@@ -214,9 +214,17 @@ function main(): void {
     return;
   }
 
-  if (!overrides['runCheck']) {
-    printOSCReference();
-  }
+  printOSCReference();
+
+  // Auto systems check on startup (non-blocking)
+  setTimeout(async () => {
+    console.log('[Hub] Running startup systems check...');
+    const report = await hub.runSystemsCheck();
+    console.log(SystemsCheck.formatConsoleReport(report));
+    if (report.overall === 'fail') {
+      console.warn('[Hub] Startup check found issues — hub is running, but some targets are unreachable');
+    }
+  }, 3000);
 }
 
 main();
