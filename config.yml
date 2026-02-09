@@ -1,0 +1,27 @@
+# Avantis OSC Bridge Configuration
+
+osc:
+  # Address to listen on (0.0.0.0 = all interfaces)
+  listenAddress: "0.0.0.0"
+  # UDP port for incoming OSC messages
+  listenPort: 9000
+
+midi:
+  # Avantis IP address
+  host: "192.168.1.70"
+  # Avantis MIDI TCP port (default 51325)
+  port: 51325
+  # Base MIDI channel configured on the Avantis (1-16, default 12)
+  # This should match Utils/Shows > Control > MIDI on the desk
+  baseChannel: 12
+
+feedback:
+  # Send desk parameter changes back to OSC clients
+  enabled: true
+  # Suppress echo feedback within this window (ms) after sending a command
+  # Prevents feedback loops when the desk echoes back what we just sent
+  echoSuppressionMs: 100
+
+logging:
+  # Set to true for detailed message logging
+  verbose: false
