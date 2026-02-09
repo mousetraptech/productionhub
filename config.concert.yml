@@ -1,0 +1,73 @@
+# Production Hub — Concert Profile
+# Usage: avantis-osc --profile concert
+#
+# Full multi-device setup for concert production.
+# All devices active: audio, lighting, streaming, cameras, rendering.
+
+osc:
+  listenAddress: "0.0.0.0"
+  listenPort: 9000
+
+devices:
+  # Allen & Heath Avantis — FOH audio
+  - type: avantis
+    prefix: /avantis
+    host: "192.168.1.70"
+    port: 51325
+    midiBaseChannel: 12
+    feedback:
+      enabled: true
+      echoSuppressionMs: 100
+
+  # ChamSys QuickQ 20 — stage lighting
+  - type: chamsys
+    prefix: /lights
+    host: "192.168.1.71"
+    port: 7000
+
+  # OBS Studio — livestream
+  - type: obs
+    prefix: /obs
+    host: "127.0.0.1"
+    port: 4455
+    # password: "your-obs-websocket-password"
+
+  # PTZ Camera — house left
+  - type: visca
+    prefix: /cam1
+    host: "192.168.1.80"
+    port: 5678
+
+  # PTZ Camera — house right
+  - type: visca
+    prefix: /cam2
+    host: "192.168.1.81"
+    port: 5678
+
+  # TouchDesigner — stage visuals
+  - type: touchdesigner
+    prefix: /td
+    host: "127.0.0.1"
+    port: 12000
+
+health:
+  enabled: true
+  port: 8080
+
+systemsCheck:
+  externalTargets:
+    - name: "PTZ Camera HL"
+      host: "192.168.100.2"
+      port: 5678
+      protocol: tcp
+    - name: "PTZ Camera C"
+      host: "192.168.100.3"
+      port: 5678
+      protocol: tcp
+    - name: "PTZ Camera HR"
+      host: "192.168.100.4"
+      port: 5678
+      protocol: tcp
+
+logging:
+  verbose: false

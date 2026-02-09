@@ -1,0 +1,39 @@
+# Production Hub — Talent Show Profile
+# Usage: avantis-osc --profile talent-show
+#
+# Simplified setup for talent shows: audio + lighting + one camera.
+# No livestream or rendering — just booth essentials.
+
+osc:
+  listenAddress: "0.0.0.0"
+  listenPort: 9000
+
+devices:
+  # Allen & Heath Avantis — FOH audio
+  - type: avantis
+    prefix: /avantis
+    host: "192.168.1.70"
+    port: 51325
+    midiBaseChannel: 12
+    feedback:
+      enabled: true
+      echoSuppressionMs: 100
+
+  # ChamSys QuickQ 20 — stage lighting
+  - type: chamsys
+    prefix: /lights
+    host: "192.168.1.71"
+    port: 7000
+
+  # PTZ Camera — center stage
+  - type: visca
+    prefix: /cam1
+    host: "192.168.1.80"
+    port: 5678
+
+health:
+  enabled: true
+  port: 8080
+
+logging:
+  verbose: false
