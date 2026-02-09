@@ -18,6 +18,7 @@
  *   avantis-osc --config ./my.yml    # Use a specific config file
  *   avantis-osc --verbose            # Enable verbose logging
  *   avantis-osc --check              # Run systems check and exit
+ *   avantis-osc --validate cues.txt  # Validate OSC addresses against config
  */
 
 import * as fs from 'fs';
@@ -117,6 +118,13 @@ function parseArgs(argv: string[]): { configPath?: string; overrides: Record<str
       case '--check':
         overrides['runCheck'] = true;
         break;
+      case '--validate':
+        overrides['validateFile'] = argv[++i];
+        if (!overrides['validateFile']) {
+          console.error('[Error] --validate requires a file path (e.g. --validate cues.txt)');
+          process.exit(1);
+        }
+        break;
       case '--help':
       case '-h':
         printBanner();
@@ -127,6 +135,7 @@ function parseArgs(argv: string[]): { configPath?: string; overrides: Record<str
         console.log('    --port, -p <port>     OSC listen port (default 9000)');
         console.log('    --verbose, -v         Enable verbose logging');
         console.log('    --check               Run systems check and exit');
+        console.log('    --validate <file>     Validate OSC addresses against config prefixes');
         console.log('    --help, -h            Show this help');
         console.log('');
         process.exit(0);
@@ -134,6 +143,109 @@ function parseArgs(argv: string[]): { configPath?: string; overrides: Record<str
   }
 
   return { configPath, overrides };
+}
+
+/** Global addresses handled by the hub itself (not routed to drivers) */
+const GLOBAL_ADDRESSES = ['/fade/stop', '/system/check'];
+
+export interface CueValidationResult {
+  matched: Array<{ address: string; driver: string }>;
+  orphaned: string[];
+}
+
+/**
+ * Match a list of OSC addresses against configured driver prefixes.
+ * Pure function — no I/O, no process.exit.
+ */
+export function matchCueAddresses(
+  addresses: string[],
+  prefixes: Array<{ prefix: string }>,
+): CueValidationResult {
+  // Build sorted prefixes (longest first, lowercased)
+  const sorted = prefixes
+    .map(d => d.prefix.toLowerCase())
+    .sort((a, b) => b.length - a.length);
+
+  const matched: Array<{ address: string; driver: string }> = [];
+  const orphaned: string[] = [];
+
+  for (const address of addresses) {
+    const addr = address.toLowerCase();
+
+    // Check global addresses first
+    if (GLOBAL_ADDRESSES.some(g => addr === g || addr.startsWith(g + '/'))) {
+      matched.push({ address, driver: '(global)' });
+      continue;
+    }
+
+    // Check against driver prefixes
+    let found = false;
+    for (const prefix of sorted) {
+      if (addr.startsWith(prefix + '/') || addr === prefix) {
+        const deviceEntry = prefixes.find(d => d.prefix.toLowerCase() === prefix);
+        matched.push({ address, driver: deviceEntry?.prefix ?? prefix });
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      orphaned.push(address);
+    }
+  }
+
+  return { matched, orphaned };
+}
+
+/**
+ * Validate a cue list file against configured driver prefixes.
+ * Reads file, runs validation, prints report, exits.
+ */
+function validateCues(cueFile: string, config: { devices: { prefix: string }[] }): void {
+  if (!fs.existsSync(cueFile)) {
+    console.error(`[Error] Cue file not found: ${cueFile}`);
+    process.exit(1);
+  }
+
+  const raw = fs.readFileSync(cueFile, 'utf-8');
+  const addresses = raw.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.startsWith('#'));
+
+  if (addresses.length === 0) {
+    console.error('[Error] Cue file is empty');
+    process.exit(1);
+  }
+
+  const { matched, orphaned } = matchCueAddresses(addresses, config.devices);
+
+  // Print report
+  console.log('');
+  console.log('  CUE VALIDATION REPORT');
+  console.log('  ========================================');
+  console.log('');
+
+  if (matched.length > 0) {
+    console.log(`  Matched (${matched.length}):`);
+    for (const m of matched) {
+      console.log(`    [OK]   ${m.address.padEnd(40)} → ${m.driver}`);
+    }
+    console.log('');
+  }
+
+  if (orphaned.length > 0) {
+    console.log(`  Orphaned (${orphaned.length}):`);
+    for (const o of orphaned) {
+      console.log(`    [??]   ${o}`);
+    }
+    console.log('');
+  }
+
+  console.log(`  RESULT: ${orphaned.length === 0 ? 'PASS' : 'FAIL'} (${matched.length} matched, ${orphaned.length} orphaned)`);
+  console.log('  ========================================');
+  console.log('');
+
+  process.exit(orphaned.length === 0 ? 0 : 1);
 }
 
 /** Create a device driver from a config entry */
@@ -166,6 +278,12 @@ function main(): void {
   }
 
   const config = loadConfig(configPath);
+
+  // --validate: offline cue validation, no device connections needed
+  if (overrides['validateFile']) {
+    validateCues(overrides['validateFile'], config);
+    return; // validateCues calls process.exit
+  }
 
   // Apply CLI overrides
   if (overrides['osc.listenPort']) config.osc.listenPort = overrides['osc.listenPort'];
@@ -227,4 +345,7 @@ function main(): void {
   }, 3000);
 }
 
-main();
+// Only run main() when this file is the entry point (not when imported for testing)
+if (require.main === module) {
+  main();
+}
