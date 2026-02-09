@@ -60,15 +60,30 @@ export class FadeEngine extends EventEmitter {
   /**
    * Start a fade. Always starts from the last known value for this key
    * (whether set by a previous fade tick or a direct fader set).
-   * Falls back to req.startValue only if we've never seen this key before.
+   *
+   * Cold start behavior: if we've never seen a value for this key (e.g.
+   * no feedback from the desk yet), we snap-set to the target immediately
+   * instead of fading from an arbitrary fallback. This prevents audible
+   * jumps — a fader at 0.8 on the desk shouldn't suddenly drop to 0 just
+   * because we haven't received NRPN feedback yet.
    */
   startFade(req: FadeRequest): void {
     const currentVal = this.currentValues.get(req.key);
-    const startValue = currentVal !== undefined ? currentVal : req.startValue;
+    if (currentVal === undefined) {
+      console.warn(
+        `[Fade] Cold start: no known value for "${req.key}" — snapping to target ${req.endValue}. ` +
+        `Move the fader or send a direct set first to enable smooth fading.`
+      );
+      // Snap to target immediately — better than fading from wrong value
+      this.currentValues.set(req.key, req.endValue);
+      this.emit('value', req.key, req.endValue);
+      this.emit('fadeComplete', req.key);
+      return;
+    }
 
     const fade: ActiveFade = {
       key: req.key,
-      startValue,
+      startValue: currentVal,
       endValue: req.endValue,
       startTime: Date.now(),
       durationMs: req.durationMs,
