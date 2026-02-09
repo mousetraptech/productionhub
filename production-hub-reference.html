@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Hub — OSC Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --avantis: #00e5a0;
+    --lights: #ffc23a;
+    --cameras: #ff6b6b;
+    --obs: #a78bfa;
+    --bg: #0c0e14;
+    --surface: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --text: #e2e8f0;
+    --text-dim: rgba(255,255,255,0.4);
+    --text-dimmer: rgba(255,255,255,0.25);
+    --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* Header */
+  .header { border-bottom: 1px solid var(--border); padding: 16px 20px; background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%); }
+  .header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--avantis); box-shadow: 0 0 8px rgba(0,229,160,0.4); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; background: linear-gradient(135deg, #e2e8f0, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header-badge { font-size: 10px; color: var(--text-dimmer); font-family: var(--mono); margin-top: 2px; }
+  .header-sub { font-size: 11px; color: rgba(255,255,255,0.3); font-family: var(--mono); }
+
+  /* View Switcher */
+  .view-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .view-tab { flex: 1; padding: 10px 0; background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 12px; font-family: var(--sans); border-bottom: 2px solid transparent; transition: all 0.15s ease; }
+  .view-tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--avantis); }
+
+  /* Search */
+  .search-wrap { padding: 12px 16px 8px; }
+  .search-input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 13px; font-family: var(--mono); outline: none; }
+  .search-input::placeholder { color: rgba(255,255,255,0.2); }
+  .search-input:focus { border-color: rgba(255,255,255,0.15); }
+
+  /* Device Tabs */
+  .device-tabs { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; }
+  .device-tab { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap; font-family: var(--sans); transition: all 0.15s ease; background: var(--surface); color: var(--text-dim); outline: 1px solid transparent; }
+  .device-tab.active { outline: 1px solid rgba(255,255,255,0.1); }
+  .protocol-badge { padding: 4px 16px 8px; font-size: 11px; color: var(--text-dimmer); font-family: var(--mono); }
+
+  /* Command Cards */
+  .commands { padding: 4px 16px 20px; }
+  .cmd-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; cursor: pointer; transition: all 0.2s ease; margin-bottom: 6px; }
+  .cmd-card.expanded { border-color: rgba(255,255,255,0.1); }
+  .cmd-header { display: flex; justify-content: space-between; align-items: center; }
+  .cmd-name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .cmd-arrow { font-size: 11px; color: rgba(255,255,255,0.35); transition: transform 0.2s; display: inline-block; }
+  .cmd-card.expanded .cmd-arrow { transform: rotate(90deg); }
+  .cmd-detail { margin-top: 10px; font-size: 12.5px; display: none; }
+  .cmd-card.expanded .cmd-detail { display: block; }
+  .cmd-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .cmd-addr { font-family: var(--mono); color: var(--text); margin-top: 2px; background: rgba(0,0,0,0.3); padding: 5px 8px; border-radius: 4px; font-size: 12px; }
+  .cmd-args { font-family: var(--mono); color: #cbd5e1; margin-top: 2px; font-size: 12px; }
+  .cmd-desc { color: rgba(255,255,255,0.55); line-height: 1.5; margin: 6px 0; }
+  .cmd-example { background: rgba(0,0,0,0.25); border-radius: 4px; padding: 6px 10px; border-left: 2px solid rgba(255,255,255,0.1); }
+  .cmd-example-label { color: rgba(255,255,255,0.35); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .cmd-example-code { font-family: var(--mono); font-size: 11.5px; color: var(--text); margin-top: 2px; }
+  .cmd-example-code .dim { color: rgba(255,255,255,0.35); }
+  .cmd-field { margin-bottom: 6px; }
+  .search-cat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 6px; }
+  .no-results { text-align: center; padding: 30px; color: var(--text-dimmer); font-size: 13px; }
+
+  /* Fader Reference */
+  .fader-ref { padding: 0 16px 20px; }
+  .section-label { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; font-weight: 600; }
+  .fader-table { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .fader-row { display: flex; justify-content: space-between; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+  .fader-row:last-child { border-bottom: none; }
+  .fader-val { font-family: var(--mono); color: var(--avantis); }
+  .fader-db { color: rgba(255,255,255,0.5); }
+
+  /* Sample Show */
+  .show-intro { font-size: 12px; color: var(--text-dim); margin: 0 0 14px; line-height: 1.5; }
+  .show-cue { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .cue-num { min-width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: var(--mono); }
+  .cue-body { flex: 1; min-width: 0; }
+  .cue-action { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .cue-addr { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.35); word-break: break-all; }
+  .cue-addr .dim { color: rgba(255,255,255,0.2); }
+
+  /* Troubleshoot */
+  .trouble-item { margin-bottom: 8px; }
+  .trouble-summary { cursor: pointer; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--cameras); list-style: none; font-family: var(--sans); }
+  .trouble-summary::-webkit-details-marker { display: none; }
+  details[open] .trouble-summary { border-color: rgba(255,107,107,0.2); }
+  .trouble-fixes { padding: 8px 14px 12px; border-left: 2px solid rgba(255,107,107,0.2); margin-left: 14px; margin-top: 4px; }
+  .trouble-fix { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 12px; color: rgba(255,255,255,0.55); }
+  .trouble-fix-num { color: var(--avantis); font-family: var(--mono); font-size: 11px; }
+
+  /* Info boxes */
+  .info-box { padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .info-box strong { color: rgba(255,255,255,0.6); }
+  .info-box.mono { font-family: var(--mono); color: rgba(255,255,255,0.3); line-height: 1.6; }
+  .info-box .highlight { color: var(--lights); }
+
+  /* Sections */
+  .section { padding: 12px 16px 20px; }
+  .footer { padding: 12px 16px 20px; border-top: 1px solid rgba(255,255,255,0.04); }
+
+  /* Utility */
+  .hidden { display: none !important; }
+  .mt { margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="status-dot"></div>
+    <h1>Production Hub</h1>
+    <span class="header-badge">OSC Reference</span>
+  </div>
+  <div class="header-sub">QLab → Hub (:9000) → Avantis · QuickQ · OBS · PTZ Cams</div>
+</div>
+
+<div class="view-tabs">
+  <button class="view-tab active" data-view="reference">Commands</button>
+  <button class="view-tab" data-view="show">Sample Show</button>
+  <button class="view-tab" data-view="troubleshoot">Troubleshoot</button>
+</div>
+
+<!-- REFERENCE VIEW -->
+<div id="view-reference">
+  <div class="search-wrap">
+    <input class="search-input" id="search" placeholder="Search commands, addresses..." autocomplete="off">
+  </div>
+  <div class="device-tabs" id="device-tabs"></div>
+  <div class="protocol-badge" id="protocol-badge"></div>
+  <div class="commands" id="commands"></div>
+  <div class="fader-ref" id="fader-ref"></div>
+</div>
+
+<!-- SHOW VIEW -->
+<div id="view-show" class="hidden">
+  <div class="section">
+    <p class="show-intro">Template cue list. Group related cues into GO groups so one press fires camera + scene + lighting together.</p>
+    <div id="show-cues"></div>
+    <div class="info-box mt"><strong>💡 GO Groups:</strong> Use QLab's GO Group feature (Cue → Go Group) to fire multiple cues simultaneously. One press = camera + scene + lights.</div>
+  </div>
+</div>
+
+<!-- TROUBLESHOOT VIEW -->
+<div id="view-troubleshoot" class="hidden">
+  <div class="section" id="troubleshoot-list"></div>
+</div>
+
+<div class="footer">
+  <div class="info-box mono">
+    QLab Setup → Settings → Network → OSC<br>
+    Destination: Hub IP : 9000<br>
+    All cues = Network Cue type
+  </div>
+</div>
+
+<script>
+const OSC_DATA = {
+  avantis: {
+    label: "Avantis", color: "#00e5a0", icon: "🎛️", protocol: "MIDI TCP",
+    commands: [
+      { name: "Fade Channel", addr: "/avantis/ch/{X}/mix/fade", args: "float target, float secs, string curve", desc: "Smooth fade interpolated at 50Hz. Curves: linear, scurve, easein, easeout", example: { addr: "/avantis/ch/1/mix/fade", args: "0.0, 3.0, scurve" } },
+      { name: "Set Fader", addr: "/avantis/ch/{X}/mix/fader", args: "float level", desc: "Instant fader set. 0.0=silence, 0.75≈-6dB, 1.0=unity", example: { addr: "/avantis/ch/5/mix/fader", args: "0.5" } },
+      { name: "Mute Channel", addr: "/avantis/ch/{X}/mix/mute", args: "int (1=mute, 0=unmute)", desc: "Toggle channel mute state", example: { addr: "/avantis/ch/5/mix/mute", args: "1" } },
+      { name: "Fade DCA", addr: "/avantis/dca/{X}/fade", args: "float target, float secs, string curve", desc: "Smooth fade on DCA group. Program DCAs on mixer first.", example: { addr: "/avantis/dca/1/fade", args: "1.0, 2.0, scurve" } },
+      { name: "DCA Fader", addr: "/avantis/dca/{X}/fader", args: "float level", desc: "Instant DCA level set", example: { addr: "/avantis/dca/1/fader", args: "1.0" } },
+      { name: "Master Fade", addr: "/avantis/main/mix/fade", args: "float target, float secs, string curve", desc: "Fade entire main output", example: { addr: "/avantis/main/mix/fade", args: "0.0, 5.0, scurve" } },
+      { name: "Recall Scene", addr: "/avantis/scene/recall", args: "int scene (0–127)", desc: "Recall pre-programmed mixer scene", example: { addr: "/avantis/scene/recall", args: "5" } },
+    ]
+  },
+  lights: {
+    label: "QuickQ 20", color: "#ffc23a", icon: "💡", protocol: "OSC Relay",
+    commands: [
+      { name: "Go Playback", addr: "/lights/pb/{X}/1", args: "none", desc: "Execute next step in playback stack. Program cue stacks on physical desk first.", example: { addr: "/lights/pb/1/1", args: "—" } },
+      { name: "Set Fader Level", addr: "/lights/pb/{X}/1/level", args: "float level", desc: "Set playback fader position", example: { addr: "/lights/pb/1/1/level", args: "0.5" } },
+      { name: "Execute Cue", addr: "/lights/exec/{X}", args: "none", desc: "Step through cue list in executor", example: { addr: "/lights/exec/1", args: "—" } },
+      { name: "Release Playback", addr: "/lights/release/{X}", args: "none", desc: "Release playback, reset to previous lighting state", example: { addr: "/lights/release/1", args: "—" } },
+    ]
+  },
+  cameras: {
+    label: "PTZ Cameras", color: "#ff6b6b", icon: "🎥", protocol: "VISCA over IP",
+    commands: [
+      { name: "Recall Preset", addr: "/cam{N}/preset/recall/{X}", args: "none", desc: "Recall pre-programmed camera position.", example: { addr: "/cam1/preset/recall/3", args: "—" } },
+      { name: "Store Preset", addr: "/cam{N}/preset/store/{X}", args: "none", desc: "Save current camera position as a preset", example: { addr: "/cam1/preset/store/3", args: "—" } },
+      { name: "Pan/Tilt Speed", addr: "/cam{N}/pantilt/speed", args: "float pan (-0.3 to 0.3), float tilt (-0.3 to 0.3)", desc: "Continuous pan/tilt. Negative=left/down. MUST send stop after.", example: { addr: "/cam1/pantilt/speed", args: "0.3, 0.2" } },
+      { name: "Pan/Tilt Stop", addr: "/cam{N}/pantilt/stop", args: "none", desc: "Stop pan/tilt movement. Always pair with speed command.", example: { addr: "/cam1/pantilt/stop", args: "—" } },
+      { name: "Zoom Speed", addr: "/cam{N}/zoom/speed", args: "float (-0.5 to 0.5)", desc: "Continuous zoom. Negative=out, positive=in. Send stop after.", example: { addr: "/cam1/zoom/speed", args: "0.5" } },
+      { name: "Zoom Stop", addr: "/cam{N}/zoom/stop", args: "none", desc: "Stop zoom movement", example: { addr: "/cam1/zoom/stop", args: "—" } },
+    ]
+  },
+  obs: {
+    label: "OBS Studio", color: "#a78bfa", icon: "📡", protocol: "WebSocket",
+    commands: [
+      { name: "Switch Scene", addr: "/obs/scene/{NAME}", args: "none", desc: "Switch active OBS scene. Scene name goes in the path.", example: { addr: "/obs/scene/Live", args: "—" } },
+      { name: "Start Stream", addr: "/obs/stream/start", args: "none", desc: "Begin live stream", example: { addr: "/obs/stream/start", args: "—" } },
+      { name: "Stop Stream", addr: "/obs/stream/stop", args: "none", desc: "End live stream", example: { addr: "/obs/stream/stop", args: "—" } },
+      { name: "Start Recording", addr: "/obs/record/start", args: "none", desc: "Begin recording", example: { addr: "/obs/record/start", args: "—" } },
+      { name: "Stop Recording", addr: "/obs/record/stop", args: "none", desc: "End recording", example: { addr: "/obs/record/stop", args: "—" } },
+      { name: "Set Transition", addr: "/obs/transition/{NAME}", args: "none", desc: "Set active transition type (Cut, Fade, etc.)", example: { addr: "/obs/transition/Cut", args: "—" } },
+      { name: "Transition Duration", addr: "/obs/transition/duration", args: "int ms", desc: "Set transition duration in milliseconds", example: { addr: "/obs/transition/duration", args: "500" } },
+    ]
+  }
+};
+
+const FADER_REF = [
+  { val: "0.0", db: "-∞ (silence)" },
+  { val: "0.5", db: "≈ -12dB" },
+  { val: "0.75", db: "≈ -6dB" },
+  { val: "1.0", db: "0dB (unity)" },
+  { val: "1.1", db: "+10dB (max)" },
+];
+
+const SAMPLE_SHOW = [
+  { cue: 1, action: "House lights to 50%", addr: "/lights/pb/1/1/level", args: "0.5", cat: "lights" },
+  { cue: 2, action: "Start recording", addr: "/obs/record/start", args: "—", cat: "obs" },
+  { cue: 3, action: "Wide shot", addr: "/cam1/preset/recall/1", args: "—", cat: "cameras" },
+  { cue: 4, action: "OBS → Pre-Show", addr: "/obs/scene/Pre-Show", args: "—", cat: "obs" },
+  { cue: 5, action: "Band DCA to unity", addr: "/avantis/dca/1/fade", args: "1.0, 2.0, scurve", cat: "avantis" },
+  { cue: 6, action: "House lights down", addr: "/lights/pb/2/1", args: "—", cat: "lights" },
+  { cue: 7, action: "Start stream", addr: "/obs/stream/start", args: "—", cat: "obs" },
+  { cue: 8, action: "OBS → Live", addr: "/obs/scene/Live", args: "—", cat: "obs" },
+  { cue: 9, action: "Camera → speaker", addr: "/cam1/preset/recall/2", args: "—", cat: "cameras" },
+  { cue: 10, action: "Band to -10dB", addr: "/avantis/dca/1/fade", args: "0.6, 1.5, scurve", cat: "avantis" },
+];
+
+const TROUBLESHOOT = [
+  { problem: "Cue fires but nothing happens", fixes: ["Check Production Hub is running", "Verify hub IP in QLab Settings → Network → OSC", "Confirm target device is powered on and networked", "Enable verbose logging on hub and check logs"] },
+  { problem: "Audio fades are steppy", fixes: ["Use /fade address, not /fader with multiple steps", "Hub interpolates /fade at 50Hz for smooth transitions"] },
+  { problem: "OBS doesn't respond", fixes: ["Enable WebSocket: Tools → WebSocket Server Settings", "Match WebSocket password in hub config.yml", "Restart OBS and the hub"] },
+  { problem: "Camera won't move/recall", fixes: ["Verify camera IP in hub config.yml", "Enable VISCA over IP in camera settings", "Ping camera from hub machine", "Pre-program presets on camera first"] },
+  { problem: "Lighting cues do nothing", fixes: ["Program playbacks on physical QuickQ desk first", "Match playback number in OSC address to desk", "Test manual playback press on desk", "Then test from QLab"] },
+];
+
+// State
+let activeTab = "avantis";
+let currentView = "reference";
+
+// Helpers
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function buildCommandCard(cmd, color) {
+  const id = "cmd-" + Math.random().toString(36).slice(2, 9);
+  const argsDisplay = cmd.example.args !== "—" ? `<span class="dim"> → ${esc(cmd.example.args)}</span>` : "";
+  return `<div class="cmd-card" id="${id}" onclick="this.classList.toggle('expanded');this.style.borderColor=this.classList.contains('expanded')?'${color}44':''" data-color="${color}">
+    <div class="cmd-header">
+      <span class="cmd-name" style="color:${color}">${esc(cmd.name)}</span>
+      <span class="cmd-arrow">▶</span>
+    </div>
+    <div class="cmd-detail">
+      <div class="cmd-field"><span class="cmd-label">Address</span><div class="cmd-addr">${esc(cmd.addr)}</div></div>
+      <div class="cmd-field"><span class="cmd-label">Arguments</span><div class="cmd-args">${esc(cmd.args)}</div></div>
+      <p class="cmd-desc">${esc(cmd.desc)}</p>
+      <div class="cmd-example" style="border-left-color:${color}44">
+        <span class="cmd-example-label">Example</span>
+        <div class="cmd-example-code">${esc(cmd.example.addr)}${argsDisplay}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Render functions
+function renderDeviceTabs() {
+  const container = document.getElementById("device-tabs");
+  container.innerHTML = Object.entries(OSC_DATA).map(([key, cat]) => {
+    const isActive = key === activeTab;
+    const bg = isActive ? cat.color + "18" : "";
+    const clr = isActive ? cat.color : "";
+    const outline = isActive ? `1px solid ${cat.color}33` : "";
+    return `<button class="device-tab ${isActive ? "active" : ""}" data-device="${key}" style="background:${bg};color:${clr};outline:${outline}">${cat.icon} ${cat.label}</button>`;
+  }).join("");
+
+  container.querySelectorAll(".device-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      activeTab = btn.dataset.device;
+      document.getElementById("search").value = "";
+      renderReference();
+    });
+  });
+}
+
+function renderCommands(commands, color) {
+  return commands.map(cmd => buildCommandCard(cmd, color)).join("");
+}
+
+function renderReference() {
+  const search = document.getElementById("search").value.trim().toLowerCase();
+
+  if (search) {
+    // Global search
+    document.getElementById("device-tabs").classList.add("hidden");
+    document.getElementById("protocol-badge").classList.add("hidden");
+    document.getElementById("fader-ref").classList.add("hidden");
+
+    let html = "";
+    let found = false;
+    Object.entries(OSC_DATA).forEach(([key, cat]) => {
+      const matches = cat.commands.filter(c =>
+        c.name.toLowerCase().includes(search) ||
+        c.addr.toLowerCase().includes(search) ||
+        c.desc.toLowerCase().includes(search)
+      );
+      if (matches.length) {
+        found = true;
+        html += `<div class="search-cat-label" style="color:${cat.color};margin-top:${html ? "14px" : "4px"}">${cat.label}</div>`;
+        html += renderCommands(matches, cat.color);
+      }
+    });
+    if (!found) html = `<div class="no-results">No commands match "${esc(search)}"</div>`;
+    document.getElementById("commands").innerHTML = html;
+  } else {
+    // Normal tab view
+    document.getElementById("device-tabs").classList.remove("hidden");
+    document.getElementById("protocol-badge").classList.remove("hidden");
+    renderDeviceTabs();
+
+    const cat = OSC_DATA[activeTab];
+    document.getElementById("protocol-badge").textContent = `Protocol: ${cat.protocol}`;
+    document.getElementById("commands").innerHTML = renderCommands(cat.commands, cat.color);
+
+    // Fader ref only on avantis
+    const faderRef = document.getElementById("fader-ref");
+    if (activeTab === "avantis") {
+      faderRef.classList.remove("hidden");
+      faderRef.innerHTML = `<div class="section-label">Fader Values</div><div class="fader-table">${FADER_REF.map(f =>
+        `<div class="fader-row"><span class="fader-val">${f.val}</span><span class="fader-db">${f.db}</span></div>`
+      ).join("")}</div>`;
+    } else {
+      faderRef.classList.add("hidden");
+    }
+  }
+}
+
+function renderShow() {
+  document.getElementById("show-cues").innerHTML = SAMPLE_SHOW.map(cue => {
+    const color = OSC_DATA[cue.cat].color;
+    const argsDisplay = cue.args !== "—" ? `<span class="dim"> → ${esc(cue.args)}</span>` : "";
+    return `<div class="show-cue">
+      <div class="cue-num" style="background:${color}15;color:${color}">${cue.cue}</div>
+      <div class="cue-body">
+        <div class="cue-action">${esc(cue.action)}</div>
+        <div class="cue-addr">${esc(cue.addr)}${argsDisplay}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderTroubleshoot() {
+  document.getElementById("troubleshoot-list").innerHTML = TROUBLESHOOT.map(t =>
+    `<details class="trouble-item">
+      <summary class="trouble-summary">⚠ ${esc(t.problem)}</summary>
+      <div class="trouble-fixes">${t.fixes.map((fix, j) =>
+        `<div class="trouble-fix"><span class="trouble-fix-num">${j + 1}.</span> ${esc(fix)}</div>`
+      ).join("")}</div>
+    </details>`
+  ).join("") + `<div class="info-box mono mt"><div style="color:rgba(255,255,255,0.55);margin-bottom:4px">Enable verbose logging:</div><div class="highlight">config.yml → logging: verbose: true</div></div>`;
+}
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll(".view-tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+  document.getElementById("view-reference").classList.toggle("hidden", view !== "reference");
+  document.getElementById("view-show").classList.toggle("hidden", view !== "show");
+  document.getElementById("view-troubleshoot").classList.toggle("hidden", view !== "troubleshoot");
+}
+
+// Init
+document.querySelectorAll(".view-tab").forEach(tab => {
+  tab.addEventListener("click", () => switchView(tab.dataset.view));
+});
+document.getElementById("search").addEventListener("input", renderReference);
+
+renderReference();
+renderShow();
+renderTroubleshoot();
+</script>
+</body>
+</html>

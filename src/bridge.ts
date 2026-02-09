@@ -30,14 +30,18 @@ import {
   OSCFadeStopEvent,
 } from './osc-server';
 import { FadeEngine, fadeKey } from './fade-engine';
-import { Config } from './config';
+import { LegacyConfig } from './config';
 
+/**
+ * @deprecated Use ProductionHub + AvantisDriver instead.
+ * Kept for backward compatibility with single-device setups.
+ */
 export class AvantisBridge {
   private oscServer: AvantisOSCServer;
   private midiTransport: AvantisTCPTransport;
   private fadeEngine: FadeEngine;
   private midiParser: MIDIStreamParser;
-  private config: Config;
+  private config: LegacyConfig;
   private baseMidiChannel: number;
   private feedbackEnabled: boolean;
   private echoSuppressionMs: number;
@@ -47,7 +51,7 @@ export class AvantisBridge {
   // to prevent OSC→MIDI→OSC feedback loops.
   private lastSentTimestamps: Map<string, number> = new Map();
 
-  constructor(config: Config) {
+  constructor(config: LegacyConfig) {
     this.config = config;
     this.baseMidiChannel = (config.midi.baseChannel ?? 12) - 1; // convert 1-based to 0-based
     this.feedbackEnabled = config.feedback?.enabled ?? true;

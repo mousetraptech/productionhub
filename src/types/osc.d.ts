@@ -28,5 +28,14 @@ declare module 'osc' {
     send(packet: OSCMessage | OSCBundle, address?: string, port?: number): void;
   }
 
-  export { UDPPort, UDPPortOptions, OSCMessage, OSCBundle };
+  /** Write an OSC message to a Buffer */
+  function writeMessage(msg: OSCMessage): Buffer;
+
+  /** Write an OSC bundle to a Buffer */
+  function writeBundle(bundle: OSCBundle): Buffer;
+
+  /** Read an OSC message from a Buffer */
+  function readMessage(data: Buffer | Uint8Array, options?: any): OSCMessage;
+
+  export { UDPPort, UDPPortOptions, OSCMessage, OSCBundle, writeMessage, writeBundle, readMessage };
 }

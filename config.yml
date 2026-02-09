@@ -1,26 +1,81 @@
-# Avantis OSC Bridge Configuration
+# Production Hub Configuration
+# Multi-device OSC control for live production
 
 osc:
   # Address to listen on (0.0.0.0 = all interfaces)
   listenAddress: "0.0.0.0"
-  # UDP port for incoming OSC messages
+  # UDP port for incoming OSC messages from QLab/controllers
   listenPort: 9000
 
-midi:
-  # Avantis IP address
-  host: "192.168.1.70"
-  # Avantis MIDI TCP port (default 51325)
-  port: 51325
-  # Base MIDI channel configured on the Avantis (1-16, default 12)
-  # This should match Utils/Shows > Control > MIDI on the desk
-  baseChannel: 12
+devices:
+  # Allen & Heath Avantis — audio mixing console
+  - type: avantis
+    prefix: /avantis
+    host: "192.168.1.70"
+    port: 51325
+    # Base MIDI channel (1-16), should match Utils/Shows > Control > MIDI on the desk
+    midiBaseChannel: 12
+    feedback:
+      enabled: true
+      echoSuppressionMs: 100
 
-feedback:
-  # Send desk parameter changes back to OSC clients
+  # ChamSys QuickQ 20 — lighting desk
+  - type: chamsys
+    prefix: /lights
+    host: "192.168.1.71"
+    port: 7000
+
+  # OBS Studio — streaming/recording
+  - type: obs
+    prefix: /obs
+    host: "127.0.0.1"
+    port: 4455
+    # password: "your-obs-websocket-password"
+
+  # PTZ Camera 1
+  - type: visca
+    prefix: /cam1
+    host: "192.168.1.80"
+    port: 5678
+
+  # PTZ Camera 2
+  # - type: visca
+  #   prefix: /cam2
+  #   host: "192.168.1.81"
+  #   port: 5678
+
+  # TouchDesigner — real-time rendering
+  - type: touchdesigner
+    prefix: /td
+    host: "127.0.0.1"
+    port: 12000
+
+# Health check HTTP server (used by watchdog)
+health:
   enabled: true
-  # Suppress echo feedback within this window (ms) after sending a command
-  # Prevents feedback loops when the desk echoes back what we just sent
-  echoSuppressionMs: 100
+  port: 8080           # GET /ping → "pong", GET /health → full JSON, GET /system/check → probe report
+
+# Pre-show systems check — external devices to probe beyond hub drivers
+systemsCheck:
+  externalTargets:
+    # PTZ cameras on camera subnet (not managed by hub if only cam1 configured)
+    - name: "PTZ Camera HL"
+      host: "192.168.100.2"
+      port: 5678
+      protocol: tcp
+    - name: "PTZ Camera C"
+      host: "192.168.100.3"
+      port: 5678
+      protocol: tcp
+    - name: "PTZ Camera HR"
+      host: "192.168.100.4"
+      port: 5678
+      protocol: tcp
+    # OWC NAS (AFP/SMB)
+    # - name: "OWC NAS"
+    #   host: "192.168.1.100"
+    #   port: 548
+    #   protocol: tcp
 
 logging:
   # Set to true for detailed message logging

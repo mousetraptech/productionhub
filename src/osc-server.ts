@@ -94,6 +94,7 @@ export class AvantisOSCServer extends EventEmitter {
   private options: { localAddress: string; localPort: number };
   private replyPort?: number;
   private clients: Map<string, OSCClient> = new Map();
+  private rawMessageCallback?: (address: string, args: any[], info: any) => void;
 
   constructor(opts: OSCServerOptions = {}) {
     super();
@@ -102,6 +103,21 @@ export class AvantisOSCServer extends EventEmitter {
       localPort: opts.localPort ?? 9000,
     };
     this.replyPort = opts.replyPort;
+  }
+
+  /**
+   * Register a callback for raw OSC messages before parsing.
+   * Used by ProductionHub for prefix-based routing.
+   *
+   * When set, the callback receives every incoming message with:
+   *   - address: the raw OSC address string
+   *   - args: the raw args array
+   *   - info: sender info (address, port)
+   *
+   * The server's own parseAddress → 'command' emit still fires as normal.
+   */
+  onRawMessage(callback: (address: string, args: any[], info: any) => void): void {
+    this.rawMessageCallback = callback;
   }
 
   start(): void {
@@ -163,6 +179,20 @@ export class AvantisOSCServer extends EventEmitter {
     return this.clients.size;
   }
 
+  /** Get list of active clients (pruning expired ones) */
+  getClients(): Array<{ address: string; port: number; lastSeen: number }> {
+    const now = Date.now();
+    const result: Array<{ address: string; port: number; lastSeen: number }> = [];
+    for (const [key, client] of this.clients) {
+      if (now - client.lastSeen > CLIENT_TIMEOUT_MS) {
+        this.clients.delete(key);
+        continue;
+      }
+      result.push({ address: client.address, port: client.port, lastSeen: client.lastSeen });
+    }
+    return result;
+  }
+
   private trackClient(info: any): void {
     if (!info || !info.address || !info.port) return;
     const key = `${info.address}:${info.port}`;
@@ -177,12 +207,20 @@ export class AvantisOSCServer extends EventEmitter {
     const address: string = msg.address;
     const args: any[] = msg.args || [];
 
+    // Fire raw callback first (used by ProductionHub for prefix routing)
+    if (this.rawMessageCallback) {
+      this.rawMessageCallback(address, args, info);
+    }
+
     try {
       const event = this.parseAddress(address, args);
       if (event) {
         this.emit('command', event);
       } else {
-        console.warn(`[OSC] Unrecognized address: ${address}`);
+        // Only warn if no raw callback is handling routing
+        if (!this.rawMessageCallback) {
+          console.warn(`[OSC] Unrecognized address: ${address}`);
+        }
       }
     } catch (err: any) {
       console.error(`[OSC] Parse error for ${address}: ${err.message}`);
