@@ -238,6 +238,71 @@ export function getDashboardHTML(): string {
     transition: width 0.3s;
   }
 
+  /* Checklist */
+  .checklist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .checklist-item:hover {
+    background: rgba(255,255,255,0.03);
+  }
+  .checklist-item input[type="checkbox"] {
+    accent-color: var(--green);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    pointer-events: none;
+  }
+  .checklist-item.checked .checklist-label {
+    color: var(--text-dimmer);
+    text-decoration: line-through;
+  }
+  .checklist-item .checklist-label {
+    color: var(--text);
+    user-select: none;
+  }
+  .checklist-progress {
+    float: right;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .checklist-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .checklist-reset-btn {
+    background: rgba(255,107,107,0.08);
+    color: var(--red);
+    border-color: rgba(255,107,107,0.25);
+  }
+  .checklist-reset-btn:hover {
+    background: rgba(255,107,107,0.15);
+    border-color: rgba(255,107,107,0.4);
+  }
+  .checklist-status {
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .checklist-status.done { color: var(--green); }
+  .checklist-status.pending { color: var(--text-dimmer); }
+
   .footer {
     margin-top: 24px;
     font-size: 10px;
@@ -294,6 +359,15 @@ export function getDashboardHTML(): string {
   <div class="check-section">
     <button class="check-btn" id="checkBtn" onclick="runCheck()">Run Systems Check</button>
     <div class="check-results" id="checkResults"></div>
+  </div>
+</div>
+
+<div class="card" id="checklistCard" style="display:none">
+  <div class="card-title">Pre-Show Checklist <span class="checklist-progress" id="checklistProgress"></span></div>
+  <div class="checklist-items" id="checklistItems"></div>
+  <div class="checklist-actions">
+    <button class="check-btn checklist-reset-btn" id="checklistResetBtn" onclick="resetChecklist()">Reset Checklist</button>
+    <span class="checklist-status" id="checklistStatus"></span>
   </div>
 </div>
 
@@ -440,8 +514,80 @@ function renderCheck(report) {
   results.innerHTML = html;
 }
 
+// --- Checklist ---
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+async function fetchChecklist() {
+  try {
+    var res = await fetch('/checklist');
+    var state = await res.json();
+    renderChecklist(state);
+  } catch(e) {
+    document.getElementById('checklistCard').style.display = 'none';
+  }
+}
+
+function renderChecklist(state) {
+  var card = document.getElementById('checklistCard');
+  if (!state.items || state.items.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+
+  var progress = document.getElementById('checklistProgress');
+  progress.textContent = state.checked + ' / ' + state.total;
+  progress.style.color = state.allDone ? 'var(--green)' : 'var(--text-dimmer)';
+
+  var container = document.getElementById('checklistItems');
+  container.innerHTML = state.items.map(function(item) {
+    var checkedClass = item.checked ? 'checked' : '';
+    var checkedAttr = item.checked ? 'checked' : '';
+    return '<div class="checklist-item ' + checkedClass + '" onclick="toggleChecklistItem(' + item.id + ')">' +
+      '<input type="checkbox" ' + checkedAttr + ' tabindex="-1">' +
+      '<span class="checklist-label">' + escapeHtml(item.label) + '</span>' +
+    '</div>';
+  }).join('');
+
+  var status = document.getElementById('checklistStatus');
+  if (state.allDone) {
+    status.textContent = 'ALL CLEAR';
+    status.className = 'checklist-status done';
+  } else {
+    status.textContent = state.checked + ' of ' + state.total + ' complete';
+    status.className = 'checklist-status pending';
+  }
+}
+
+async function toggleChecklistItem(id) {
+  try {
+    var res = await fetch('/checklist/toggle/' + id, { method: 'POST' });
+    var state = await res.json();
+    renderChecklist(state);
+  } catch(e) {
+    console.error('Toggle failed:', e);
+  }
+}
+
+async function resetChecklist() {
+  if (!confirm('Reset all checklist items?')) return;
+  try {
+    var res = await fetch('/checklist/reset', { method: 'POST' });
+    var state = await res.json();
+    renderChecklist(state);
+  } catch(e) {
+    console.error('Reset failed:', e);
+  }
+}
+
 // Start polling
 fetchHealth();
+fetchChecklist();
 pollTimer = setInterval(fetchHealth, POLL_INTERVAL);
 </script>
 

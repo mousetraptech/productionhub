@@ -77,6 +77,7 @@ export interface Config {
   systemsCheck?: {
     externalTargets: ProbeTarget[];
   };
+  checklist?: string[];
 }
 
 // --- Defaults ---
@@ -160,6 +161,9 @@ function loadHubConfig(parsed: any): Config {
         protocol: t.protocol ?? 'tcp',
       })),
     } : undefined,
+    checklist: parsed.checklist && Array.isArray(parsed.checklist)
+      ? parsed.checklist.map((item: any) => String(item))
+      : undefined,
   };
 
   console.log(`[Config] Hub mode: ${devices.length} device(s) configured`);

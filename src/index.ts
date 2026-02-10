@@ -297,6 +297,7 @@ function main(): void {
     health: config.health,
     logging: config.logging,
     systemsCheck: config.systemsCheck,
+    checklist: config.checklist,
   });
 
   // Create and register drivers from config

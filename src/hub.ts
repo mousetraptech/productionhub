@@ -14,6 +14,7 @@ import { DeviceDriver, DeviceConfig, FeedbackEvent, HubContext, DriverFadeReques
 import { DriverStats, createDriverStats, inferTransportType } from './driver-stats';
 import { SystemsCheck, ProbeTarget, SystemsCheckReport } from './systems-check';
 import { getDashboardHTML } from './dashboard';
+import { PreshowChecklist } from './preshow-checklist';
 
 export interface HubConfig {
   osc: {
@@ -31,6 +32,7 @@ export interface HubConfig {
   systemsCheck?: {
     externalTargets: ProbeTarget[];
   };
+  checklist?: string[];
 }
 
 export class ProductionHub {
@@ -43,6 +45,7 @@ export class ProductionHub {
   private healthServer?: http.Server;
   private healthConfig: { enabled: boolean; port: number };
   private externalTargets: ProbeTarget[];
+  private checklist?: PreshowChecklist;
   private startedAt: number = 0;
 
   /** HubContext passed to drivers so they can use the shared fade engine */
@@ -55,6 +58,10 @@ export class ProductionHub {
       port: config.health?.port ?? 8080,
     };
     this.externalTargets = config.systemsCheck?.externalTargets ?? [];
+
+    if (config.checklist && config.checklist.length > 0) {
+      this.checklist = new PreshowChecklist(config.checklist);
+    }
 
     this.oscServer = new AvantisOSCServer({
       localAddress: config.osc.listenAddress,
@@ -378,6 +385,34 @@ export class ProductionHub {
       if (req.method === 'GET' && req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(getDashboardHTML());
+        return;
+      }
+
+      // Checklist endpoints
+      if (req.method === 'GET' && req.url === '/checklist') {
+        const state = this.checklist?.getState() ?? { items: [], total: 0, checked: 0, allDone: true };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(state));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url?.startsWith('/checklist/toggle/')) {
+        const id = parseInt(req.url.split('/').pop() ?? '', 10);
+        if (!this.checklist || isNaN(id) || !this.checklist.toggle(id)) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Item not found' }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.checklist.getState()));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/checklist/reset') {
+        if (this.checklist) this.checklist.reset();
+        const state = this.checklist?.getState() ?? { items: [], total: 0, checked: 0, allDone: true };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(state));
         return;
       }
 

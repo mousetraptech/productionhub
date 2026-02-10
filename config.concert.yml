@@ -69,5 +69,14 @@ systemsCheck:
       port: 5678
       protocol: tcp
 
+checklist:
+  - "Soundcheck complete"
+  - "Camera positions verified"
+  - "Lyrics slides loaded in ProPresenter"
+  - "Stream key configured in OBS"
+  - "Lighting presets loaded"
+  - "Recording drive mounted and space verified"
+  - "Comms / IFB battery check"
+
 logging:
   verbose: false
