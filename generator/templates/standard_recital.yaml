@@ -1,0 +1,285 @@
+# =============================================================================
+# Production Event Template: Standard Recital
+# =============================================================================
+# This template defines all show control parameters for a standard recital.
+# The template engine reads this file and generates:
+#   - Companion page layout (JSON)
+#   - QLab OSC cue builder script (Python)
+#   - TouchDesigner setup script (Python)
+#   - Setup checklist (Markdown)
+# =============================================================================
+
+event_type: standard_recital
+event_name: "Standard Recital"
+venue: "Main Hall"
+description: "Two-performer recital with basic AV and lighting"
+
+# --- Performers ---
+performers:
+  count: 2
+  positions:
+    - name: "Performer 1"
+      stage_position: center_left
+    - name: "Performer 2"
+      stage_position: center_right
+
+# --- Audio Configuration ---
+audio:
+  microphones:
+    - id: lav1
+      type: lavalier
+      model: "Sennheiser EW 100"
+      input_channel: 1
+      performer: "Performer 1"
+      gain_db: -12
+    - id: lav2
+      type: lavalier
+      model: "Sennheiser EW 100"
+      input_channel: 2
+      performer: "Performer 2"
+      gain_db: -12
+  main_output:
+    channels: stereo
+    routing: [1, 2]
+  recording:
+    enabled: true
+    format: wav
+    sample_rate: 48000
+
+# --- Video Configuration ---
+video:
+  cameras:
+    - id: cam1
+      type: fixed
+      position: front_center
+      shot: wide
+      resolution: "1920x1080"
+      fps: 30
+    - id: cam2
+      type: fixed
+      position: stage_left
+      shot: medium
+      resolution: "1920x1080"
+      fps: 30
+  switching:
+    mode: manual          # manual | auto | scripted
+    default_camera: cam1
+  recording:
+    enabled: true
+    format: h264
+    bitrate: "20Mbps"
+
+# --- Lighting Configuration ---
+lighting:
+  controller: "ETC Eos"
+  universe: 1
+  presets:
+    - id: warm_stage_wash
+      name: "Warm Stage Wash"
+      description: "Full warm wash at 80% for performance"
+      channels:
+        front_wash: 80
+        side_fill: 60
+        back_light: 40
+      color_temp: 3200
+    - id: house_full
+      name: "House Full"
+      description: "House lights at full"
+      channels:
+        house_lights: 100
+    - id: house_half
+      name: "House Half"
+      description: "House lights at 50%"
+      channels:
+        house_lights: 50
+    - id: house_out
+      name: "House Out"
+      description: "House lights fully dimmed"
+      channels:
+        house_lights: 0
+    - id: blackout
+      name: "Blackout"
+      description: "All lights off"
+      channels:
+        front_wash: 0
+        side_fill: 0
+        back_light: 0
+        house_lights: 0
+
+# --- Cue List ---
+# timing: "pre-show" | "post-show" | "MM:SS" relative to show start
+# follow: optional auto-follow delay in seconds
+cues:
+  - id: cue_010
+    number: "010"
+    name: "House to Half"
+    type: lighting
+    target: house_half
+    timing: pre-show
+    description: "Dim house lights to signal show starting"
+    notes: "5 min before downbeat"
+    hub_actions:
+      - address: /lights/pb/1/1/level
+        args: [0.5]
+
+  - id: cue_020
+    number: "020"
+    name: "House Out"
+    type: lighting
+    target: house_out
+    timing: pre-show
+    follow: 5.0
+    description: "House lights out"
+    fade_duration: 3.0
+    hub_actions:
+      - address: /lights/pb/1/1/level
+        args: [0.0]
+
+  - id: cue_030
+    number: "030"
+    name: "Stage Wash Up"
+    type: lighting
+    target: warm_stage_wash
+    timing: "0:00"
+    follow: 2.0
+    description: "Bring up stage lighting"
+    fade_duration: 4.0
+    hub_actions:
+      - address: /lights/exec/1
+
+  - id: cue_040
+    number: "040"
+    name: "Mics Hot"
+    type: audio
+    action: unmute
+    targets: [lav1, lav2]
+    timing: "0:00"
+    description: "Open both lavalieres"
+    hub_actions:
+      - address: /avantis/ch/1/mix/mute
+        args: [0]
+      - address: /avantis/ch/2/mix/mute
+        args: [0]
+
+  - id: cue_050
+    number: "050"
+    name: "Camera 1 Live"
+    type: video
+    action: switch
+    target: cam1
+    timing: "0:00"
+    description: "Cut to wide shot"
+    hub_actions:
+      - address: /obs/scene/Camera1
+      - address: /cam1/preset/recall/1
+
+  - id: cue_060
+    number: "060"
+    name: "Recording Start"
+    type: system
+    action: record_start
+    targets: [audio, video]
+    timing: "0:00"
+    description: "Start audio and video recording"
+    hub_actions:
+      - address: /obs/record/start
+
+  - id: cue_070
+    number: "070"
+    name: "Camera 2"
+    type: video
+    action: switch
+    target: cam2
+    timing: manual
+    description: "Cut to medium shot - operator triggered"
+    hub_actions:
+      - address: /obs/scene/Camera2
+      - address: /cam1/preset/recall/2
+
+  - id: cue_080
+    number: "080"
+    name: "Camera 1"
+    type: video
+    action: switch
+    target: cam1
+    timing: manual
+    description: "Cut back to wide shot"
+    hub_actions:
+      - address: /obs/scene/Camera1
+      - address: /cam1/preset/recall/1
+
+  - id: cue_090
+    number: "090"
+    name: "Recording Stop"
+    type: system
+    action: record_stop
+    targets: [audio, video]
+    timing: post-show
+    description: "Stop all recording"
+    hub_actions:
+      - address: /obs/record/stop
+
+  - id: cue_100
+    number: "100"
+    name: "Mics Off"
+    type: audio
+    action: mute
+    targets: [lav1, lav2]
+    timing: post-show
+    description: "Mute both lavalieres"
+    hub_actions:
+      - address: /avantis/ch/1/mix/mute
+        args: [1]
+      - address: /avantis/ch/2/mix/mute
+        args: [1]
+
+  - id: cue_110
+    number: "110"
+    name: "House to Full"
+    type: lighting
+    target: house_full
+    timing: post-show
+    fade_duration: 5.0
+    description: "Bring house lights back up"
+    hub_actions:
+      - address: /lights/pb/1/1/level
+        args: [1.0]
+
+  - id: cue_120
+    number: "120"
+    name: "Stage Blackout"
+    type: lighting
+    target: blackout
+    timing: post-show
+    fade_duration: 3.0
+    description: "Fade stage lighting to black"
+    hub_actions:
+      - address: /lights/exec/2
+
+# --- Network Configuration ---
+network:
+  hub:
+    host: "127.0.0.1"
+    port: 9000
+  qlab:
+    host: "127.0.0.1"
+    port: 53000
+    passcode: "1234"
+  companion:
+    host: "127.0.0.1"
+    port: 8000
+    osc_listen_port: 12321
+  touchdesigner:
+    host: "127.0.0.1"
+    osc_listen_port: 12000
+  lighting_console:
+    protocol: osc
+    host: "192.168.1.100"
+    port: 8000
+
+# --- Metadata ---
+metadata:
+  version: "1.0"
+  author: "Event Template System"
+  created: "2026-02-11"
+  notes: "Phase 1 proof of concept - standard recital configuration"

@@ -1,0 +1,862 @@
+{
+  "version": "4.2.0",
+  "type": "page_export",
+  "event_type": "standard_recital",
+  "event_name": "Standard Recital",
+  "pages": {
+    "page_1": {
+      "name": "Show Control",
+      "gridSize": {
+        "columns": 8,
+        "rows": 4
+      },
+      "buttons": {
+        "0,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Standard Recital\nCONTROL",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "0,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "PRE-SHOW",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "0,4": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "SHOW",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "0,6": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "POST-SHOW",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "0,2": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "GO\n(QLab)",
+            "size": "14px",
+            "color": 0,
+            "bgcolor": 52224,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "0,3": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "STOP\n(QLab)",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 204,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "1,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q010\nHouse to Half",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_float",
+                  "options": {
+                    "path": "/lights/pb/1/1/level",
+                    "value": 0.5
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "1,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q020\nHouse Out",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_float",
+                  "options": {
+                    "path": "/lights/pb/1/1/level",
+                    "value": 0.0
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q030\nStage Wash Up",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/1"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q040\nMics Hot",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 13408512,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/1/mix/mute",
+                    "value": 0
+                  }
+                },
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/2/mix/mute",
+                    "value": 0
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,2": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q050\nCamera 1 Live",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 13395507,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/scene/Camera1"
+                  }
+                },
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/cam1/preset/recall/1"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,3": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q060\nRecording Start",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 10040217,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/record/start"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,4": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q070\nCamera 2",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 13395507,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/scene/Camera2"
+                  }
+                },
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/cam1/preset/recall/2"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,5": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q080\nCamera 1",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 13395507,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/scene/Camera1"
+                  }
+                },
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/cam1/preset/recall/1"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q090\nRecording Stop",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 10040217,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/record/stop"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q100\nMics Off",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 13408512,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/1/mix/mute",
+                    "value": 1
+                  }
+                },
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/2/mix/mute",
+                    "value": 1
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,2": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q110\nHouse to Full",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_float",
+                  "options": {
+                    "path": "/lights/pb/1/1/level",
+                    "value": 1.0
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,3": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Q120\nStage Blackout",
+            "size": "12px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/2"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        }
+      }
+    },
+    "page_2": {
+      "name": "A/V Control",
+      "gridSize": {
+        "columns": 8,
+        "rows": 4
+      },
+      "buttons": {
+        "0,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "A/V\nCONTROL",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "1,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "CAMERAS",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "1,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "CAM1\nwide",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 13395507,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/scene/Camera1"
+                  }
+                },
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/cam1/preset/recall/1"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "1,2": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "CAM2\nmedium",
+            "size": "14px",
+            "color": 16777215,
+            "bgcolor": 13395507,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/obs/scene/Camera2"
+                  }
+                },
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/cam2/preset/recall/1"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "AUDIO",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "2,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "LAV1\nMUTE",
+            "size": "14px",
+            "color": 0,
+            "bgcolor": 13408512,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/1/mix/mute",
+                    "value": 1
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,3": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "LAV1\nUNMUTE",
+            "size": "14px",
+            "color": 0,
+            "bgcolor": 52224,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/1/mix/mute",
+                    "value": 0
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,2": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "LAV2\nMUTE",
+            "size": "14px",
+            "color": 0,
+            "bgcolor": 13408512,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/2/mix/mute",
+                    "value": 1
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "2,4": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "LAV2\nUNMUTE",
+            "size": "14px",
+            "color": 0,
+            "bgcolor": 52224,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_integer",
+                  "options": {
+                    "path": "/avantis/ch/2/mix/mute",
+                    "value": 0
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,0": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "LIGHTING",
+            "size": "12px",
+            "color": 16777215,
+            "bgcolor": 2631720,
+            "alignment": "center",
+            "show_topbar": false,
+            "textExpression": false
+          },
+          "steps": {},
+          "feedbacks": []
+        },
+        "3,1": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Warm\nStage\nWash",
+            "size": "11px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/1"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,2": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "House Full",
+            "size": "11px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/2"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,3": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "House Half",
+            "size": "11px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/3"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,4": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "House Out",
+            "size": "11px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/4"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        },
+        "3,5": {
+          "type": "button",
+          "enabled": true,
+          "style": {
+            "text": "Blackout",
+            "size": "11px",
+            "color": 0,
+            "bgcolor": 39372,
+            "alignment": "center",
+            "show_topbar": true,
+            "textExpression": false
+          },
+          "steps": {
+            "step0": {
+              "down": [
+                {
+                  "actionId": "osc:send_no_args",
+                  "options": {
+                    "path": "/lights/exec/5"
+                  }
+                }
+              ],
+              "up": []
+            }
+          },
+          "feedbacks": []
+        }
+      }
+    }
+  },
+  "connections": [
+    {
+      "id": "osc_hub",
+      "module": "generic-osc",
+      "label": "Production Hub",
+      "config": {
+        "host": "127.0.0.1",
+        "port": 9000,
+        "send_enabled": true
+      }
+    }
+  ]
+}

@@ -11,7 +11,7 @@ devices:
   # Allen & Heath Avantis — audio mixing console
   - type: avantis
     prefix: /avantis
-    host: "192.168.1.70"
+    host: "192.168.10.20"
     port: 51325
     # Base MIDI channel (1-16), should match Utils/Shows > Control > MIDI on the desk
     midiBaseChannel: 12
@@ -22,7 +22,7 @@ devices:
   # ChamSys QuickQ 20 — lighting desk
   - type: chamsys
     prefix: /lights
-    host: "192.168.1.71"
+    host: "192.168.10.60"
     port: 7000
 
   # OBS Studio — streaming/recording
@@ -35,14 +35,19 @@ devices:
   # PTZ Camera 1
   - type: visca
     prefix: /cam1
-    host: "192.168.1.80"
+    host: "192.168.10.31"
     port: 5678
 
   # PTZ Camera 2
-  # - type: visca
-  #   prefix: /cam2
-  #   host: "192.168.1.81"
-  #   port: 5678
+  - type: visca
+    prefix: /cam2
+    host: "192.168.10.32"
+    port: 5678
+
+  - type: visca
+    prefix: /cam2
+    host: "192.168.10.33"
+    port: 5678
 
   # TouchDesigner — real-time rendering
   - type: touchdesigner

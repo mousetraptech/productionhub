@@ -15,6 +15,7 @@ import { DriverStats, createDriverStats, inferTransportType } from './driver-sta
 import { SystemsCheck, ProbeTarget, SystemsCheckReport } from './systems-check';
 import { getDashboardHTML } from './dashboard';
 import { PreshowChecklist } from './preshow-checklist';
+import { SmokeTest, SmokeTestResult } from './smoke-test';
 
 export interface HubConfig {
   osc: {
@@ -413,6 +414,48 @@ export class ProductionHub {
         const state = this.checklist?.getState() ?? { items: [], total: 0, checked: 0, allDone: true };
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(state));
+        return;
+      }
+
+      // Smoke test endpoint: POST /smoke/{prefix}
+      if (req.method === 'POST' && req.url?.startsWith('/smoke/')) {
+        const rawPrefix = '/' + req.url.slice('/smoke/'.length);
+        const prefix = rawPrefix.toLowerCase();
+        const driver = this.drivers.get(prefix);
+
+        if (!driver) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `No driver for prefix: ${rawPrefix}` }));
+          return;
+        }
+
+        const cmd = SmokeTest.getCommand(driver.name);
+        if (!cmd) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `No smoke command for driver type: ${driver.name}` }));
+          return;
+        }
+
+        const result: SmokeTestResult = {
+          prefix,
+          driverName: driver.name,
+          connected: driver.isConnected(),
+          sent: false,
+          command: `${prefix}${cmd.address}`,
+          label: cmd.label,
+        };
+
+        try {
+          this.routeOSC(`${prefix}${cmd.address}`, cmd.args);
+          result.sent = true;
+          console.log(`[Hub] Smoke test: ${result.command} → ${driver.name} (${cmd.label})`);
+        } catch (err: any) {
+          result.error = err.message ?? String(err);
+          console.error(`[Hub] Smoke test failed: ${result.command} → ${err.message}`);
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
         return;
       }
 

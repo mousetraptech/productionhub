@@ -166,6 +166,38 @@ export function getDashboardHTML(): string {
   }
   .error-text { color: var(--red); }
 
+  /* Smoke test */
+  .smoke-btn {
+    background: rgba(88,166,255,0.08);
+    color: var(--blue);
+    border: 1px solid rgba(88,166,255,0.25);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .smoke-btn:hover { background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.4); }
+  .smoke-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .smoke-btn.sent {
+    background: rgba(0,229,160,0.08);
+    color: var(--green);
+    border-color: rgba(0,229,160,0.25);
+  }
+  .smoke-btn.fail {
+    background: rgba(255,107,107,0.08);
+    color: var(--red);
+    border-color: rgba(255,107,107,0.25);
+  }
+  .smoke-detail {
+    font-size: 10px;
+    color: var(--text-dimmer);
+    margin-top: 3px;
+  }
+
   /* Systems check */
   .check-section { margin-top: 4px; }
   .check-btn {
@@ -346,10 +378,11 @@ export function getDashboardHTML(): string {
         <th>Status</th>
         <th>Reconnects</th>
         <th>Last Message</th>
+        <th></th>
       </tr>
     </thead>
     <tbody id="driversBody">
-      <tr><td colspan="7" style="color:var(--text-dimmer)">Loading...</td></tr>
+      <tr><td colspan="8" style="color:var(--text-dimmer)">Loading...</td></tr>
     </tbody>
   </table>
 </div>
@@ -447,6 +480,7 @@ function renderHealth(d) {
     if (dr.lastError) {
       errorInfo = '<div class="detail-sub error-text">' + dr.lastError + ' (' + ago(dr.lastErrorAt) + ')</div>';
     }
+    var safePrefix = dr.prefix.replace(/^\//, '');
     return '<tr>' +
       '<td><span class="status-dot ' + dotClass + '"></span></td>' +
       '<td><span class="driver-name">' + dr.name + '</span></td>' +
@@ -455,6 +489,8 @@ function renderHealth(d) {
       '<td style="color:' + statusColor + '">' + statusText + errorInfo + '</td>' +
       '<td>' + (dr.reconnectCount || 0) + '</td>' +
       '<td>' + lastMsg + '</td>' +
+      '<td><button class="smoke-btn" id="smoke-' + safePrefix + '" onclick="smokeTest(\\'' + safePrefix + '\\')">Test</button>' +
+        '<div class="smoke-detail" id="smoke-detail-' + safePrefix + '"></div></td>' +
     '</tr>';
   }).join('');
 
@@ -512,6 +548,50 @@ function renderCheck(report) {
   '</div>';
 
   results.innerHTML = html;
+}
+
+// --- Smoke Test ---
+
+async function smokeTest(prefix) {
+  var btn = document.getElementById('smoke-' + prefix);
+  var detail = document.getElementById('smoke-detail-' + prefix);
+  btn.disabled = true;
+  btn.textContent = '...';
+  btn.className = 'smoke-btn';
+  detail.textContent = '';
+
+  try {
+    var res = await fetch('/smoke/' + prefix, { method: 'POST' });
+    var result = await res.json();
+
+    if (result.error) {
+      btn.textContent = 'Fail';
+      btn.className = 'smoke-btn fail';
+      detail.textContent = result.error;
+      detail.style.color = 'var(--red)';
+    } else if (!result.connected) {
+      btn.textContent = 'Queued';
+      btn.className = 'smoke-btn fail';
+      detail.textContent = result.label + ' (not connected)';
+      detail.style.color = 'var(--yellow)';
+    } else {
+      btn.textContent = 'Sent';
+      btn.className = 'smoke-btn sent';
+      detail.textContent = result.label;
+      detail.style.color = 'var(--text-dimmer)';
+    }
+  } catch(e) {
+    btn.textContent = 'Fail';
+    btn.className = 'smoke-btn fail';
+    detail.textContent = e.message;
+    detail.style.color = 'var(--red)';
+  }
+
+  setTimeout(function() {
+    btn.disabled = false;
+    btn.textContent = 'Test';
+    btn.className = 'smoke-btn';
+  }, 3000);
 }
 
 // --- Checklist ---

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "ts-node --files src/index.ts",
     "test": "TS_NODE_FILES=true node --require ts-node/register --test src/__tests__/*.test.ts",
     "test:protocol": "ts-node --files src/__tests__/midi-protocol.test.ts",
     "test:parser": "ts-node --files src/__tests__/midi-parser.test.ts",
@@ -19,6 +19,7 @@
     "test:check": "ts-node --files src/__tests__/systems-check.test.ts",
     "test:obs": "ts-node --files src/__tests__/obs-driver.test.ts",
     "test:validate": "ts-node --files src/__tests__/cue-validation.test.ts",
+    "generate": "python3 generator/generate.py generator/templates/standard_recital.yaml",
     "service:install": "./service/install.sh",
     "service:uninstall": "./service/uninstall.sh",
     "service:status": "./service/status.sh"
