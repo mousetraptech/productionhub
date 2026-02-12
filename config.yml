@@ -88,6 +88,11 @@ systemsCheck:
     #   port: 548
     #   protocol: tcp
 
+# MOD UI — web-based show control interface
+ui:
+  enabled: true
+  port: 3001               # WebSocket port for MOD UI
+
 logging:
   # Set to true for detailed message logging
   verbose: false

@@ -1,0 +1,92 @@
+# Production Hub — Show Templates
+# Pre-built cue lists for common show types.
+# The MOD picks a template on launch, then customizes as needed.
+
+templates:
+  blank:
+    name: "Blank Show"
+    description: "Start from scratch"
+    icon: "📄"
+    cues: []
+
+  concert:
+    name: "Concert Standard"
+    description: "Full concert with intermission"
+    icon: "🎵"
+    cues:
+      - name: "Doors Open"
+        actions: [house-preset-walk, audio-walkin, stage-blackout]
+      - name: "Walk-in Fade"
+        actions: [audio-walkin-fade]
+      - name: "Welcome"
+        actions: [house-half, stage-warm, audio-mains-up, stream-start, cam-wide]
+      - name: "Performance Start"
+        actions: [house-out, stage-full, cam-stage]
+      - name: "Intermission"
+        actions: [house-full, stage-blackout, audio-walkin, stream-brb]
+      - name: "Act 2"
+        actions: [house-out, stage-warm, cam-wide]
+      - name: "Curtain Call"
+        actions: [stage-full, cam-wide]
+      - name: "Post-Show"
+        actions: [house-full, stage-blackout, stream-stop, audio-mains-mute]
+
+  recital:
+    name: "Recital"
+    description: "Simple recital, no intermission"
+    icon: "🎹"
+    cues:
+      - name: "Doors Open"
+        actions: [house-preset-walk, audio-walkin, stage-blackout]
+      - name: "Walk-in Fade"
+        actions: [audio-walkin-fade]
+      - name: "Welcome"
+        actions: [house-half, stage-warm, audio-mains-up, cam-wide]
+      - name: "Recital Start"
+        actions: [house-out, stage-spot, cam-piano]
+      - name: "Applause / Bow"
+        actions: [stage-full, cam-wide]
+      - name: "Post-Show"
+        actions: [house-full, stage-blackout, audio-mains-mute]
+
+  livestream:
+    name: "Livestream Only"
+    description: "No audience, stream-focused"
+    icon: "📡"
+    cues:
+      - name: "Pre-Show Setup"
+        actions: [stage-warm, cam-wide, stream-brb]
+      - name: "Go Live"
+        actions: [stage-full, audio-mains-up, stream-start, cam-stage]
+      - name: "Break"
+        actions: [stream-brb, audio-mains-mute]
+      - name: "Back Live"
+        actions: [audio-mains-up, stream-start, cam-wide]
+      - name: "End Stream"
+        actions: [stream-stop, stage-blackout, audio-mains-mute]
+
+  talent:
+    name: "Talent Show"
+    description: "Multiple acts with transitions"
+    icon: "⭐"
+    cues:
+      - name: "Doors Open"
+        actions: [house-preset-walk, audio-walkin, stage-blackout]
+      - name: "Walk-in Fade"
+        actions: [audio-walkin-fade]
+      - name: "MC Welcome"
+        actions: [house-half, stage-spot, audio-mains-up, stream-start, cam-stage]
+      - name: "Act 1"
+        actions: [house-out, stage-full, cam-wide]
+      - name: "Transition"
+        actions: [stage-blackout, cam-wide]
+      - name: "Act 2"
+        actions: [stage-full, cam-stage]
+      - name: "Transition"
+        actions: [stage-blackout, cam-wide]
+      - name: "Act 3"
+        actions: [stage-warm, cam-stage]
+      - name: "Awards / Closing"
+        actions: [stage-full, cam-wide]
+      - name: "Post-Show"
+        actions: [house-full, stage-blackout, stream-stop, audio-mains-mute]

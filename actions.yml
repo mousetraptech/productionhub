@@ -1,0 +1,233 @@
+# Production Hub — Action Registry
+# Maps human-readable MOD actions to OSC command bundles.
+# The MOD interface never sees OSC addresses — only action labels.
+
+actions:
+  # ─── House Lights ───
+  house-full:
+    label: "Full"
+    category: "House Lights"
+    icon: "🏠"
+    color: "#F59E0B"
+    description: "House lights to 100%"
+    commands:
+      - device: avantis
+        address: /dca/1/fader
+        args: [1.0]
+      - device: chamsys
+        address: /pb/2/1
+
+  house-half:
+    label: "Half"
+    category: "House Lights"
+    icon: "🏠"
+    color: "#F59E0B"
+    description: "House lights to 50%"
+    commands:
+      - device: avantis
+        address: /dca/1/fader
+        args: [0.5]
+
+  house-out:
+    label: "Out"
+    category: "House Lights"
+    icon: "🏠"
+    color: "#F59E0B"
+    description: "House lights off"
+    commands:
+      - device: avantis
+        address: /dca/1/fader
+        args: [0.0]
+      - device: chamsys
+        address: /pb/2/2
+
+  house-preset-walk:
+    label: "Walk-in"
+    category: "House Lights"
+    icon: "🏠"
+    color: "#F59E0B"
+    description: "Warm walk-in preset"
+    commands:
+      - device: avantis
+        address: /dca/1/fader
+        args: [0.7]
+      - device: chamsys
+        address: /pb/2/3
+
+  # ─── Stage Lights ───
+  stage-full:
+    label: "Full Wash"
+    category: "Stage Lights"
+    icon: "🎤"
+    color: "#8B5CF6"
+    description: "Full stage wash"
+    commands:
+      - device: chamsys
+        address: /pb/1/1
+
+  stage-warm:
+    label: "Warm"
+    category: "Stage Lights"
+    icon: "🎤"
+    color: "#8B5CF6"
+    description: "Warm stage preset"
+    commands:
+      - device: chamsys
+        address: /pb/1/2
+
+  stage-cool:
+    label: "Cool"
+    category: "Stage Lights"
+    icon: "🎤"
+    color: "#8B5CF6"
+    description: "Cool stage preset"
+    commands:
+      - device: chamsys
+        address: /pb/1/3
+
+  stage-spot:
+    label: "Spotlight"
+    category: "Stage Lights"
+    icon: "🎤"
+    color: "#8B5CF6"
+    description: "Center spot only"
+    commands:
+      - device: chamsys
+        address: /pb/1/4
+
+  stage-blackout:
+    label: "Blackout"
+    category: "Stage Lights"
+    icon: "🎤"
+    color: "#8B5CF6"
+    description: "Stage to black"
+    commands:
+      - device: chamsys
+        address: /pb/1/5
+
+  # ─── Audio ───
+  audio-walkin:
+    label: "Walk-in Music"
+    category: "Audio"
+    icon: "🔊"
+    color: "#10B981"
+    description: "Start walk-in playlist"
+    commands:
+      - device: avantis
+        address: /ch/33/mix/mute
+        args: [0]
+      - device: avantis
+        address: /ch/33/mix/fader
+        args: [0.75]
+
+  audio-walkin-fade:
+    label: "Fade Walk-in"
+    category: "Audio"
+    icon: "🔊"
+    color: "#10B981"
+    description: "Fade out walk-in music"
+    commands:
+      - device: avantis
+        address: /ch/33/mix/fade
+        args: [0.0, 3.0, "scurve"]
+
+  audio-mains-up:
+    label: "Mains Up"
+    category: "Audio"
+    icon: "🔊"
+    color: "#10B981"
+    description: "Main speakers live"
+    commands:
+      - device: avantis
+        address: /main/mix/mute
+        args: [0]
+      - device: avantis
+        address: /main/mix/fader
+        args: [0.75]
+
+  audio-mains-mute:
+    label: "Mains Mute"
+    category: "Audio"
+    icon: "🔊"
+    color: "#10B981"
+    description: "Mute main speakers"
+    commands:
+      - device: avantis
+        address: /main/mix/mute
+        args: [1]
+
+  # ─── Livestream ───
+  stream-start:
+    label: "Go Live"
+    category: "Livestream"
+    icon: "📹"
+    color: "#EF4444"
+    description: "Start livestream"
+    commands:
+      - device: obs
+        address: /stream/start
+
+  stream-brb:
+    label: "BRB"
+    category: "Livestream"
+    icon: "📹"
+    color: "#EF4444"
+    description: "Show BRB screen"
+    commands:
+      - device: obs
+        address: /scene/BRB
+
+  stream-stop:
+    label: "End Stream"
+    category: "Livestream"
+    icon: "📹"
+    color: "#EF4444"
+    description: "Stop livestream"
+    commands:
+      - device: obs
+        address: /stream/stop
+
+  # ─── Camera ───
+  cam-wide:
+    label: "Wide Shot"
+    category: "Camera"
+    icon: "🎥"
+    color: "#06B6D4"
+    description: "Camera to wide angle"
+    commands:
+      - device: visca
+        prefix: cam1
+        address: /preset/recall/1
+
+  cam-stage:
+    label: "Stage"
+    category: "Camera"
+    icon: "🎥"
+    color: "#06B6D4"
+    description: "Camera to stage center"
+    commands:
+      - device: visca
+        prefix: cam1
+        address: /preset/recall/2
+
+  cam-piano:
+    label: "Piano"
+    category: "Camera"
+    icon: "🎥"
+    color: "#06B6D4"
+    description: "Camera to piano position"
+    commands:
+      - device: visca
+        prefix: cam1
+        address: /preset/recall/3
+
+  cam-audience:
+    label: "Audience"
+    category: "Camera"
+    icon: "🎥"
+    color: "#06B6D4"
+    description: "Camera to audience"
+    commands:
+      - device: visca
+        prefix: cam1
+        address: /preset/recall/4

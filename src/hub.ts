@@ -17,6 +17,11 @@ import { getDashboardHTML } from './dashboard';
 import { PreshowChecklist } from './preshow-checklist';
 import { SmokeTest, SmokeTestResult } from './smoke-test';
 import { DeviceEmulator } from './emulators';
+import { ActionRegistry } from './actions/registry';
+import { CueEngine } from './cue-engine/engine';
+import { TemplateLoader } from './shows/templates';
+import { ShowPersistence } from './cue-engine/persistence';
+import { ModWebSocket } from './server/websocket';
 
 export interface HubConfig {
   osc: {
@@ -35,6 +40,10 @@ export interface HubConfig {
     externalTargets: ProbeTarget[];
   };
   checklist?: string[];
+  ui?: {
+    enabled: boolean;
+    port: number;
+  };
 }
 
 export class ProductionHub {
@@ -49,6 +58,12 @@ export class ProductionHub {
   private externalTargets: ProbeTarget[];
   private checklist?: PreshowChecklist;
   private startedAt: number = 0;
+  private uiConfig: { enabled: boolean; port: number };
+  private actionRegistry: ActionRegistry;
+  private cueEngine: CueEngine;
+  private templateLoader: TemplateLoader;
+  private showPersistence: ShowPersistence;
+  private modWebSocket?: ModWebSocket;
 
   /** HubContext passed to drivers so they can use the shared fade engine */
   readonly hubContext: HubContext;
@@ -60,6 +75,11 @@ export class ProductionHub {
       port: config.health?.port ?? 8080,
     };
     this.externalTargets = config.systemsCheck?.externalTargets ?? [];
+
+    this.uiConfig = {
+      enabled: config.ui?.enabled ?? false,
+      port: config.ui?.port ?? 3001,
+    };
 
     if (config.checklist && config.checklist.length > 0) {
       this.checklist = new PreshowChecklist(config.checklist);
@@ -81,6 +101,23 @@ export class ProductionHub {
       setCurrentValue: (key: string, val: number) => this.fadeEngine.setCurrentValue(key, val),
       getCurrentValue: (key: string) => this.fadeEngine.getCurrentValue(key),
     };
+
+    // MOD UI: action registry, cue engine, templates, persistence
+    this.actionRegistry = new ActionRegistry();
+    this.actionRegistry.load();
+
+    this.templateLoader = new TemplateLoader();
+    this.templateLoader.load();
+
+    this.showPersistence = new ShowPersistence();
+
+    // Cue engine routes commands through the hub's OSC router
+    this.cueEngine = new CueEngine(
+      this.actionRegistry,
+      (prefix: string, address: string, args: any[]) => {
+        this.routeOSC(`${prefix}${address}`, args);
+      },
+    );
   }
 
   /** Register a device driver with the hub */
@@ -178,6 +215,19 @@ export class ProductionHub {
     if (this.healthConfig.enabled) {
       this.startHealthServer();
     }
+
+    // Start MOD UI WebSocket server
+    if (this.uiConfig.enabled) {
+      this.actionRegistry.watch();
+      this.modWebSocket = new ModWebSocket(
+        { port: this.uiConfig.port },
+        this.cueEngine,
+        this.actionRegistry,
+        this.templateLoader,
+        this.showPersistence,
+      );
+      this.modWebSocket.start();
+    }
   }
 
   /** Stop everything */
@@ -191,6 +241,11 @@ export class ProductionHub {
     if (this.healthServer) {
       this.healthServer.close();
       this.healthServer = undefined;
+    }
+    this.actionRegistry.stopWatching();
+    if (this.modWebSocket) {
+      this.modWebSocket.stop();
+      this.modWebSocket = undefined;
     }
   }
 

@@ -78,6 +78,10 @@ export interface Config {
     externalTargets: ProbeTarget[];
   };
   checklist?: string[];
+  ui?: {
+    enabled: boolean;
+    port: number;
+  };
 }
 
 // --- Defaults ---
@@ -164,6 +168,10 @@ function loadHubConfig(parsed: any): Config {
     checklist: parsed.checklist && Array.isArray(parsed.checklist)
       ? parsed.checklist.map((item: any) => String(item))
       : undefined,
+    ui: parsed.ui ? {
+      enabled: parsed.ui.enabled ?? false,
+      port: parsed.ui.port ?? 3001,
+    } : undefined,
   };
 
   console.log(`[Config] Hub mode: ${devices.length} device(s) configured`);

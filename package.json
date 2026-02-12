@@ -21,6 +21,8 @@
     "test:validate": "ts-node --files src/__tests__/cue-validation.test.ts",
     "test:emulators": "ts-node --files src/__tests__/emulators.test.ts",
     "generate": "python3 generator/generate.py generator/templates/standard_recital.yaml",
+    "dev:ui": "cd ui && npm run dev",
+    "build:ui": "cd ui && npm run build",
     "service:install": "./service/install.sh",
     "service:uninstall": "./service/uninstall.sh",
     "service:status": "./service/status.sh"
