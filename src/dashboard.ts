@@ -480,7 +480,7 @@ function renderHealth(d) {
     if (dr.lastError) {
       errorInfo = '<div class="detail-sub error-text">' + dr.lastError + ' (' + ago(dr.lastErrorAt) + ')</div>';
     }
-    var safePrefix = dr.prefix.replace(/^\//, '');
+    var safePrefix = dr.prefix.replace(/^\\//, '');
     return '<tr>' +
       '<td><span class="status-dot ' + dotClass + '"></span></td>' +
       '<td><span class="driver-name">' + dr.name + '</span></td>' +
@@ -489,7 +489,7 @@ function renderHealth(d) {
       '<td style="color:' + statusColor + '">' + statusText + errorInfo + '</td>' +
       '<td>' + (dr.reconnectCount || 0) + '</td>' +
       '<td>' + lastMsg + '</td>' +
-      '<td><button class="smoke-btn" id="smoke-' + safePrefix + '" onclick="smokeTest(\\'' + safePrefix + '\\')">Test</button>' +
+      '<td><button class="smoke-btn" id="smoke-' + safePrefix + '" data-prefix="' + safePrefix + '">Test</button>' +
         '<div class="smoke-detail" id="smoke-detail-' + safePrefix + '"></div></td>' +
     '</tr>';
   }).join('');
@@ -664,6 +664,14 @@ async function resetChecklist() {
     console.error('Reset failed:', e);
   }
 }
+
+// Delegated click handler for smoke test buttons (avoids quote escaping in onclick)
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.smoke-btn');
+  if (btn && btn.dataset.prefix) {
+    smokeTest(btn.dataset.prefix);
+  }
+});
 
 // Start polling
 fetchHealth();

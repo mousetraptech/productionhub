@@ -31,6 +31,7 @@ import { OBSDriver } from './drivers/obs-driver';
 import { VISCADriver } from './drivers/visca-driver';
 import { TouchDesignerDriver } from './drivers/touchdesigner-driver';
 import { DeviceConfig, DeviceDriver, HubContext } from './drivers/device-driver';
+import { createEmulator } from './emulators';
 import { SystemsCheck } from './systems-check';
 
 function printBanner(): void {
@@ -250,6 +251,11 @@ function validateCues(cueFile: string, config: { devices: { prefix: string }[] }
 
 /** Create a device driver from a config entry */
 function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbose: boolean): DeviceDriver {
+  // Emulator mode: return a virtual driver instead of a real one
+  if (deviceConfig.emulate) {
+    return createEmulator(deviceConfig, hubContext, verbose);
+  }
+
   switch (deviceConfig.type) {
     case 'avantis':
       return new AvantisDriver(deviceConfig as any, hubContext, verbose);
@@ -304,7 +310,8 @@ function main(): void {
   for (const deviceConf of config.devices) {
     const driver = createDriver(deviceConf, hub.hubContext, verbose);
     hub.addDriver(driver, deviceConf);
-    console.log(`[Main] Registered ${deviceConf.type} on ${deviceConf.prefix} -> ${deviceConf.host}:${deviceConf.port}`);
+    const mode = deviceConf.emulate ? '(emulated)' : `-> ${deviceConf.host}:${deviceConf.port}`;
+    console.log(`[Main] Registered ${deviceConf.type} on ${deviceConf.prefix} ${mode}`);
   }
 
   // Graceful shutdown

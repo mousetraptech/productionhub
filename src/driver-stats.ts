@@ -5,7 +5,7 @@
  * No modifications to driver implementations needed.
  */
 
-export type TransportType = 'tcp' | 'websocket' | 'udp';
+export type TransportType = 'tcp' | 'websocket' | 'udp' | 'emulator';
 
 export interface DriverStats {
   name: string;
@@ -45,8 +45,9 @@ export function createDriverStats(
   };
 }
 
-/** Infer transport type from device type string */
-export function inferTransportType(deviceType: string): TransportType {
+/** Infer transport type from device type string and config */
+export function inferTransportType(deviceType: string, config?: Record<string, any>): TransportType {
+  if (config?.emulate) return 'emulator';
   switch (deviceType) {
     case 'avantis': return 'tcp';
     case 'visca': return 'tcp';

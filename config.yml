@@ -13,6 +13,7 @@ devices:
     prefix: /avantis
     host: "192.168.10.20"
     port: 51325
+    emulate: true
     # Base MIDI channel (1-16), should match Utils/Shows > Control > MIDI on the desk
     midiBaseChannel: 12
     feedback:
@@ -30,6 +31,8 @@ devices:
     prefix: /obs
     host: "127.0.0.1"
     port: 4455
+    emulate: true
+
     # password: "your-obs-websocket-password"
 
   # PTZ Camera 1
@@ -37,17 +40,20 @@ devices:
     prefix: /cam1
     host: "192.168.10.31"
     port: 5678
+    emulate: true
 
   # PTZ Camera 2
   - type: visca
     prefix: /cam2
     host: "192.168.10.32"
     port: 5678
+    emulate: true
 
   - type: visca
-    prefix: /cam2
+    prefix: /cam3
     host: "192.168.10.33"
     port: 5678
+    emulate: true
 
   # TouchDesigner — real-time rendering
   - type: touchdesigner
