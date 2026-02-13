@@ -305,6 +305,7 @@ function main(): void {
     systemsCheck: config.systemsCheck,
     checklist: config.checklist,
     ui: config.ui,
+    macros: config.macros,
   });
 
   // Create and register drivers from config

@@ -335,6 +335,141 @@ export function getDashboardHTML(): string {
   .checklist-status.done { color: var(--green); }
   .checklist-status.pending { color: var(--text-dimmer); }
 
+  /* Cue list panel */
+  .cue-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .cue-btn {
+    background: rgba(0,229,160,0.08);
+    color: var(--green);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cue-btn:hover { background: rgba(0,229,160,0.15); border-color: rgba(0,229,160,0.4); }
+  .cue-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .cue-btn.stop-btn {
+    background: rgba(255,107,107,0.08);
+    color: var(--red);
+    border-color: rgba(255,107,107,0.25);
+  }
+  .cue-btn.stop-btn:hover { background: rgba(255,107,107,0.15); border-color: rgba(255,107,107,0.4); }
+  .cue-btn.back-btn {
+    background: rgba(255,194,58,0.08);
+    color: var(--yellow);
+    border-color: rgba(255,194,58,0.25);
+  }
+  .cue-btn.back-btn:hover { background: rgba(255,194,58,0.15); border-color: rgba(255,194,58,0.4); }
+  .cue-status-text {
+    font-size: 11px;
+    color: var(--text-dimmer);
+    margin-left: auto;
+  }
+  .cue-list-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .cue-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .cue-item:hover { background: rgba(255,255,255,0.03); }
+  .cue-item.active {
+    background: rgba(0,229,160,0.06);
+    border-left: 2px solid var(--green);
+  }
+  .cue-item.past { opacity: 0.5; }
+  .cue-item .cue-id {
+    width: 80px;
+    flex-shrink: 0;
+    color: var(--text-dimmer);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .cue-item .cue-name { color: var(--text); flex: 1; }
+  .cue-item .cue-actions-count {
+    font-size: 10px;
+    color: var(--text-dimmer);
+  }
+  .cue-item .cue-auto {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(167,139,250,0.12);
+    color: var(--purple);
+  }
+  .cue-empty {
+    font-size: 12px;
+    color: var(--text-dimmer);
+    padding: 8px 0;
+  }
+
+  /* OSC Monitor */
+  .osc-monitor {
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 11px;
+    font-family: var(--mono);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+  }
+  .osc-monitor::-webkit-scrollbar { width: 4px; }
+  .osc-monitor::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .osc-entry {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+  }
+  .osc-entry .osc-time { color: var(--text-dimmer); width: 60px; flex-shrink: 0; }
+  .osc-entry .osc-dir { width: 20px; flex-shrink: 0; font-weight: 600; }
+  .osc-entry .osc-dir.in { color: var(--blue); }
+  .osc-entry .osc-dir.out { color: var(--purple); }
+  .osc-entry .osc-addr { color: var(--text); flex: 1; }
+  .osc-entry .osc-args { color: var(--text-dimmer); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .osc-monitor-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .osc-toggle {
+    font-size: 10px;
+    color: var(--text-dimmer);
+    cursor: pointer;
+    user-select: none;
+  }
+  .osc-toggle input { accent-color: var(--green); margin-right: 4px; }
+
+  /* WebSocket indicator */
+  .ws-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .ws-dot.connected { background: var(--green); }
+
   .footer {
     margin-top: 24px;
     font-size: 10px;
@@ -402,6 +537,28 @@ export function getDashboardHTML(): string {
     <button class="check-btn checklist-reset-btn" id="checklistResetBtn" onclick="resetChecklist()">Reset Checklist</button>
     <span class="checklist-status" id="checklistStatus"></span>
   </div>
+</div>
+
+<div class="card" id="cueCard">
+  <div class="card-title">Cue List <span class="checklist-progress" id="cueListName">--</span></div>
+  <div class="cue-controls">
+    <button class="cue-btn back-btn" onclick="cueBack()">BACK</button>
+    <button class="cue-btn" onclick="cueGo()">GO</button>
+    <button class="cue-btn stop-btn" onclick="cueStop()">STOP</button>
+    <span class="cue-status-text" id="cueStatusText">No cue list loaded</span>
+  </div>
+  <div class="cue-list-items" id="cueListItems">
+    <div class="cue-empty">No cue list loaded</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">OSC Monitor <span class="ws-dot" id="wsDot"></span></div>
+  <div class="osc-monitor-controls">
+    <label class="osc-toggle"><input type="checkbox" id="oscMonitorToggle" checked onchange="toggleOscMonitor(this.checked)"> Live</label>
+    <button class="smoke-btn" onclick="clearOscLog()">Clear</button>
+  </div>
+  <div class="osc-monitor" id="oscMonitor"></div>
 </div>
 
 <div class="card">
@@ -673,10 +830,184 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Start polling
+// --- Cue List ---
+
+var cueState = null;
+var cueList = null;
+
+async function fetchCues() {
+  try {
+    var res = await fetch('/api/cues');
+    var data = await res.json();
+    cueState = data.state;
+    cueList = data.cueList;
+    renderCueList();
+  } catch(e) {}
+}
+
+function renderCueList() {
+  var nameEl = document.getElementById('cueListName');
+  var statusEl = document.getElementById('cueStatusText');
+  var itemsEl = document.getElementById('cueListItems');
+
+  if (!cueState || !cueState.loaded) {
+    nameEl.textContent = '--';
+    statusEl.textContent = 'No cue list loaded';
+    itemsEl.innerHTML = '<div class="cue-empty">No cue list loaded</div>';
+    return;
+  }
+
+  nameEl.textContent = cueState.cueListName;
+  var runText = cueState.isRunning ? ' (running)' : '';
+  statusEl.textContent = 'Cue ' + (cueState.playheadIndex + 1) + ' of ' + cueState.cueCount + runText;
+
+  if (!cueList || !cueList.cues) {
+    itemsEl.innerHTML = '<div class="cue-empty">No cues</div>';
+    return;
+  }
+
+  itemsEl.innerHTML = cueList.cues.map(function(cue, i) {
+    var cls = 'cue-item';
+    if (i === cueState.playheadIndex) cls += ' active';
+    else if (i < cueState.playheadIndex) cls += ' past';
+    var autoTag = cue.autoFollow ? '<span class="cue-auto">auto</span>' : '';
+    return '<div class="' + cls + '" onclick="cueGoId(\\'' + cue.id + '\\')">' +
+      '<span class="cue-id">' + cue.id + '</span>' +
+      '<span class="cue-name">' + escapeHtml(cue.name) + '</span>' +
+      '<span class="cue-actions-count">' + cue.actions.length + ' actions</span>' +
+      autoTag +
+    '</div>';
+  }).join('');
+}
+
+async function cueGo() {
+  await fetch('/api/cues/go', { method: 'POST' });
+  fetchCues();
+}
+
+async function cueGoId(id) {
+  await fetch('/api/cues/go/' + id, { method: 'POST' });
+  fetchCues();
+}
+
+async function cueStop() {
+  await fetch('/api/cues/stop', { method: 'POST' });
+  fetchCues();
+}
+
+async function cueBack() {
+  await fetch('/api/cues/back', { method: 'POST' });
+  fetchCues();
+}
+
+// --- OSC Monitor ---
+
+var oscLog = [];
+var MAX_OSC_LOG = 100;
+var oscMonitorEnabled = true;
+
+function addOscEntry(entry) {
+  if (!oscMonitorEnabled) return;
+  oscLog.push(entry);
+  if (oscLog.length > MAX_OSC_LOG) oscLog.shift();
+  renderOscLog();
+}
+
+function renderOscLog() {
+  var el = document.getElementById('oscMonitor');
+  el.innerHTML = oscLog.map(function(e) {
+    var t = new Date(e.timestamp);
+    var time = t.toLocaleTimeString([], { hour12: false }) + '.' + String(t.getMilliseconds()).padStart(3, '0');
+    var dir = e.direction === 'in' ? 'in' : 'out';
+    var argsStr = (e.args || []).map(function(a) { return String(a); }).join(', ');
+    return '<div class="osc-entry">' +
+      '<span class="osc-time">' + time.slice(-12) + '</span>' +
+      '<span class="osc-dir ' + dir + '">' + (dir === 'in' ? '>' : '<') + '</span>' +
+      '<span class="osc-addr">' + escapeHtml(e.address) + '</span>' +
+      '<span class="osc-args">' + escapeHtml(argsStr) + '</span>' +
+    '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearOscLog() {
+  oscLog = [];
+  renderOscLog();
+}
+
+function toggleOscMonitor(enabled) {
+  oscMonitorEnabled = enabled;
+  if (dashWs && dashWs.readyState === 1) {
+    dashWs.send(JSON.stringify({ type: 'osc-monitor', enabled: enabled }));
+  }
+}
+
+// --- Dashboard WebSocket ---
+
+var dashWs = null;
+var wsReconnectTimer = null;
+
+function connectDashWs() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  dashWs = new WebSocket(proto + '//' + location.host);
+  var dot = document.getElementById('wsDot');
+
+  dashWs.onopen = function() {
+    dot.classList.add('connected');
+    // Send OSC monitor preference
+    dashWs.send(JSON.stringify({ type: 'osc-monitor', enabled: oscMonitorEnabled }));
+  };
+
+  dashWs.onclose = function() {
+    dot.classList.remove('connected');
+    // Reconnect after 3 seconds
+    wsReconnectTimer = setTimeout(connectDashWs, 3000);
+  };
+
+  dashWs.onerror = function() {
+    dot.classList.remove('connected');
+  };
+
+  dashWs.onmessage = function(event) {
+    try {
+      var msg = JSON.parse(event.data);
+      handleWsMessage(msg);
+    } catch(e) {}
+  };
+}
+
+function handleWsMessage(msg) {
+  switch(msg.type) {
+    case 'osc':
+      addOscEntry(msg);
+      break;
+
+    case 'driver-state':
+      // Immediate refresh of health data
+      fetchHealth();
+      break;
+
+    case 'cue-event':
+      if (msg.state) {
+        cueState = msg.state;
+        renderCueList();
+      } else {
+        // Refresh cue data on other events
+        fetchCues();
+      }
+      break;
+  }
+}
+
+// Start polling and WebSocket
 fetchHealth();
 fetchChecklist();
-pollTimer = setInterval(fetchHealth, POLL_INTERVAL);
+fetchCues();
+pollTimer = setInterval(function() {
+  fetchHealth();
+  fetchCues();
+}, POLL_INTERVAL);
+connectDashWs();
 </script>
 
 </body>

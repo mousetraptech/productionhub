@@ -82,6 +82,15 @@ export interface Config {
     enabled: boolean;
     port: number;
   };
+  macros?: Array<{
+    address: string;
+    name: string;
+    actions: Array<{
+      address: string;
+      args?: (number | string)[];
+      delayMs?: number;
+    }>;
+  }>;
 }
 
 // --- Defaults ---
@@ -172,6 +181,17 @@ function loadHubConfig(parsed: any): Config {
       enabled: parsed.ui.enabled ?? false,
       port: parsed.ui.port ?? 3001,
     } : undefined,
+    macros: parsed.macros && Array.isArray(parsed.macros)
+      ? parsed.macros.map((m: any) => ({
+          address: m.address,
+          name: m.name ?? m.address,
+          actions: (m.actions ?? []).map((a: any) => ({
+            address: a.address,
+            args: Array.isArray(a.args) ? a.args : undefined,
+            delayMs: a.delayMs ?? undefined,
+          })),
+        }))
+      : undefined,
   };
 
   console.log(`[Config] Hub mode: ${devices.length} device(s) configured`);

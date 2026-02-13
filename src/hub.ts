@@ -22,6 +22,10 @@ import { CueEngine } from './cue-engine/engine';
 import { TemplateLoader } from './shows/templates';
 import { ShowPersistence } from './cue-engine/persistence';
 import { ModWebSocket } from './server/websocket';
+import { DeviceHealthManager, DeviceHealth, ReconnectConfig, HeartbeatConfig } from './health';
+import { CueSequencer, CueSequencerState, CueList } from './cue-sequencer';
+import { DashboardWebSocket } from './server/dashboard-ws';
+import { MacroEngine, MacroDef, MacroConfig } from './macros';
 
 export interface HubConfig {
   osc: {
@@ -44,6 +48,7 @@ export interface HubConfig {
     enabled: boolean;
     port: number;
   };
+  macros?: MacroDef[];
 }
 
 export class ProductionHub {
@@ -64,6 +69,10 @@ export class ProductionHub {
   private templateLoader: TemplateLoader;
   private showPersistence: ShowPersistence;
   private modWebSocket?: ModWebSocket;
+  private healthManagers: Map<string, DeviceHealthManager> = new Map();
+  private cueSequencer: CueSequencer;
+  private dashboardWs: DashboardWebSocket;
+  private macroEngine: MacroEngine;
 
   /** HubContext passed to drivers so they can use the shared fade engine */
   readonly hubContext: HubContext;
@@ -118,6 +127,44 @@ export class ProductionHub {
         this.routeOSC(`${prefix}${address}`, args);
       },
     );
+
+    // Cue sequencer: YAML-driven cue list with direct OSC addresses
+    this.cueSequencer = new CueSequencer(
+      (address: string, args: any[]) => this.routeOSC(address, args),
+      this.verbose,
+    );
+
+    // Dashboard WebSocket for live updates
+    this.dashboardWs = new DashboardWebSocket();
+
+    // Wire cue sequencer events to dashboard
+    this.cueSequencer.on('cue-fired', (index: number, cue: any) => {
+      this.dashboardWs.broadcastCueEvent('cue-fired', {
+        index,
+        cueId: cue.id,
+        cueName: cue.name,
+      });
+    });
+    this.cueSequencer.on('cue-complete', (index: number, cue: any) => {
+      this.dashboardWs.broadcastCueEvent('cue-complete', { index, cueId: cue.id });
+    });
+    this.cueSequencer.on('state', (state: CueSequencerState) => {
+      this.dashboardWs.broadcastCueEvent('state', { state });
+    });
+
+    // Macro engine: config-defined group commands
+    this.macroEngine = new MacroEngine(
+      (address: string, args: any[]) => this.routeOSC(address, args),
+      this.verbose,
+    );
+
+    // Load macros from config if provided
+    if (config.macros && config.macros.length > 0) {
+      this.macroEngine.loadMacros({ macros: config.macros });
+    }
+
+    // Register built-in /hub/panic macro
+    this.registerPanicMacro();
   }
 
   /** Register a device driver with the hub */
@@ -132,21 +179,43 @@ export class ProductionHub {
       .sort((a, b) => b.length - a.length); // longest first
 
     // Create stats tracker for this driver
+    const transportType = config ? inferTransportType(config.type, config) : 'udp';
     const stats = createDriverStats(
       driver.name,
       prefix,
-      config ? inferTransportType(config.type, config) : 'udp',
+      transportType,
       config?.host ?? '',
       config?.port ?? 0,
     );
     this.driverStats.set(prefix, stats);
     let firstConnectSeen = false;
 
+    // Create health manager for auto-reconnect and heartbeat monitoring
+    const reconnectCfg: Partial<ReconnectConfig> | undefined = config?.reconnect;
+    const heartbeatCfg: Partial<HeartbeatConfig> | undefined = config?.heartbeat;
+    const healthManager = new DeviceHealthManager(
+      driver,
+      config?.type ?? 'unknown',
+      transportType,
+      reconnectCfg,
+      heartbeatCfg,
+      this.verbose,
+    );
+    this.healthManagers.set(prefix, healthManager);
+
+    healthManager.on('stateChange', (newState: string, prevState: string) => {
+      if (this.verbose) {
+        console.log(`[Hub] ${driver.name} health: ${prevState} -> ${newState}`);
+      }
+    });
+
     // Wire up feedback: driver emits feedback, hub prepends prefix and sends to OSC clients
     driver.on('feedback', (event: FeedbackEvent) => {
       const fullAddress = `${prefix}${event.address}`;
       this.oscServer.sendToClients(fullAddress, event.args);
       stats.lastMessageReceivedAt = Date.now();
+      healthManager.markDataReceived();
+      this.dashboardWs.broadcastOscMessage(fullAddress, event.args, 'out');
       if (this.verbose) {
         console.log(`[Hub] Feedback ${driver.name}: ${fullAddress}`);
       }
@@ -156,6 +225,7 @@ export class ProductionHub {
       stats.lastError = err.message;
       stats.lastErrorAt = Date.now();
       console.error(`[Hub] ${driver.name} error: ${err.message}`);
+      this.dashboardWs.broadcastDriverState(driver.name, prefix, 'error', err.message);
     });
 
     driver.on('connected', () => {
@@ -166,6 +236,7 @@ export class ProductionHub {
       console.log(`[Hub] ${driver.name} connected`);
       this.sendDriverStatus(driver.name, 1);
       this.checkAllReady();
+      this.dashboardWs.broadcastDriverState(driver.name, prefix, 'connected');
     });
 
     driver.on('disconnected', () => {
@@ -173,6 +244,7 @@ export class ProductionHub {
       stats.lastDisconnectedAt = Date.now();
       console.warn(`[Hub] ${driver.name} disconnected`);
       this.sendDriverStatus(driver.name, 0);
+      this.dashboardWs.broadcastDriverState(driver.name, prefix, 'disconnected');
     });
 
     if (this.verbose) {
@@ -235,9 +307,15 @@ export class ProductionHub {
     console.log('[Hub] Stopping...');
     this.fadeEngine.stop();
     this.oscServer.stop();
+    this.cueSequencer.shutdown();
+    this.macroEngine.shutdown();
+    for (const hm of this.healthManagers.values()) {
+      hm.shutdown();
+    }
     for (const driver of this.drivers.values()) {
       driver.disconnect();
     }
+    this.dashboardWs.stop();
     if (this.healthServer) {
       this.healthServer.close();
       this.healthServer = undefined;
@@ -246,6 +324,134 @@ export class ProductionHub {
     if (this.modWebSocket) {
       this.modWebSocket.stop();
       this.modWebSocket = undefined;
+    }
+  }
+
+  /** Get health status for all devices */
+  getDeviceHealth(): DeviceHealth[] {
+    return Array.from(this.healthManagers.values()).map(hm => hm.getHealth());
+  }
+
+  /** Get a health manager by prefix (for testing) */
+  getHealthManager(prefix: string): DeviceHealthManager | undefined {
+    return this.healthManagers.get(prefix.toLowerCase());
+  }
+
+  /** Get the cue sequencer (for API/testing) */
+  getCueSequencer(): CueSequencer {
+    return this.cueSequencer;
+  }
+
+  /** Get the macro engine (for API/testing) */
+  getMacroEngine(): MacroEngine {
+    return this.macroEngine;
+  }
+
+  /**
+   * Register the built-in /hub/panic macro.
+   * Panic stops all fades, stops cue sequencer, and stops all macro timers.
+   * Additional device-specific actions can be added via config macros.
+   */
+  private registerPanicMacro(): void {
+    // If a custom /hub/panic macro was loaded from config, leave it as-is
+    if (this.macroEngine.hasMacro('/hub/panic')) return;
+
+    // Register a default panic: cancel fades + stop cues
+    this.macroEngine.loadMacros({
+      macros: [{
+        address: '/hub/panic',
+        name: 'PANIC',
+        actions: [
+          { address: '/fade/stop' },        // cancel all fades
+          { address: '/hub/stop' },          // stop cue sequencer
+        ],
+      }],
+    });
+  }
+
+  /**
+   * Handle /hub/* OSC commands for the cue sequencer.
+   *
+   *   /hub/go                → fire next cue
+   *   /hub/go/{cueId}        → fire specific cue
+   *   /hub/stop              → stop all pending actions
+   *   /hub/back              → move playhead back
+   *   /hub/cuelist/load      → load a cue list file (arg[0] = file path)
+   *   /hub/status            → request current state (responds via OSC feedback)
+   */
+  private handleHubCommand(addr: string, args: any[]): void {
+    // Normalize arg extraction: OSC args may be { type, value } objects
+    const extractString = (a: any): string =>
+      typeof a === 'object' && a !== null && a.value !== undefined
+        ? String(a.value)
+        : String(a);
+
+    if (addr === '/hub/go') {
+      this.cueSequencer.go();
+      return;
+    }
+
+    if (addr.startsWith('/hub/go/')) {
+      const cueId = addr.slice('/hub/go/'.length);
+      if (cueId) {
+        this.cueSequencer.goCue(cueId);
+      }
+      return;
+    }
+
+    if (addr === '/hub/stop') {
+      this.cueSequencer.stop();
+      return;
+    }
+
+    if (addr === '/hub/back') {
+      this.cueSequencer.back();
+      return;
+    }
+
+    if (addr === '/hub/cuelist/load') {
+      if (args.length === 0) {
+        console.warn('[Hub] /hub/cuelist/load requires a file path argument');
+        return;
+      }
+      const filePath = extractString(args[0]);
+      try {
+        const { loadCueListFromFile } = require('./cue-sequencer');
+        const cueList = loadCueListFromFile(filePath);
+        this.cueSequencer.loadCueList(cueList);
+      } catch (err: any) {
+        console.error(`[Hub] Failed to load cue list: ${err.message}`);
+      }
+      return;
+    }
+
+    if (addr === '/hub/status') {
+      const state = this.cueSequencer.getState();
+      this.oscServer.sendToClients('/hub/status/loaded', [
+        { type: 'i', value: state.loaded ? 1 : 0 },
+      ]);
+      this.oscServer.sendToClients('/hub/status/cuelist', [
+        { type: 's', value: state.cueListName },
+      ]);
+      this.oscServer.sendToClients('/hub/status/playhead', [
+        { type: 'i', value: state.playheadIndex },
+      ]);
+      this.oscServer.sendToClients('/hub/status/running', [
+        { type: 'i', value: state.isRunning ? 1 : 0 },
+      ]);
+      this.oscServer.sendToClients('/hub/status/activecue', [
+        { type: 's', value: state.activeCueId ?? '' },
+      ]);
+      return;
+    }
+
+    // Check if it's a macro (e.g. /hub/panic, /hub/macro/*)
+    if (this.macroEngine.execute(addr, args)) {
+      return;
+    }
+
+    if (this.verbose) {
+      console.warn(`[Hub] Unknown hub command: ${addr}`);
     }
   }
 
@@ -259,6 +465,9 @@ export class ProductionHub {
    */
   routeOSC(address: string, args: any[]): void {
     const addr = address.toLowerCase();
+
+    // Dashboard OSC monitor (throttled)
+    this.dashboardWs.broadcastOscMessage(address, args, 'in');
 
     // Global fade stop
     if (addr === '/fade/stop') {
@@ -281,6 +490,17 @@ export class ProductionHub {
         console.log(SystemsCheck.formatConsoleReport(report));
         this.sendCheckResultsViaOSC(report);
       });
+      return;
+    }
+
+    // Cue sequencer OSC commands: /hub/go, /hub/stop, /hub/back, /hub/status
+    if (addr.startsWith('/hub/')) {
+      this.handleHubCommand(addr, args);
+      return;
+    }
+
+    // Macro matching — check before driver prefix matching
+    if (this.macroEngine.execute(addr, args)) {
       return;
     }
 
@@ -426,6 +646,74 @@ export class ProductionHub {
         return;
       }
 
+      if (req.method === 'GET' && req.url === '/api/health') {
+        const deviceHealth = this.getDeviceHealth();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(deviceHealth, null, 2));
+        return;
+      }
+
+      // Cue sequencer REST API
+      if (req.method === 'GET' && req.url === '/api/cues') {
+        const state = this.cueSequencer.getState();
+        const cueList = this.cueSequencer.getCueList();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ state, cueList }, null, 2));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/cues/go') {
+        this.cueSequencer.go();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.cueSequencer.getState()));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url?.startsWith('/api/cues/go/')) {
+        const cueId = req.url.slice('/api/cues/go/'.length);
+        if (cueId) {
+          this.cueSequencer.goCue(cueId);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.cueSequencer.getState()));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/cues/stop') {
+        this.cueSequencer.stop();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.cueSequencer.getState()));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url === '/api/cues/back') {
+        this.cueSequencer.back();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.cueSequencer.getState()));
+        return;
+      }
+
+      // Macro REST API
+      if (req.method === 'GET' && req.url === '/api/macros') {
+        const macros = this.macroEngine.getMacros();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(macros, null, 2));
+        return;
+      }
+
+      if (req.method === 'POST' && req.url?.startsWith('/api/macros/trigger/')) {
+        const macroAddr = '/' + req.url.slice('/api/macros/trigger/'.length);
+        const executed = this.macroEngine.execute(macroAddr, []);
+        if (executed) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ triggered: macroAddr }));
+        } else {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `No macro for: ${macroAddr}` }));
+        }
+        return;
+      }
+
       if (req.method === 'GET' && req.url === '/system/check') {
         this.runSystemsCheck().then(report => {
           console.log(SystemsCheck.formatConsoleReport(report));
@@ -556,6 +844,9 @@ export class ProductionHub {
       res.writeHead(404);
       res.end();
     });
+
+    // Attach dashboard WebSocket to same HTTP server
+    this.dashboardWs.attach(this.healthServer);
 
     this.healthServer.listen(this.healthConfig.port, '0.0.0.0', () => {
       console.log(`[Hub] Dashboard: http://localhost:${this.healthConfig.port}/`);
