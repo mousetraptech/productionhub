@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import { useProductionHub } from './hooks/useProductionHub';
+import { useDeviceStates } from './hooks/useDeviceStates';
 import TemplatePicker from './components/TemplatePicker';
 import ActionPalette from './components/ActionPalette';
 import CueStack from './components/CueStack';
 import GoBar from './components/GoBar';
+import CollapsiblePanel from './components/CollapsiblePanel';
+import {
+  AvantisPanel,
+  OBSPanel,
+  ChamSysPanel,
+  PTZPanel,
+  TouchDesignerPanel,
+} from './components/devices';
 
 export default function App() {
   const { show, categories, templates, connected, send } = useProductionHub();
+  const { deviceStates, connected: devicesConnected } = useDeviceStates();
   const [showPicker, setShowPicker] = useState(true);
 
   // Hide picker once a template is loaded (cues appear)
@@ -40,7 +50,11 @@ export default function App() {
       `}</style>
 
       {pickerVisible && templates.length > 0 && (
-        <TemplatePicker templates={templates} onSelect={selectTemplate} />
+        <TemplatePicker
+          templates={templates}
+          onSelect={selectTemplate}
+          onDismiss={() => setShowPicker(false)}
+        />
       )}
 
       {/* Reconnection indicator */}
@@ -66,9 +80,64 @@ export default function App() {
       />
 
       {/* Center: Cue Stack + GO Bar */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <CueStack show={show} categories={categories} send={send} />
         <GoBar show={show} send={send} />
+      </div>
+
+      {/* Right: Device Panels */}
+      <div style={{
+        width: 320,
+        background: '#0F172A',
+        borderLeft: '1px solid #1E293B',
+        overflowY: 'auto',
+        padding: 12,
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+          paddingBottom: 8,
+          borderBottom: '1px solid #1E293B',
+        }}>
+          <span style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#94A3B8',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}>
+            Device States
+          </span>
+          <span style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: devicesConnected ? '#10B981' : '#EF4444',
+            boxShadow: devicesConnected ? '0 0 6px #10B981' : '0 0 6px #EF4444',
+          }} />
+        </div>
+
+        <CollapsiblePanel title="Avantis" icon="faders">
+          <AvantisPanel state={deviceStates.avantis} />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="OBS Studio" icon="video">
+          <OBSPanel state={deviceStates.obs} />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="ChamSys" icon="lights">
+          <ChamSysPanel state={deviceStates.chamsys} />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="PTZ Camera" icon="camera">
+          <PTZPanel state={deviceStates.visca} />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="TouchDesigner" icon="td">
+          <TouchDesignerPanel state={deviceStates.touchdesigner} />
+        </CollapsiblePanel>
       </div>
     </div>
   );

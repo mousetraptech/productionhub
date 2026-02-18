@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ActionCategory } from '../types';
 import DragTile from './DragTile';
+import CommandBuilder from './CommandBuilder';
 
 interface ActionPaletteProps {
   categories: ActionCategory[];
@@ -9,12 +10,12 @@ interface ActionPaletteProps {
 
 export default function ActionPalette({ categories, onNewShow }: ActionPaletteProps) {
   const [expandedCats, setExpandedCats] = useState<string[]>(
-    categories.map(c => c.category)
+    [...categories.map(c => c.category), '__custom__']
   );
 
   // Keep expanded list in sync when categories arrive
-  if (categories.length > 0 && expandedCats.length === 0) {
-    setExpandedCats(categories.map(c => c.category));
+  if (categories.length > 0 && expandedCats.length <= 1) {
+    setExpandedCats([...categories.map(c => c.category), '__custom__']);
   }
 
   const toggleCat = (cat: string) =>
@@ -72,6 +73,35 @@ export default function ActionPalette({ categories, onNewShow }: ActionPalettePr
             </div>
           );
         })}
+
+        {/* Custom Commands */}
+        <div style={{ marginBottom: 2 }}>
+          <button
+            onClick={() => toggleCat('__custom__')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              width: '100%', padding: '9px 8px',
+              background: 'none', border: 'none',
+              color: '#94A3B8', cursor: 'pointer',
+              fontSize: 12.5, fontWeight: 600, textAlign: 'left', borderRadius: 6,
+              transition: 'background 0.1s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#0F172A')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+          >
+            <span style={{ fontSize: 15 }}>⚡</span>
+            <span style={{ flex: 1 }}>Custom Commands</span>
+            <span style={{
+              fontSize: 9, transition: 'transform 0.2s',
+              transform: expandedCats.includes('__custom__') ? 'rotate(180deg)' : 'rotate(0)',
+            }}>▼</span>
+          </button>
+          {expandedCats.includes('__custom__') && (
+            <div style={{ padding: '3px 0 6px' }}>
+              <CommandBuilder />
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ padding: '12px 14px', borderTop: '1px solid #1E293B' }}>
         <button

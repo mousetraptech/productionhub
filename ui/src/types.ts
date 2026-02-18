@@ -1,6 +1,13 @@
+export interface InlineOSC {
+  address: string;
+  args: any[];
+  label: string;
+}
+
 export interface CueAction {
   actionId: string;
   delay?: number;
+  osc?: InlineOSC;
 }
 
 export interface Cue {
@@ -50,12 +57,14 @@ export type ClientMessage =
   | { type: 'get-templates' }
   | { type: 'load-template'; templateId: string }
   | { type: 'go' }
+  | { type: 'standby' }
   | { type: 'reset' }
   | { type: 'add-cue'; cue?: Partial<Cue>; atIndex?: number }
   | { type: 'remove-cue'; cueId: string }
   | { type: 'move-cue'; cueId: string; direction: -1 | 1 }
   | { type: 'rename-cue'; cueId: string; name: string }
-  | { type: 'add-action-to-cue'; cueId: string; actionId: string }
+  | { type: 'add-action-to-cue'; cueId: string; actionId: string; osc?: InlineOSC; delay?: number }
   | { type: 'remove-action-from-cue'; cueId: string; actionIndex: number }
   | { type: 'save-show'; name: string }
-  | { type: 'load-show'; name: string };
+  | { type: 'load-show'; name: string }
+  | { type: 'osc'; address: string; args: any[] };

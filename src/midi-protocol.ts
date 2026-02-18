@@ -224,7 +224,7 @@ export function buildNRPNFader(midiChannel: number, stripHex: number, level: num
 /** Build Note On message for mute control */
 export function buildMuteMessage(midiChannel: number, noteNumber: number, muteOn: boolean): number[] {
   const status = 0x90 | (midiChannel & 0x0f);
-  const velocity = muteOn ? 0x7f : 0x00; // >= 0x40 = mute on, <= 0x3F = mute off
+  const velocity = muteOn ? 0x7f : 0x3f; // >= 0x40 = mute on, <= 0x3F = mute off (0x00 would be Note Off per MIDI spec)
   return [status, noteNumber & 0x7f, velocity];
 }
 
@@ -266,34 +266,44 @@ export class AvantisTCPTransport extends EventEmitter {
 
   connect(): void {
     if (this.socket) {
+      // Remove all listeners from the old socket before destroying it,
+      // so its async 'close' event doesn't interfere with the new socket.
+      this.socket.removeAllListeners();
       this.socket.destroy();
+      this.socket = null;
     }
 
-    this.socket = new net.Socket();
+    const sock = new net.Socket();
+    this.socket = sock;
 
-    this.socket.on('connect', () => {
+    sock.on('connect', () => {
+      // Guard: only handle events for the current socket
+      if (this.socket !== sock) return;
       this.connected = true;
       this.emit('connected');
       console.log(`[MIDI TCP] Connected to Avantis at ${this.host}:${this.port}`);
     });
 
-    this.socket.on('data', (data: Buffer) => {
+    sock.on('data', (data: Buffer) => {
+      if (this.socket !== sock) return;
       this.emit('data', data);
     });
 
-    this.socket.on('error', (err: Error) => {
+    sock.on('error', (err: Error) => {
+      if (this.socket !== sock) return;
       console.error(`[MIDI TCP] Connection error: ${err.message}`);
       this.emit('error', err);
     });
 
-    this.socket.on('close', () => {
+    sock.on('close', () => {
+      if (this.socket !== sock) return;
       this.connected = false;
       this.emit('disconnected');
       console.log('[MIDI TCP] Disconnected from Avantis');
       this.scheduleReconnect();
     });
 
-    this.socket.connect(this.port, this.host);
+    sock.connect(this.port, this.host);
   }
 
   private scheduleReconnect(): void {

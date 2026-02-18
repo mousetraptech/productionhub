@@ -14,6 +14,8 @@ import { ShowPersistence } from '../cue-engine/persistence';
 import { ShowState } from '../cue-engine/types';
 import { Cue } from '../cue-engine/types';
 
+export type RouteOSCFn = (address: string, args: any[]) => void;
+
 export interface ModWebSocketConfig {
   port: number;
 }
@@ -25,6 +27,7 @@ export class ModWebSocket {
   private actionRegistry: ActionRegistry;
   private templateLoader: TemplateLoader;
   private persistence: ShowPersistence;
+  private routeOSC: RouteOSCFn;
 
   constructor(
     config: ModWebSocketConfig,
@@ -32,12 +35,14 @@ export class ModWebSocket {
     actionRegistry: ActionRegistry,
     templateLoader: TemplateLoader,
     persistence: ShowPersistence,
+    routeOSC: RouteOSCFn,
   ) {
     this.config = config;
     this.cueEngine = cueEngine;
     this.actionRegistry = actionRegistry;
     this.templateLoader = templateLoader;
     this.persistence = persistence;
+    this.routeOSC = routeOSC;
   }
 
   /** Start the WebSocket server */
@@ -118,6 +123,10 @@ export class ModWebSocket {
         this.cueEngine.go();
         break;
 
+      case 'standby':
+        this.cueEngine.standby();
+        break;
+
       case 'reset':
         this.cueEngine.reset();
         break;
@@ -139,7 +148,7 @@ export class ModWebSocket {
         break;
 
       case 'add-action-to-cue':
-        this.cueEngine.addActionToCue(msg.cueId, msg.actionId);
+        this.cueEngine.addActionToCue(msg.cueId, msg.actionId, msg.delay, msg.osc);
         break;
 
       case 'remove-action-from-cue':
@@ -155,6 +164,12 @@ export class ModWebSocket {
         if (state) this.cueEngine.loadState(state);
         break;
       }
+
+      case 'osc':
+        if (typeof msg.address === 'string') {
+          this.routeOSC(msg.address, Array.isArray(msg.args) ? msg.args : []);
+        }
+        break;
 
       default:
         console.warn(`[ModWS] Unknown message type: ${msg.type}`);

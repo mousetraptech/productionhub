@@ -153,6 +153,14 @@ export class OBSEmulator extends DeviceEmulator {
     if (parts[0] === 'duration') {
       this.transitionDuration = this.getInt(args);
       this.log('Transition', `duration → ${this.transitionDuration}ms`);
+    } else if (parts[0] === 'trigger') {
+      if (this.previewScene && this.previewScene !== this.currentScene) {
+        const old = this.currentScene;
+        this.currentScene = this.previewScene;
+        this.previewScene = old;
+        this.emitFeedback('/scene/current', [{ type: 's', value: this.currentScene }]);
+        this.log('Transition', `${old} → ${this.currentScene} (${this.currentTransition})`);
+      }
     } else {
       const name = decodeURIComponent(parts.join('/'));
       this.currentTransition = name;

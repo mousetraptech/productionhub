@@ -19,8 +19,12 @@ export function useProductionHub() {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const send = useCallback((msg: ClientMessage) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      console.log('[ProductionHub] send:', msg.type, msg);
+      ws.send(JSON.stringify(msg));
+    } else {
+      console.warn('[ProductionHub] send FAILED - ws state:', ws ? ws.readyState : 'null');
     }
   }, []);
 
@@ -57,9 +61,13 @@ export function useProductionHub() {
       };
 
       ws.onclose = () => {
-        setConnected(false);
-        wsRef.current = null;
-        reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
+        // Only clear the ref if this is still the active WebSocket
+        // (avoids race with React StrictMode double-mount)
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+          setConnected(false);
+          reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
+        }
       };
 
       ws.onerror = () => {

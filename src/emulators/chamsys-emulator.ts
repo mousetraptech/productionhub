@@ -49,6 +49,7 @@ export class ChamSysEmulator extends DeviceEmulator {
           const n = parseInt(parts[1], 10);
           if (!isNaN(n)) {
             this.lastExec = n;
+            this.emitFeedback(`/exec/${n}`, [{ type: 'i', value: n }]);
             this.log('Execute', `cue ${n}`);
           }
         }
@@ -62,8 +63,10 @@ export class ChamSysEmulator extends DeviceEmulator {
             for (const [key, state] of this.playbacks) {
               if (key.startsWith(`${n}/`)) {
                 state.active = false;
+                this.emitFeedback(`/pb/${key}/isActive`, [{ type: 'i', value: 0 }]);
               }
             }
+            this.emitFeedback(`/release/${n}`, [{ type: 'i', value: n }]);
             this.log('Release', `playback ${n}`);
           }
         }
@@ -103,6 +106,7 @@ export class ChamSysEmulator extends DeviceEmulator {
       const level = this.getFloat(args);
       const state = this.getOrCreatePlayback(key);
       state.level = level;
+      this.emitFeedback(`/pb/${key}/level`, [{ type: 'f', value: level }]);
       this.log('Playback', `${key} level → ${level.toFixed(2)}`);
       return;
     }
@@ -110,6 +114,7 @@ export class ChamSysEmulator extends DeviceEmulator {
     // /pb/{X}/{Y} — go (activate)
     const state = this.getOrCreatePlayback(key);
     state.active = true;
+    this.emitFeedback(`/pb/${key}/isActive`, [{ type: 'i', value: 1 }]);
     this.log('Playback', `${key} GO`);
   }
 

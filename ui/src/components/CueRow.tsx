@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Cue } from '../types';
+import type { Cue, InlineOSC } from '../types';
 import ActionChip, { buildActionLookup } from './ActionChip';
 import type { ActionCategory } from '../types';
 
@@ -14,7 +14,7 @@ interface CueRowProps {
   onRemoveCue: (cueId: string) => void;
   onRenameCue: (cueId: string, name: string) => void;
   onMoveCue: (cueId: string, direction: -1 | 1) => void;
-  onDrop: (cueId: string, actionId: string) => void;
+  onDrop: (cueId: string, actionId: string, osc?: InlineOSC, delay?: number) => void;
 }
 
 export default function CueRow({
@@ -43,9 +43,19 @@ export default function CueRow({
       onDragLeave={() => setIsOver(false)}
       onDrop={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsOver(false);
+        // Check for inline OSC (CommandBuilder drag)
+        const jsonData = e.dataTransfer.getData('application/json');
+        if (jsonData) {
+          try {
+            const { actionId, osc, delay } = JSON.parse(jsonData);
+            onDrop(cue.id, actionId, osc, delay);
+            return;
+          } catch { /* fall through */ }
+        }
         const itemId = e.dataTransfer.getData('text/plain');
-        if (itemId && lookup[itemId]) onDrop(cue.id, itemId);
+        if (itemId) onDrop(cue.id, itemId);
       }}
       style={{
         background: isActive ? '#0C1A2E' : isOver ? '#0E1E38' : fired ? '#0A0F1A' : '#0F172A',
@@ -60,6 +70,7 @@ export default function CueRow({
         opacity: fired ? 0.45 : 1,
         position: 'relative',
         overflow: 'hidden',
+        flexShrink: 0,
       }}
     >
       {/* Active glow */}
@@ -162,6 +173,7 @@ export default function CueRow({
               index={ai}
               expanded={isActive}
               lookup={lookup}
+              osc={cueAction.osc}
               onRemove={(idx) => onRemoveAction(cue.id, idx)}
             />
           ))}

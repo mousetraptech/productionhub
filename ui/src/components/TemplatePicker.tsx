@@ -4,9 +4,10 @@ import type { Template } from '../types';
 interface TemplatePickerProps {
   templates: Template[];
   onSelect: (templateId: string) => void;
+  onDismiss: () => void;
 }
 
-export default function TemplatePicker({ templates, onSelect }: TemplatePickerProps) {
+export default function TemplatePicker({ templates, onSelect, onDismiss }: TemplatePickerProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
@@ -28,7 +29,7 @@ export default function TemplatePicker({ templates, onSelect }: TemplatePickerPr
             What kind of show tonight?
           </h1>
           <p style={{ color: '#64748B', fontSize: 14, marginTop: 8 }}>
-            Pick a template. You can change everything after.
+            Pick a template, or start from scratch.
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -65,6 +66,25 @@ export default function TemplatePicker({ templates, onSelect }: TemplatePickerPr
             </button>
           ))}
         </div>
+
+        <button
+          onClick={onDismiss}
+          style={{
+            display: 'block',
+            margin: '20px auto 0',
+            background: 'none',
+            border: 'none',
+            color: '#475569',
+            fontSize: 13,
+            cursor: 'pointer',
+            padding: '8px 16px',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#94A3B8')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+        >
+          Start from scratch &rarr;
+        </button>
       </div>
     </div>
   );

@@ -56,7 +56,7 @@ export default function GoBar({ show, send }: GoBarProps) {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
         {activeCueIndex !== null && (
           <button
-            onClick={() => send({ type: 'reset' })}
+            onClick={() => send({ type: 'standby' })}
             style={{
               background: '#1E293B', border: '1px solid #334155',
               color: '#94A3B8', padding: '10px 18px', borderRadius: 8,
@@ -66,7 +66,7 @@ export default function GoBar({ show, send }: GoBarProps) {
             onMouseEnter={e => { e.currentTarget.style.background = '#334155'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#1E293B'; }}
           >
-            Reset
+            Rewind
           </button>
         )}
         <button

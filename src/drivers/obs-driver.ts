@@ -16,6 +16,7 @@
  *   /source/{name}/visible     SetSceneItemEnabled (int 0|1)
  *   /transition/{name}         SetCurrentSceneTransition
  *   /transition/duration       SetCurrentSceneTransitionDuration (int ms)
+ *   /transition/trigger        TriggerStudioModeTransition (preview → program)
  *   /virtualcam/start          StartVirtualCam
  *   /virtualcam/stop           StopVirtualCam
  *
@@ -158,29 +159,30 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
       return;
     }
 
-    const addr = address.toLowerCase().replace(/\/$/, '');
-    const parts = addr.split('/').filter(Boolean);
+    const rawAddr = address.replace(/\/$/, '');
+    const rawParts = rawAddr.split('/').filter(Boolean);
+    const cmd = rawParts[0]?.toLowerCase();
 
-    if (parts.length === 0) return;
+    if (!cmd) return;
 
-    switch (parts[0]) {
+    switch (cmd) {
       case 'scene':
-        this.handleSceneCommand(parts.slice(1), args);
+        this.handleSceneCommand(rawParts.slice(1), args);
         break;
       case 'stream':
-        this.handleStreamCommand(parts.slice(1));
+        this.handleStreamCommand(rawParts.slice(1));
         break;
       case 'record':
-        this.handleRecordCommand(parts.slice(1));
+        this.handleRecordCommand(rawParts.slice(1));
         break;
       case 'transition':
-        this.handleTransitionCommand(parts.slice(1), args);
+        this.handleTransitionCommand(rawParts.slice(1), args);
         break;
       case 'virtualcam':
-        this.handleVirtualCamCommand(parts.slice(1));
+        this.handleVirtualCamCommand(rawParts.slice(1));
         break;
       case 'source':
-        this.handleSourceCommand(parts.slice(1), args);
+        this.handleSourceCommand(rawParts.slice(1), args);
         break;
       default:
         if (this.verbose) console.warn(`[OBS] Unrecognized: ${address}`);
@@ -204,14 +206,13 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
   // --- Command handlers ---
 
-  private handleSceneCommand(parts: string[], args: any[]): void {
+  private handleSceneCommand(parts: string[], _args: any[]): void {
     if (parts.length === 0) return;
 
-    if (parts[0] === 'preview' && parts.length >= 2) {
+    if (parts[0].toLowerCase() === 'preview' && parts.length >= 2) {
       const sceneName = decodeURIComponent(parts.slice(1).join('/'));
       this.sendRequest('SetCurrentPreviewScene', { sceneName });
     } else {
-      // /scene/{name} — use the raw parts to preserve case
       const sceneName = decodeURIComponent(parts.join('/'));
       this.sendRequest('SetCurrentProgramScene', { sceneName });
     }
@@ -219,7 +220,7 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
   private handleStreamCommand(parts: string[]): void {
     if (parts.length === 0) return;
-    switch (parts[0]) {
+    switch (parts[0].toLowerCase()) {
       case 'start':  this.sendRequest('StartStream'); break;
       case 'stop':   this.sendRequest('StopStream'); break;
       case 'toggle': this.sendRequest('ToggleStream'); break;
@@ -228,7 +229,7 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
   private handleRecordCommand(parts: string[]): void {
     if (parts.length === 0) return;
-    switch (parts[0]) {
+    switch (parts[0].toLowerCase()) {
       case 'start':  this.sendRequest('StartRecord'); break;
       case 'stop':   this.sendRequest('StopRecord'); break;
       case 'toggle': this.sendRequest('ToggleRecord'); break;
@@ -237,9 +238,12 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
   private handleTransitionCommand(parts: string[], args: any[]): void {
     if (parts.length === 0) return;
-    if (parts[0] === 'duration') {
+    const sub = parts[0].toLowerCase();
+    if (sub === 'duration') {
       const ms = getInt(args);
       this.sendRequest('SetCurrentSceneTransitionDuration', { transitionDuration: ms });
+    } else if (sub === 'trigger') {
+      this.sendRequest('TriggerStudioModeTransition');
     } else {
       const name = decodeURIComponent(parts.join('/'));
       this.sendRequest('SetCurrentSceneTransition', { transitionName: name });
@@ -248,7 +252,7 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
   private handleVirtualCamCommand(parts: string[]): void {
     if (parts.length === 0) return;
-    switch (parts[0]) {
+    switch (parts[0].toLowerCase()) {
       case 'start': this.sendRequest('StartVirtualCam'); break;
       case 'stop':  this.sendRequest('StopVirtualCam'); break;
     }
@@ -257,7 +261,7 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
   private handleSourceCommand(parts: string[], args: any[]): void {
     // /source/{name}/visible {0|1}
     if (parts.length < 2) return;
-    const lastPart = parts[parts.length - 1];
+    const lastPart = parts[parts.length - 1].toLowerCase();
     if (lastPart === 'visible') {
       const sourceName = decodeURIComponent(parts.slice(0, -1).join('/'));
       const enabled = getInt(args) >= 1;

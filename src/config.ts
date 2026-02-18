@@ -8,8 +8,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from 'yaml';
+import { ZodError } from 'zod';
 import { DeviceConfig } from './drivers/device-driver';
 import { ProbeTarget } from './systems-check';
+import { validateHubConfig, validateLegacyConfig, formatZodError } from './config-schema';
 
 // --- Legacy Config (backward compat with single-Avantis setups) ---
 
@@ -138,60 +140,61 @@ export function loadConfig(configPath?: string): Config {
 
 /** Load new multi-device format */
 function loadHubConfig(parsed: any): Config {
-  const devices: DeviceConfig[] = parsed.devices.map((d: any) => {
-    if (!d.type) throw new Error(`[Config] Device missing "type" field`);
-    if (!d.prefix) throw new Error(`[Config] Device "${d.type}" missing "prefix" field`);
-    if (!d.host) throw new Error(`[Config] Device "${d.type}" missing "host" field`);
-    if (!d.port) throw new Error(`[Config] Device "${d.type}" missing "port" field`);
+  // Validate with Zod schema
+  let validated;
+  try {
+    validated = validateHubConfig(parsed);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new Error(`[Config] Validation failed:\n${formatZodError(error)}`);
+    }
+    throw error;
+  }
 
-    // Normalize prefix: ensure leading slash, no trailing slash
+  // Normalize prefixes and build device configs
+  const devices: DeviceConfig[] = validated.devices.map((d) => {
     let prefix = d.prefix;
     if (!prefix.startsWith('/')) prefix = '/' + prefix;
     prefix = prefix.replace(/\/$/, '');
-
-    return { ...d, prefix };
+    return { ...d, prefix } as DeviceConfig;
   });
 
   const config: Config = {
     osc: {
-      listenAddress: parsed.osc?.listenAddress ?? DEFAULT_OSC.listenAddress,
-      listenPort: parsed.osc?.listenPort ?? DEFAULT_OSC.listenPort,
-      replyPort: parsed.osc?.replyPort,
+      listenAddress: validated.osc?.listenAddress ?? DEFAULT_OSC.listenAddress,
+      listenPort: validated.osc?.listenPort ?? DEFAULT_OSC.listenPort,
+      replyPort: validated.osc?.replyPort,
     },
     devices,
-    health: parsed.health ? {
-      enabled: parsed.health.enabled ?? true,
-      port: parsed.health.port ?? 8080,
+    health: validated.health ? {
+      enabled: validated.health.enabled,
+      port: validated.health.port,
     } : undefined,
     logging: {
-      verbose: parsed.logging?.verbose ?? false,
+      verbose: validated.logging?.verbose ?? false,
     },
-    systemsCheck: parsed.systemsCheck ? {
-      externalTargets: (parsed.systemsCheck.externalTargets ?? []).map((t: any) => ({
+    systemsCheck: validated.systemsCheck ? {
+      externalTargets: validated.systemsCheck.externalTargets.map((t) => ({
         name: t.name ?? `${t.host}:${t.port}`,
         host: t.host,
         port: t.port,
-        protocol: t.protocol ?? 'tcp',
+        protocol: t.protocol,
       })),
     } : undefined,
-    checklist: parsed.checklist && Array.isArray(parsed.checklist)
-      ? parsed.checklist.map((item: any) => String(item))
-      : undefined,
-    ui: parsed.ui ? {
-      enabled: parsed.ui.enabled ?? false,
-      port: parsed.ui.port ?? 3001,
+    checklist: validated.checklist,
+    ui: validated.ui ? {
+      enabled: validated.ui.enabled,
+      port: validated.ui.port,
     } : undefined,
-    macros: parsed.macros && Array.isArray(parsed.macros)
-      ? parsed.macros.map((m: any) => ({
-          address: m.address,
-          name: m.name ?? m.address,
-          actions: (m.actions ?? []).map((a: any) => ({
-            address: a.address,
-            args: Array.isArray(a.args) ? a.args : undefined,
-            delayMs: a.delayMs ?? undefined,
-          })),
-        }))
-      : undefined,
+    macros: validated.macros?.map((m) => ({
+      address: m.address,
+      name: m.name ?? m.address,
+      actions: m.actions.map((a) => ({
+        address: a.address,
+        args: a.args,
+        delayMs: a.delayMs,
+      })),
+    })),
   };
 
   console.log(`[Config] Hub mode: ${devices.length} device(s) configured`);
@@ -200,35 +203,38 @@ function loadHubConfig(parsed: any): Config {
 
 /** Load legacy single-Avantis format and convert to hub format */
 function loadLegacyConfig(parsed: any): Config {
-  const midi = parsed.midi ?? {};
-  const feedback = parsed.feedback ?? {};
-
-  const baseChannel = midi.baseChannel ?? 12;
-  if (baseChannel < 1 || baseChannel > 16) {
-    throw new Error(`midi.baseChannel must be 1-16, got ${baseChannel}`);
+  // Validate with Zod schema
+  let validated;
+  try {
+    validated = validateLegacyConfig(parsed);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new Error(`[Config] Validation failed:\n${formatZodError(error)}`);
+    }
+    throw error;
   }
 
   const avantisDevice: DeviceConfig = {
     type: 'avantis',
     prefix: '/avantis',
-    host: midi.host ?? '192.168.1.70',
-    port: midi.port ?? 51325,
-    midiBaseChannel: baseChannel,
+    host: validated.midi.host,
+    port: validated.midi.port,
+    midiBaseChannel: validated.midi.baseChannel,
     feedback: {
-      enabled: feedback.enabled ?? true,
-      echoSuppressionMs: feedback.echoSuppressionMs ?? 100,
+      enabled: validated.feedback?.enabled ?? true,
+      echoSuppressionMs: validated.feedback?.echoSuppressionMs ?? 100,
     },
   };
 
   const config: Config = {
     osc: {
-      listenAddress: parsed.osc?.listenAddress ?? DEFAULT_OSC.listenAddress,
-      listenPort: parsed.osc?.listenPort ?? DEFAULT_OSC.listenPort,
-      replyPort: parsed.osc?.replyPort,
+      listenAddress: validated.osc?.listenAddress ?? DEFAULT_OSC.listenAddress,
+      listenPort: validated.osc?.listenPort ?? DEFAULT_OSC.listenPort,
+      replyPort: validated.osc?.replyPort,
     },
     devices: [avantisDevice],
     logging: {
-      verbose: parsed.logging?.verbose ?? false,
+      verbose: validated.logging?.verbose ?? false,
     },
   };
 

@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import type { ShowState, ActionCategory, ClientMessage } from '../types';
+import { useRef, useState } from 'react';
+import type { ShowState, ActionCategory, ClientMessage, InlineOSC } from '../types';
 import { buildActionLookup } from './ActionChip';
 import CueRow from './CueRow';
 
@@ -12,6 +12,7 @@ interface CueStackProps {
 export default function CueStack({ show, categories, send }: CueStackProps) {
   const cueListRef = useRef<HTMLDivElement>(null);
   const lookup = buildActionLookup(categories);
+  const [dragOver, setDragOver] = useState(false);
 
   const addCue = () => {
     send({ type: 'add-cue' });
@@ -20,8 +21,53 @@ export default function CueStack({ show, categories, send }: CueStackProps) {
     }, 50);
   };
 
+  // Single drop handler on the entire cue list container
+  const onListDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+
+    // Check for inline OSC (CommandBuilder drag)
+    const jsonData = e.dataTransfer.getData('application/json');
+    if (jsonData) {
+      try {
+        const { actionId, osc } = JSON.parse(jsonData) as { actionId: string; osc: InlineOSC };
+        send({
+          type: 'add-cue',
+          cue: { name: osc.label, actions: [{ actionId, osc }] },
+        });
+        return;
+      } catch { /* fall through to text/plain */ }
+    }
+
+    // Registry action (DragTile drag)
+    const itemId = e.dataTransfer.getData('text/plain');
+    if (!itemId) return;
+    const info = lookup[itemId];
+    send({
+      type: 'add-cue',
+      cue: { name: info?.label ?? itemId, actions: [{ actionId: itemId }] },
+    });
+  };
+
+  const onListDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setDragOver(true);
+  };
+
+  const onListDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Only count as leave if we actually left the container
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOver(false);
+    }
+  };
+
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -54,19 +100,34 @@ export default function CueStack({ show, categories, send }: CueStackProps) {
         </button>
       </div>
 
-      {/* Cue List */}
-      <div ref={cueListRef} style={{
-        flex: 1, overflow: 'auto', padding: '14px 24px',
-        display: 'flex', flexDirection: 'column', gap: 6,
-      }}>
+      {/* Cue List — entire area is a drop target */}
+      <div
+        ref={cueListRef}
+        onDragOver={onListDragOver}
+        onDragLeave={onListDragLeave}
+        onDrop={onListDrop}
+        style={{
+          flex: 1, overflow: 'auto', padding: '14px 24px',
+          display: 'flex', flexDirection: 'column', gap: 6,
+          border: dragOver ? '2px dashed #3B82F6' : '2px dashed transparent',
+          background: dragOver ? '#0F172A' : 'transparent',
+          transition: 'border-color 0.15s, background 0.15s',
+        }}
+      >
         {show.cues.length === 0 && (
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexDirection: 'column', gap: 8, color: '#1E293B',
+            flexDirection: 'column', gap: 8, color: dragOver ? '#3B82F6' : '#1E293B',
+            transition: 'color 0.15s',
+            pointerEvents: 'none',
           }}>
             <div style={{ fontSize: 36 }}>📄</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>Empty show</div>
-            <div style={{ fontSize: 12.5, color: '#1E293B' }}>Drag actions here or add a cue</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: dragOver ? '#60A5FA' : '#334155' }}>
+              {dragOver ? 'Drop to create cue' : 'Empty show'}
+            </div>
+            <div style={{ fontSize: 12.5, color: dragOver ? '#3B82F6' : '#1E293B' }}>
+              {dragOver ? '' : 'Drag actions here or add a cue'}
+            </div>
           </div>
         )}
 
@@ -83,45 +144,19 @@ export default function CueStack({ show, categories, send }: CueStackProps) {
             onRemoveCue={(cueId) => send({ type: 'remove-cue', cueId })}
             onRenameCue={(cueId, name) => send({ type: 'rename-cue', cueId, name })}
             onMoveCue={(cueId, direction) => send({ type: 'move-cue', cueId, direction })}
-            onDrop={(cueId, actionId) => send({ type: 'add-action-to-cue', cueId, actionId })}
+            onDrop={(cueId, actionId, osc, delay) => send({ type: 'add-action-to-cue', cueId, actionId, osc, delay })}
           />
         ))}
 
-        {/* Drop zone for new cue at bottom */}
-        {show.cues.length > 0 && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-              e.currentTarget.style.borderColor = '#3B82F6';
-              e.currentTarget.style.background = '#0F172A';
-              e.currentTarget.style.color = '#3B82F6';
-            }}
-            onDragLeave={(e) => {
-              e.currentTarget.style.borderColor = '#1E293B';
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#1E293B';
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.borderColor = '#1E293B';
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#1E293B';
-              const itemId = e.dataTransfer.getData('text/plain');
-              if (itemId && lookup[itemId]) {
-                const info = lookup[itemId];
-                send({
-                  type: 'add-cue',
-                  cue: { name: info.label, actions: [{ actionId: itemId }] },
-                });
-              }
-            }}
-            style={{
-              border: '1.5px dashed #1E293B', borderRadius: 12,
-              padding: 16, textAlign: 'center',
-              color: '#1E293B', fontSize: 12.5,
-              transition: 'all 0.2s', fontStyle: 'italic',
-            }}
-          >
+        {/* Bottom hint when cues exist */}
+        {show.cues.length > 0 && dragOver && (
+          <div style={{
+            border: '1.5px dashed #3B82F6', borderRadius: 12,
+            padding: 16, textAlign: 'center',
+            color: '#3B82F6', fontSize: 12.5,
+            fontStyle: 'italic',
+            pointerEvents: 'none',
+          }}>
             drop to create new cue
           </div>
         )}

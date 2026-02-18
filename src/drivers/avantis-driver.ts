@@ -19,6 +19,7 @@ import {
   OscArg,
 } from './device-driver';
 import { getFloat, getInt, getString, getBool } from './osc-args';
+import { ReconnectQueue } from './reconnect-queue';
 import {
   AvantisTCPTransport,
   resolveStrip,
@@ -60,6 +61,12 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   // Echo suppression: tracks when we last sent a command per strip key
   private lastSentTimestamps: Map<string, number> = new Map();
 
+  // Dedup: track last MIDI value sent per key to avoid redundant sends during fades
+  private lastMidiValues: Map<string, number> = new Map();
+
+  // Queue for messages sent while disconnected
+  private reconnectQueue = new ReconnectQueue<{ address: string; args: any[] }>(64);
+
   constructor(config: AvantisConfig, hubContext: HubContext, verbose = false) {
     super();
     this.name = 'avantis';
@@ -75,7 +82,10 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     this.midiParser = new MIDIStreamParser();
 
     // Wire transport events
-    this.transport.on('connected', () => this.emit('connected'));
+    this.transport.on('connected', () => {
+      this.emit('connected');
+      this.flushQueue();
+    });
     this.transport.on('disconnected', () => this.emit('disconnected'));
     this.transport.on('error', (err: Error) => this.emit('error', err));
 
@@ -105,10 +115,31 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   }
 
   /**
+   * Replay queued messages after reconnection.
+   */
+  private flushQueue(): void {
+    const queued = this.reconnectQueue.flush();
+    if (queued.length === 0) return;
+    console.log(`[Avantis] Replaying ${queued.length} queued message(s)`);
+    for (const msg of queued) {
+      this.handleOSC(msg.address, msg.args);
+    }
+  }
+
+  /**
    * Handle an incoming OSC message (prefix already stripped by hub).
    * Parses Avantis-style addresses: /ch/{n}/mix/fader, /scene/recall, etc.
    */
   handleOSC(address: string, args: any[]): void {
+    // Queue messages if not connected
+    if (!this.isConnected()) {
+      this.reconnectQueue.push({ address, args });
+      if (this.verbose) {
+        console.warn(`[Avantis] Not connected, queued message (${this.reconnectQueue.size} in queue)`);
+      }
+      return;
+    }
+
     const addr = address.toLowerCase().replace(/\/$/, '');
     const parts = addr.split('/').filter(Boolean);
 
@@ -197,12 +228,26 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   /**
    * Handle a fade tick from the shared FadeEngine.
    * Key format: "stripType/number/param" (driver prefix already stripped)
+   *
+   * Deduplicates: only sends MIDI when the quantized value actually changes.
+   * At 100Hz tick rate, many ticks produce the same 7-bit MIDI value (0-127).
+   * Skipping duplicates reduces TCP traffic and prevents the desk from
+   * processing redundant identical messages.
    */
   handleFadeTick(key: string, value: number): void {
     const parts = key.split('/');
     if (parts.length !== 3) return;
 
     const [stripTypeStr, numStr, param] = parts;
+
+    if (param === 'fader' || param === 'pan') {
+      // Dedup: skip if the quantized MIDI value hasn't changed
+      const midiValue = floatToMidi(value);
+      const lastMidi = this.lastMidiValues.get(key);
+      if (lastMidi === midiValue) return;
+      this.lastMidiValues.set(key, midiValue);
+    }
+
     const strip: StripAddress = { type: stripTypeStr as StripType, number: parseInt(numStr, 10) };
 
     if (param === 'fader') {
@@ -250,6 +295,10 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
 
     const { midiChannel, stripHex } = resolveStrip(strip, this.baseMidiChannel);
     const level = floatToMidi(value);
+
+    // Update dedup cache so fade ticks after a direct set stay in sync
+    this.lastMidiValues.set(key, level);
+
     const bytes = buildNRPNFader(midiChannel, stripHex, level);
 
     if (this.verbose) {
@@ -286,6 +335,9 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
 
     const { midiChannel, stripHex } = resolveStrip(strip, this.baseMidiChannel);
     const panValue = floatToMidi(value);
+
+    // Update dedup cache so fade ticks after a direct set stay in sync
+    this.lastMidiValues.set(key, panValue);
     const status = 0xb0 | (midiChannel & 0x0f);
     const bytes = [
       status, 99, stripHex & 0x7f,

@@ -86,6 +86,17 @@ export interface DeviceDriver extends EventEmitter {
    * The key format is driver-specific (e.g. "input/1/fader").
    */
   handleFadeTick(key: string, value: number): void;
+
+  /**
+   * Handle unsolicited device feedback arriving on the hub's OSC port
+   * without the driver prefix. For example, a ChamSys QuickQ sends
+   * bare /pb/1, /master, etc. to port 9000 as feedback.
+   *
+   * The address is the raw OSC address (not prefix-stripped).
+   * Returns true if the driver recognized and handled the address.
+   * Optional — only needed for devices that send unprefixed feedback.
+   */
+  handleFeedback?(address: string, args: any[]): boolean;
 }
 
 /** Per-device configuration (type-specific fields are in the extras) */

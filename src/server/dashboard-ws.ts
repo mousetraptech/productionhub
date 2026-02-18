@@ -75,6 +75,17 @@ export class DashboardWebSocket {
     });
   }
 
+  /** Broadcast device state update */
+  broadcastDeviceState(prefix: string, deviceType: string, state: Record<string, any>): void {
+    this.broadcast({
+      type: 'device-state',
+      prefix,
+      deviceType,
+      state,
+      timestamp: Date.now(),
+    });
+  }
+
   /** Broadcast an OSC message (throttled for performance) */
   broadcastOscMessage(address: string, args: any[], direction: 'in' | 'out'): void {
     if (!this.oscMonitorEnabled) return;

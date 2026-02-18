@@ -507,9 +507,9 @@ describe('buildMuteMessage', () => {
     assert.deepStrictEqual(result, [0x9b, 0x30, 0x7f]);
   });
 
-  it('should build mute OFF message with velocity 0x00', () => {
+  it('should build mute OFF message with velocity 0x3F', () => {
     const result = buildMuteMessage(11, 0x30, false);
-    assert.deepStrictEqual(result, [0x9b, 0x30, 0x00]);
+    assert.deepStrictEqual(result, [0x9b, 0x30, 0x3f]);
   });
 
   it('should have status byte 0x90 | channel', () => {

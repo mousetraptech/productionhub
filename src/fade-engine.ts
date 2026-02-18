@@ -4,7 +4,8 @@
  * Handles timed parameter interpolation at high resolution.
  * Instead of relying on the OSC client to send 128 discrete steps,
  * this engine accepts a target + duration and smoothly interpolates
- * at ~50Hz (20ms intervals), sending MIDI updates each tick.
+ * at ~100Hz (10ms intervals), sending updates each tick.
+ * The driver layer deduplicates so only actual value changes hit the wire.
  *
  * Supports multiple concurrent fades on different strips.
  * Starting a new fade on the same strip+param cancels the previous one.
@@ -17,6 +18,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { performance } from 'perf_hooks';
 
 export type EasingType = 'linear' | 'scurve' | 'easein' | 'easeout';
 
@@ -37,7 +39,7 @@ interface ActiveFade {
   easing: EasingType;
 }
 
-const TICK_INTERVAL_MS = 20; // 50Hz update rate
+const TICK_INTERVAL_MS = 10; // 100Hz update rate — smoother fades
 
 export class FadeEngine extends EventEmitter {
   private activeFades: Map<string, ActiveFade> = new Map();
@@ -85,7 +87,7 @@ export class FadeEngine extends EventEmitter {
       key: req.key,
       startValue: currentVal,
       endValue: req.endValue,
-      startTime: Date.now(),
+      startTime: performance.now(),
       durationMs: req.durationMs,
       easing: req.easing,
     };
@@ -126,7 +128,7 @@ export class FadeEngine extends EventEmitter {
   private tick(): void {
     if (this.activeFades.size === 0) return;
 
-    const now = Date.now();
+    const now = performance.now();
     const completed: string[] = [];
 
     for (const [key, fade] of this.activeFades) {

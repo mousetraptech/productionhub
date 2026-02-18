@@ -7,7 +7,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { Cue, CueAction, ShowState } from './types';
+import { Cue, CueAction, InlineOSC, ShowState } from './types';
 import { ActionRegistry } from '../actions/registry';
 import { ActionCommand } from '../actions/types';
 
@@ -105,9 +105,19 @@ export class CueEngine extends EventEmitter {
     }
   }
 
-  /** Reset to standby (no active cue) */
+  /** Return to top of show (keep cues, clear progress) */
+  standby(): void {
+    this.clearAutoFollow();
+    this.state.activeCueIndex = null;
+    this.state.firedCues = [];
+    this.emitState();
+  }
+
+  /** Full reset — clear everything for a new show */
   reset(): void {
     this.clearAutoFollow();
+    this.state.name = '';
+    this.state.cues = [];
     this.state.activeCueIndex = null;
     this.state.firedCues = [];
     this.emitState();
@@ -193,11 +203,13 @@ export class CueEngine extends EventEmitter {
   }
 
   /** Add an action to a cue */
-  addActionToCue(cueId: string, actionId: string, delay?: number): void {
+  addActionToCue(cueId: string, actionId: string, delay?: number, osc?: InlineOSC): void {
     const cue = this.state.cues.find(c => c.id === cueId);
     if (!cue) return;
 
-    cue.actions.push({ actionId, delay });
+    const action: CueAction = { actionId, delay };
+    if (osc) action.osc = osc;
+    cue.actions.push(action);
     this.emitState();
   }
 
@@ -216,13 +228,26 @@ export class CueEngine extends EventEmitter {
     console.log(`[CueEngine] Firing cue: "${cue.name}"`);
 
     for (const cueAction of cue.actions) {
+      const delay = cueAction.delay ?? 0;
+
+      // Inline OSC command — route directly, bypass action registry
+      if (cueAction.osc) {
+        const { address, args } = cueAction.osc;
+        if (delay > 0) {
+          setTimeout(() => this.routeCommand('', address, args), delay);
+        } else {
+          this.routeCommand('', address, args);
+        }
+        continue;
+      }
+
+      // Registry-based action
       const action = this.actionRegistry.getAction(cueAction.actionId);
       if (!action) {
         console.warn(`[CueEngine] Unknown action: ${cueAction.actionId}`);
         continue;
       }
 
-      const delay = cueAction.delay ?? 0;
       if (delay > 0) {
         setTimeout(() => this.sendCommands(action.commands), delay);
       } else {
