@@ -100,3 +100,9 @@ ui:
 logging:
   # Set to true for detailed message logging
   verbose: false
+
+# Booth Brain — AI assistant for MOD natural language control
+brain:
+  enabled: true
+  model: "claude-sonnet-4-5-20250929"
+  mode: "confirm"   # "confirm" = propose then confirm, "trusted" = execute immediately
