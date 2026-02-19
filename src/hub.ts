@@ -23,6 +23,8 @@ import { CueSequencer, CueSequencerState } from './cue-sequencer';
 import { DashboardWebSocket } from './server/dashboard-ws';
 import { MacroEngine, MacroDef } from './macros';
 import { DriverManager, HubHttpServer, CommandRouter, StatusReporter, StatusSnapshot } from './hub/index';
+import { BrainService } from './brain/brain-service';
+import { BrainConfig } from './brain/types';
 import { getLogger } from './logger';
 
 const log = getLogger('Hub');
@@ -49,6 +51,7 @@ export interface HubConfig {
     port: number;
   };
   macros?: MacroDef[];
+  brain?: BrainConfig;
 }
 
 export class ProductionHub {
@@ -68,6 +71,7 @@ export class ProductionHub {
   private cueSequencer: CueSequencer;
   private dashboardWs: DashboardWebSocket;
   private macroEngine: MacroEngine;
+  private brainService?: BrainService;
 
   // Extracted modules
   private driverManager: DriverManager;
@@ -184,6 +188,17 @@ export class ProductionHub {
     // Register built-in /hub/panic macro
     this.registerPanicMacro();
 
+    // Booth Brain AI assistant
+    if (config.brain?.enabled) {
+      this.brainService = new BrainService(
+        config.brain,
+        this.actionRegistry,
+        this.cueEngine,
+        (address, args) => this.routeOSC(address, args),
+        () => this.getDeviceStatesSnapshot(),
+      );
+    }
+
     // Command router for /hub/* commands
     this.commandRouter = new CommandRouter({
       cueSequencer: this.cueSequencer,
@@ -269,6 +284,7 @@ export class ProductionHub {
         this.templateLoader,
         this.showPersistence,
         (address, args) => this.routeOSC(address, args),
+        this.brainService,
       );
       this.modWebSocket.start();
     }
@@ -444,6 +460,17 @@ export class ProductionHub {
   /** Get the driver stats map (for testing) */
   getDriverStats(): Map<string, DriverStats> {
     return this.driverManager.getDriverStats();
+  }
+
+  /** Get a snapshot of all device states for Brain context */
+  private getDeviceStatesSnapshot(): Record<string, any> {
+    const states: Record<string, any> = {};
+    for (const driver of this.driverManager.getDrivers()) {
+      if ('getState' in driver && typeof (driver as any).getState === 'function') {
+        states[driver.name] = (driver as any).getState();
+      }
+    }
+    return states;
   }
 
   /** Build a status snapshot for the health endpoint */

@@ -13,6 +13,7 @@ import { TemplateLoader } from '../shows/templates';
 import { ShowPersistence } from '../cue-engine/persistence';
 import { ShowState } from '../cue-engine/types';
 import { Cue } from '../cue-engine/types';
+import { BrainService } from '../brain/brain-service';
 
 export type RouteOSCFn = (address: string, args: any[]) => void;
 
@@ -28,6 +29,7 @@ export class ModWebSocket {
   private templateLoader: TemplateLoader;
   private persistence: ShowPersistence;
   private routeOSC: RouteOSCFn;
+  private brainService?: BrainService;
 
   constructor(
     config: ModWebSocketConfig,
@@ -36,6 +38,7 @@ export class ModWebSocket {
     templateLoader: TemplateLoader,
     persistence: ShowPersistence,
     routeOSC: RouteOSCFn,
+    brainService?: BrainService,
   ) {
     this.config = config;
     this.cueEngine = cueEngine;
@@ -43,6 +46,7 @@ export class ModWebSocket {
     this.templateLoader = templateLoader;
     this.persistence = persistence;
     this.routeOSC = routeOSC;
+    this.brainService = brainService;
   }
 
   /** Start the WebSocket server */
@@ -56,6 +60,10 @@ export class ModWebSocket {
       this.send(ws, { type: 'state', show: this.cueEngine.getState() });
       this.send(ws, { type: 'actions', categories: this.actionRegistry.getCategoryList() });
       this.send(ws, { type: 'templates', templates: this.templateLoader.getAll() });
+
+      if (this.brainService) {
+        this.send(ws, { type: 'chat-mode', mode: this.brainService.getMode() });
+      }
 
       ws.on('message', (data: Buffer) => {
         try {
@@ -170,6 +178,56 @@ export class ModWebSocket {
           this.routeOSC(msg.address, Array.isArray(msg.args) ? msg.args : []);
         }
         break;
+
+      case 'chat-message': {
+        if (!this.brainService) {
+          this.broadcast({ type: 'chat-error', requestId: msg.requestId ?? 'unknown', error: 'Brain is not enabled' });
+          break;
+        }
+        const requestId = msg.requestId ?? `req-${Date.now()}`;
+        this.brainService.handleMessage({ requestId, text: msg.text })
+          .then(result => {
+            if ('error' in result) {
+              this.broadcast({ type: 'chat-error', ...result });
+            } else if ('results' in result) {
+              this.broadcast({ type: 'chat-executed', ...result });
+            } else {
+              this.broadcast({ type: 'chat-response', ...result });
+            }
+          })
+          .catch(err => {
+            this.broadcast({ type: 'chat-error', requestId, error: err.message });
+          });
+        break;
+      }
+
+      case 'chat-confirm': {
+        if (!this.brainService) break;
+        const result = this.brainService.confirmActions(msg.requestId);
+        if ('error' in result) {
+          this.broadcast({ type: 'chat-error', ...result });
+        } else {
+          this.broadcast({ type: 'chat-executed', ...result });
+        }
+        break;
+      }
+
+      case 'chat-reject': {
+        if (!this.brainService) break;
+        this.brainService.rejectActions(msg.requestId);
+        this.broadcast({ type: 'chat-response', requestId: msg.requestId, text: 'Action cancelled.' });
+        break;
+      }
+
+      case 'chat-set-mode': {
+        if (!this.brainService) break;
+        const mode = msg.mode;
+        if (mode === 'confirm' || mode === 'trusted') {
+          this.brainService.setMode(mode);
+          this.broadcast({ type: 'chat-mode', mode });
+        }
+        break;
+      }
 
       default:
         console.warn(`[ModWS] Unknown message type: ${msg.type}`);
