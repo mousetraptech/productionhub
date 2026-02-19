@@ -24,6 +24,7 @@
     "test:dashboard": "ts-node --files src/__tests__/dashboard-ws.test.ts",
     "test:macros": "ts-node --files src/__tests__/macros.test.ts",
     "generate": "python3 generator/generate.py generator/templates/standard_recital.yaml",
+    "dev:all": "run-p dev dev:ui",
     "dev:ui": "cd ui && npm run dev",
     "build:ui": "cd ui && npm run build",
     "service:install": "./service/install.sh",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@types/node": "^25.2.2",
     "@types/ws": "^8.18.1",
+    "npm-run-all2": "^8.0.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
