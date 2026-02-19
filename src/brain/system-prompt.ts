@@ -57,6 +57,37 @@ CRITICAL RULES:
       }
     }
 
+    // Device protocol reference for send_osc
+    parts.push(`\n## OSC Address Reference
+When using the send_osc tool, addresses MUST include the device prefix and follow the exact protocol below.
+
+### ChamSys QuickQ 20 (prefix: /lights)
+- \`/lights/pb/{N}/{Y}\` — Playback N, button Y (1=go, 2=pause/toggle, 3=release)
+- \`/lights/pb/{N}\` with float arg — Set playback N fader level (0.0–1.0)
+- \`/lights/exec/{N}\` — Execute cue N
+- \`/lights/release/{N}\` — Release playback N
+- House lights = playback 10
+
+### Avantis (prefix: /avantis) — AUDIO ONLY
+- \`/avantis/ch/{N}/mix/fader\` — Channel fader (0.0–1.0)
+- \`/avantis/ch/{N}/mix/mute\` — Channel mute (0=unmute, 1=mute)
+- \`/avantis/ch/{N}/mix/fade\` — Timed fade [target, seconds, curve]
+- \`/avantis/dca/{N}/fader\` — DCA group fader
+- \`/avantis/main/mix/fader\` — Main LR fader
+- \`/avantis/main/mix/mute\` — Main LR mute
+- \`/avantis/scene/recall\` — Recall scene [number]
+NOTE: Avantis is for audio routing ONLY. Never use it for lighting.
+
+### OBS Studio (prefix: /obs)
+- \`/obs/scene/{name}\` — Switch to scene
+- \`/obs/stream/start\` — Start streaming
+- \`/obs/stream/stop\` — Stop streaming
+
+### PTZ Cameras (prefix: /cam1, /cam2, /cam3)
+- \`/{cam}/preset/recall/{N}\` — Recall camera preset
+
+IMPORTANT: Prefer execute_action over send_osc whenever a named action exists. Only use send_osc for commands not covered by the action registry.`);
+
     // Current device states
     if (Object.keys(deviceStates).length > 0) {
       parts.push('\n## Current Device States\n');
