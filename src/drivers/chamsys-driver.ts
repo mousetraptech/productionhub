@@ -4,12 +4,15 @@
  * OSC-to-OSC relay. Receives OSC from the hub (prefix stripped),
  * rewrites addresses, and forwards to the QuickQ over UDP.
  *
- * QuickQ 20 OSC protocol:
- *   /pb/{X}/{Y}          Playback X, button Y (go/pause/release)
- *   /pb/{X}/{Y}/level    Playback fader level (float 0-1)
- *   /exec/{X}            Execute cue X
- *   /release/{X}         Release playback X
- *   /intensity/{fixture}/{level}  Direct intensity control
+ * QuickQ 20 OSC protocol (console listens on port 8000):
+ *   /pb/{N}              Set playback N fader level (float 0.0-1.0 or int 0-100)
+ *   /pb/{N}/go           Go (advance) on playback N
+ *   /pb/{N}/flash        Flash playback N (int 0=off, 1=on)
+ *   /pb/{N}/pause        Pause playback N
+ *   /pb/{N}/release      Release playback N
+ *   /pb/{N}/{cue}        Jump to cue number on playback N (does NOT activate)
+ *   /exec/{N}            Execute cue N
+ *   /release/{N}         Release playback N
  *
  * Feedback ingestion:
  *   The QuickQ sends unsolicited state feedback as bare OSC to the hub's
