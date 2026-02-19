@@ -3,7 +3,7 @@
 # The MOD interface never sees OSC addresses — only action labels.
 
 actions:
-  # ─── House Lights ───
+  # ─── House Lights (ChamSys playback 10) ───
   house-full:
     label: "Full"
     category: "House Lights"
@@ -11,11 +11,9 @@ actions:
     color: "#F59E0B"
     description: "House lights to 100%"
     commands:
-      - device: avantis
-        address: /dca/1/fader
-        args: [1.0]
       - device: chamsys
-        address: /pb/2/1
+        address: /pb/10
+        args: [1.0]
 
   house-half:
     label: "Half"
@@ -24,8 +22,8 @@ actions:
     color: "#F59E0B"
     description: "House lights to 50%"
     commands:
-      - device: avantis
-        address: /dca/1/fader
+      - device: chamsys
+        address: /pb/10
         args: [0.5]
 
   house-out:
@@ -35,24 +33,20 @@ actions:
     color: "#F59E0B"
     description: "House lights off"
     commands:
-      - device: avantis
-        address: /dca/1/fader
-        args: [0.0]
       - device: chamsys
-        address: /pb/2/2
+        address: /pb/10
+        args: [0.0]
 
   house-preset-walk:
     label: "Walk-in"
     category: "House Lights"
     icon: "🏠"
     color: "#F59E0B"
-    description: "Warm walk-in preset"
+    description: "Warm walk-in preset (70%)"
     commands:
-      - device: avantis
-        address: /dca/1/fader
-        args: [0.7]
       - device: chamsys
-        address: /pb/2/3
+        address: /pb/10
+        args: [0.7]
 
   # ─── Stage Lights ───
   stage-full:
