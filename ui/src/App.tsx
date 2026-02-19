@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProductionHub } from './hooks/useProductionHub';
 import { useDeviceStates } from './hooks/useDeviceStates';
+import { useChat } from './hooks/useChat';
 import TemplatePicker from './components/TemplatePicker';
 import ActionPalette from './components/ActionPalette';
 import CueStack from './components/CueStack';
 import GoBar from './components/GoBar';
 import CollapsiblePanel from './components/CollapsiblePanel';
+import ChatDrawer from './components/ChatDrawer';
 import {
   AvantisPanel,
   OBSPanel,
@@ -15,9 +17,15 @@ import {
 } from './components/devices';
 
 export default function App() {
-  const { show, categories, templates, connected, send } = useProductionHub();
+  const { show, categories, templates, connected, send, setChatHandler } = useProductionHub();
   const { deviceStates, connected: devicesConnected } = useDeviceStates();
   const [showPicker, setShowPicker] = useState(true);
+  const chat = useChat(send);
+
+  // Wire chat message handler
+  useEffect(() => {
+    setChatHandler(chat.handleServerMessage);
+  }, [setChatHandler, chat.handleServerMessage]);
 
   // Hide picker once a template is loaded (cues appear)
   const pickerVisible = showPicker && show.cues.length === 0;
@@ -139,6 +147,15 @@ export default function App() {
           <TouchDesignerPanel state={deviceStates.touchdesigner} />
         </CollapsiblePanel>
       </div>
+      <ChatDrawer
+        messages={chat.messages}
+        mode={chat.mode}
+        thinking={chat.thinking}
+        onSend={chat.sendMessage}
+        onConfirm={chat.confirm}
+        onReject={chat.reject}
+        onToggleMode={chat.toggleMode}
+      />
     </div>
   );
 }

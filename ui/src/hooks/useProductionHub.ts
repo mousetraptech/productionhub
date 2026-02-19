@@ -17,6 +17,11 @@ export function useProductionHub() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const chatHandlerRef = useRef<((msg: ServerMessage) => void) | null>(null);
+
+  const setChatHandler = useCallback((handler: (msg: ServerMessage) => void) => {
+    chatHandlerRef.current = handler;
+  }, []);
 
   const send = useCallback((msg: ClientMessage) => {
     const ws = wsRef.current;
@@ -54,6 +59,14 @@ export function useProductionHub() {
             case 'templates':
               setTemplates(msg.templates);
               break;
+            case 'chat-response':
+            case 'chat-executed':
+            case 'chat-error':
+            case 'chat-mode':
+              if (chatHandlerRef.current) {
+                chatHandlerRef.current(msg);
+              }
+              break;
           }
         } catch {
           // ignore parse errors
@@ -83,5 +96,5 @@ export function useProductionHub() {
     };
   }, []);
 
-  return { show, categories, templates, connected, send };
+  return { show, categories, templates, connected, send, setChatHandler };
 }
