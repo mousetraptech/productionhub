@@ -45,12 +45,25 @@ export interface Template {
   cues: Array<{ name: string; actions: string[] }>;
 }
 
+// Chat / Brain types
+export interface ProposedAction {
+  tool: string;
+  args: Record<string, any>;
+  label: string;
+}
+
+export type BrainMode = 'confirm' | 'trusted';
+
 // WebSocket message types
 export type ServerMessage =
   | { type: 'state'; show: ShowState }
   | { type: 'actions'; categories: ActionCategory[] }
   | { type: 'templates'; templates: Template[] }
-  | { type: 'cue-fired'; cueIndex: number; cue: Cue };
+  | { type: 'cue-fired'; cueIndex: number; cue: Cue }
+  | { type: 'chat-response'; requestId: string; text: string; actions?: ProposedAction[] }
+  | { type: 'chat-executed'; requestId: string; actions: ProposedAction[]; results: string[] }
+  | { type: 'chat-error'; requestId: string; error: string }
+  | { type: 'chat-mode'; mode: BrainMode };
 
 export type ClientMessage =
   | { type: 'get-actions' }
@@ -67,4 +80,8 @@ export type ClientMessage =
   | { type: 'remove-action-from-cue'; cueId: string; actionIndex: number }
   | { type: 'save-show'; name: string }
   | { type: 'load-show'; name: string }
-  | { type: 'osc'; address: string; args: any[] };
+  | { type: 'osc'; address: string; args: any[] }
+  | { type: 'chat-message'; requestId: string; text: string }
+  | { type: 'chat-confirm'; requestId: string }
+  | { type: 'chat-reject'; requestId: string }
+  | { type: 'chat-set-mode'; mode: BrainMode };
