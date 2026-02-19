@@ -1,0 +1,367 @@
+
+BOOTH BRAIN
+Operations Manual
+Draylen Mason Music Studio
+
+V1.0 — February 2026
+Dave Lindquist
+
+This document defines the complete MOD operational workflow at DMMS.
+It serves as both a human-readable reference and the foundational
+knowledge base for the Booth Brain intelligent assistant.
+
+Purpose
+This manual defines the complete Manager on Duty (MOD) workflow at the Draylen Mason Music Studio. It serves two functions:
+
+1. Human reference: A step-by-step operational guide that any trained MOD can follow to run a professional event, regardless of technical background.
+2. Machine knowledge base: The foundational dataset for Booth Brain, the intelligent booth assistant that will translate natural language into system commands via Production Hub.
+
+The design principle is simple: every piece of operational knowledge that lives in Dave’s head needs to live in this document. If Dave gets hit by a bus, this manual and Production Hub should be enough for a competent person to run a show.
+System Architecture
+The DMMS booth runs five primary systems, all orchestrated through Production Hub:
+
+System
+Protocol
+Controlled Via
+What It Does
+Allen & Heath Avantis
+MIDI over TCP
+Production Hub
+Audio mixing — channel faders, DCAs, scene recall, mutes
+ChamSys QuickQ 20
+OSC relay (UDP)
+Production Hub
+Lighting — playback stacks, fader levels, cue execution
+PTZ Cameras (VISCA)
+VISCA over TCP
+Production Hub
+Camera positions — preset recall, pan/tilt/zoom
+OBS Studio
+WebSocket v5
+Production Hub
+Video switching — scene selection, recording, streaming
+TouchDesigner
+OSC relay (UDP)
+Production Hub
+Projection/visuals — graphics overlays, media playback
+
+🧠
+BOOTH BRAIN
+Booth Brain sits above Production Hub as a reasoning layer. It translates natural language intent into structured commands. Production Hub validates and executes. The LLM never touches gear directly.
+
+The critical design principle: Production Hub speaks five different protocols so the MOD doesn’t have to. The MOD sees human-readable actions (“House to Half”) and hits GO. Everything underneath is invisible.
+Phase 1: Open
+Estimated time: 15–20 minutes before client arrival. The MOD arrives, opens the facility, and powers up the booth.
+
+#
+What the MOD Does
+Systems
+What Can Go Wrong
+Booth Brain Knows
+1
+Prop open studio entrance doors
+Physical
+Doors don’t stay propped; check door stops
+Knows facility layout and door locations
+2
+Turn on house and studio lights via nLight panel
+nLight (Lutron)
+Wrong preset selected; lights don’t respond
+Knows nLight panel location and preset names
+3
+Prop open booth door, drop personal bag
+Physical
+—
+—
+4
+Check PlanningPod for event details and room layout
+PlanningPod (web)
+Event not in system; layout unclear
+Can parse PlanningPod data for event type, client name, layout
+5
+Set room per layout (tables, chairs, donor placards)
+Physical
+Wrong layout; missing placards
+Knows standard layouts and placard locations
+6
+Unlock tech closet with MOD keys
+Physical (keys)
+Keys missing; wrong key
+Knows which key opens tech closet
+7
+Turn on booth monitors
+Physical (power buttons)
+Monitor doesn’t wake; wrong input selected
+Knows monitor power locations and expected inputs
+8
+Power on Avantis console
+Avantis (physical)
+Board doesn’t boot; boots to wrong state
+Knows expected boot sequence and timing
+9
+Power on ChamSys QuickQ 20
+ChamSys (physical)
+Board doesn’t boot
+Knows expected boot state
+10
+Recall correct Avantis scene for today’s event
+Avantis
+Wrong scene recalled; scene doesn’t exist
+Knows scene list and which events map to which scenes
+
+⚠️
+WARNING
+NEVER shut down the Mac computers. They stay on 24/7. If a well-meaning MOD powers them off, remote access is lost and the next person has to troubleshoot why systems aren’t responding. The only things that get powered on/off are monitors and boards.
+Phase 2: Prep
+The MOD checks A/V requirements and sets up equipment for the specific event. Complex audio setups are handled by an A1 (Jeffrey or another audio engineer). The MOD handles everything else.
+
+#
+What the MOD Does
+Systems
+What Can Go Wrong
+Booth Brain Knows
+11
+Check PlanningPod for A/V requirements
+PlanningPod (web)
+Requirements unclear or missing
+Can interpret A/V requirements and generate setup checklist
+12
+Determine if A1 is needed for audio setup
+Human judgment
+MOD attempts setup beyond their skill level
+Knows the boundary: handhelds/lavs = MOD; band/multi-mic/monitors = A1
+13
+Set up wireless mics from charging station
+Wireless mics
+Dead batteries; wrong frequencies; mics not on correct channels
+Knows mic inventory, channel assignments, battery check procedure
+14
+Set up projection if needed (laptop → switcher → projector)
+Video routing
+Wrong input on switcher; projector not detected; resolution mismatch
+Knows signal path and standard routing
+15
+Position cameras to starting presets
+PTZ cameras / VISCA
+Camera offline; preset not programmed
+Knows camera IPs, default presets per event type
+16
+Verify OBS is on correct scene profile
+OBS (WebSocket)
+Wrong profile loaded; OBS crashed overnight
+Knows OBS profiles per event type; can verify and switch
+17
+Verify QLab show file is loaded
+QLab
+Wrong show file; file corrupted
+Knows show file naming convention and expected cue structure
+18
+Confirm recording is ready (always on)
+OBS / Kiloview
+Recording drive full; wrong destination folder
+Recording is ALWAYS assumed. Knows drive capacity check and default paths
+
+🧠
+BOOTH BRAIN
+Recording is not a decision — it’s a default. Every event gets recorded. The only conditional is whether we’re ALSO streaming. Booth Brain should treat “start recording” as part of every pre-show sequence automatically.
+Phase 3: Client Arrival
+This is the hospitality layer — the part that is fundamentally human and cannot be automated. The MOD is the client’s point of contact. Read their energy, manage expectations, make them feel like the room is theirs.
+
+#
+What the MOD Does
+Systems
+What Can Go Wrong
+Booth Brain Knows
+19
+Greet client, walk the room together
+Human
+Client unhappy with layout; unexpected requests
+Cannot automate. This is hospitality.
+20
+Confirm setup matches client expectations
+Human
+Last-minute changes to plan
+Can help MOD assess feasibility of changes
+21
+Handle curveballs (“we need to livestream”)
+Multiple
+MOD doesn’t know how to add streaming mid-prep
+This is where Booth Brain earns its keep. MOD types “add livestream” and BB knows: confirm stream key, switch OBS profile, start stream output.
+22
+Sound check (A1 if complex; MOD if simple)
+Avantis / mics
+Mic not working; feedback; wrong channel
+Knows basic troubleshooting: check battery, check mute, check channel assignment
+
+🧠
+BOOTH BRAIN
+Curveball handling is the highest-value Booth Brain scenario. The client asks for something that wasn’t in PlanningPod. The MOD shouldn’t have to know how to spin it up from scratch. They type what they need in plain English, and Booth Brain translates it into system commands.
+Phase 4: Show
+The MOD executes cues on the showcaller’s command. For most events, the showcaller is Stacey or Dave. The MOD is the hands; the showcaller is the voice.
+
+#
+What the MOD Does
+Systems
+What Can Go Wrong
+Booth Brain Knows
+23
+Hold for doors — wait for showcaller
+Human
+MOD opens doors without clearance
+Knows show state: “pre-show hold” until showcaller calls doors
+24
+Doors open — fire walk-in cues (lights, music)
+Production Hub (QLab → ChamSys, Avantis)
+Wrong cue fired; cue doesn’t execute
+Knows cue stack position; validates before firing
+25
+Fire cues on showcaller’s command throughout show
+Production Hub (all systems)
+Missed cue; fired wrong cue; system unresponsive
+Tracks current position in cue stack; confirms next cue before firing
+26
+Camera operation (if assigned, or if Jack shows up)
+PTZ cameras / VISCA
+Camera on wrong preset; two people fighting for control on same machine
+Knows camera control should be on a SEPARATE surface from cue engine. Separation of concerns.
+
+⚠️
+WARNING
+Do NOT delete, modify, or “clean up” network patches, QLab cues, or system configuration during a live show or in front of clients. If something looks redundant, leave it alone. Document it for later review. Broken signal paths during a show are unrecoverable in real time.
+
+The three things a MOD typically does during a show:
+1. Switch camera angles in OBS
+2. Fire projection/media cues in QLab
+3. Trigger lighting looks on ChamSys
+
+Everything else (live audio mixing, stage monitor adjustments, complex camera work) is A1/L1 territory unless the MOD has been specifically trained and cleared for it.
+Phase 5: Strike & Closeout
+Post-show teardown and facility closure. The MOD handles recording archive, basic teardown, and power-down. Significant cable strike is A1 territory. L1 handles lighting teardown if it was a busked show.
+
+#
+What the MOD Does
+Systems
+What Can Go Wrong
+Booth Brain Knows
+27
+Stop Kiloview recording on video-recorder
+Kiloview
+Recording didn’t stop cleanly; file corrupted
+Knows Kiloview stop procedure and expected file locations
+28
+Copy recording files to fresh flash drive
+File system
+Drive full; copy fails; wrong files copied
+Knows file naming convention and expected sizes
+29
+Copy recording files to Flex drive (archive)
+File system
+Flex drive not mounted; permissions error
+Knows Flex drive location and archive folder structure
+30
+Return wireless mics to charging station
+Physical
+Mics left on; not seated in charger correctly
+Knows charger locations and seating procedure
+31
+Reset room to default (chairs, tables, podium)
+Physical
+Room left in event config for next day
+Knows default room layout
+32
+Cable strike (if significant — A1’s job)
+Physical / A1
+MOD attempts cable strike incorrectly
+Knows boundary: significant cable = A1
+33
+Turn off booth monitors
+Physical
+Monitors left on overnight
+Knows monitor power locations
+34
+Power off Avantis
+Avantis (physical)
+Board left on overnight
+Knows proper shutdown sequence
+35
+Power off ChamSys
+ChamSys (physical)
+Board left on overnight
+Knows proper shutdown sequence
+36
+Lock tech closet
+Physical (keys)
+Closet left unlocked
+Knows closet must be locked
+37
+Lights off, close up facility
+nLight / physical
+Lights left on; doors not secured
+Knows facility closure checklist
+
+⚠️
+WARNING
+NEVER shut down the Mac computers during closeout. Monitors off. Boards off. Macs stay on. Always.
+Decision Boundaries
+A core function of this manual is defining what the MOD handles independently vs. what requires escalation. Booth Brain must understand these boundaries to avoid guiding a MOD into territory beyond their training.
+
+MOD Handles Independently
+• House and studio lighting (nLight presets, ChamSys playback via Production Hub cue stack)
+• Simple wireless mic setup (1–2 handhelds or lavs from charging station)
+• Camera preset recall (PTZ to pre-programmed positions)
+• OBS scene switching and recording start/stop
+• QLab cue firing on showcaller’s command
+• Projection routing (laptop to switcher to projector)
+• Room setup and teardown
+• File archive (Kiloview stop, copy to flash and Flex drives)
+• Facility open/close
+
+Escalate to A1 (Audio Engineer)
+• Multi-microphone setups (3+ mics, stage boxes, complex patching)
+• Band/ensemble audio (monitor mixes, IEMs, drum mics)
+• Live audio mixing during shows
+• Significant cable runs or cable strike
+• Any audio troubleshooting beyond “check battery, check mute, check channel”
+
+Escalate to L1 (Lighting Engineer)
+• Programming new lighting cues or busking a show live
+• Lighting fixture troubleshooting
+• DMX addressing or patching
+• Lighting-specific cable strike
+
+Escalate to Dave
+• Production Hub configuration changes
+• Network infrastructure (switch config, VLAN, IP assignments)
+• QLab show file creation or modification
+• System integration issues (device not responding, protocol errors)
+• Anything that involves editing config files, terminal commands, or code
+
+🧠
+BOOTH BRAIN
+Booth Brain must never guide a MOD into escalation territory without flagging it. If a MOD types “add a drum mic to channel 15”, Booth Brain should respond: “That’s an A1 task. Is Jeffrey or another audio engineer on site today?” Not attempt the routing itself.
+Where AI Helps vs. Where a Checklist Is Fine
+Not every step needs intelligence. This section maps each phase to the right tool.
+
+Checklist Is Fine
+Steps 1–6 (facility open) are pure procedure. A laminated card on the wall handles this. Booth Brain adds no value here except maybe reminding a new MOD what’s next if they ask.
+
+Steps 7–10 (power up and recall scene) are procedure with one decision point: which Avantis scene. Booth Brain can help here by reading PlanningPod and suggesting the correct scene, but a printed scene-to-event-type matrix on the wall works too.
+
+Steps 27–37 (strike and closeout) are reverse procedure. Same as open — a checklist handles it.
+
+AI Adds Real Value
+Steps 11–18 (prep) are where Booth Brain starts earning its keep. Interpreting A/V requirements from PlanningPod, generating a setup checklist, knowing which OBS profile and QLab show file map to this event type — that’s contextual reasoning, not rote procedure.
+
+Steps 19–22 (client arrival) are the highest-value AI scenario. Curveball handling. “The client just asked for livestreaming and it wasn’t in the plan.” A checklist can’t help with that. An intelligent system that knows the booth architecture can.
+
+Steps 23–26 (show) are mostly cue execution, which Production Hub already handles beautifully. But real-time troubleshooting (“camera 2 isn’t responding”) is where Booth Brain can walk a MOD through diagnostics without calling Dave.
+What’s Next
+This document is V1 — the skeleton. It captures the operational workflow and decision boundaries that Booth Brain needs to understand. The next steps:
+
+1. Fill in troubleshooting trees. For each “What Can Go Wrong” cell, document the diagnostic steps. This becomes the troubleshooting knowledge base.
+2. Document the signal flow. A complete map of every audio, video, lighting, and network path in the booth. Physical connections, IP addresses, port assignments.
+3. Define the action vocabulary. Every human-readable action that Production Hub supports, mapped to the OSC commands underneath. This is the contract between Booth Brain and the execution layer.
+4. Build the prototype. Feed this document into a Claude API call as context. Point it at Production Hub’s action registry. Let a MOD type natural language and see what comes back. Cloud-dependent, not for live shows — but proves the concept.
+5. Go local. Once the schema is validated through real show scenarios, fine-tune a small local model (8B parameter, RTX 4060/4070 class hardware) that can run in the rack with zero cloud dependency. That’s the production Booth Brain.
+
+The AI isn’t the product. The accessibility is the product. The AI is just how you get there.
