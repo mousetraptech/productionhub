@@ -465,7 +465,7 @@ export class ProductionHub {
   /** Get a snapshot of all device states for Brain context */
   private getDeviceStatesSnapshot(): Record<string, any> {
     const states: Record<string, any> = {};
-    for (const driver of this.driverManager.getDrivers()) {
+    for (const driver of this.driverManager.getDrivers().values()) {
       if ('getState' in driver && typeof (driver as any).getState === 'function') {
         states[driver.name] = (driver as any).getState();
       }
