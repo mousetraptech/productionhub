@@ -306,6 +306,7 @@ function main(): void {
     checklist: config.checklist,
     ui: config.ui,
     macros: config.macros,
+    brain: config.brain,
   });
 
   // Create and register drivers from config

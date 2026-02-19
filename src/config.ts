@@ -93,6 +93,12 @@ export interface Config {
       delayMs?: number;
     }>;
   }>;
+  brain?: {
+    enabled: boolean;
+    model: string;
+    mode: 'confirm' | 'trusted';
+    manualPath?: string;
+  };
 }
 
 // --- Defaults ---
@@ -195,6 +201,12 @@ function loadHubConfig(parsed: any): Config {
         delayMs: a.delayMs,
       })),
     })),
+    brain: parsed.brain ? {
+      enabled: parsed.brain.enabled ?? false,
+      model: parsed.brain.model ?? 'claude-sonnet-4-5-20250929',
+      mode: parsed.brain.mode ?? 'confirm',
+      manualPath: parsed.brain.manualPath,
+    } : undefined,
   };
 
   console.log(`[Config] Hub mode: ${devices.length} device(s) configured`);
