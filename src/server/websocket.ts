@@ -14,6 +14,8 @@ import { ShowPersistence } from '../cue-engine/persistence';
 import { ShowState } from '../cue-engine/types';
 import { Cue } from '../cue-engine/types';
 import { BrainService } from '../brain/brain-service';
+import { DeckPersistence } from '../deck/persistence';
+import { fireDeckButton } from '../deck/fire';
 
 export type RouteOSCFn = (address: string, args: any[]) => void;
 
@@ -30,6 +32,7 @@ export class ModWebSocket {
   private persistence: ShowPersistence;
   private routeOSC: RouteOSCFn;
   private brainService?: BrainService;
+  private deckPersistence: DeckPersistence;
 
   constructor(
     config: ModWebSocketConfig,
@@ -39,6 +42,7 @@ export class ModWebSocket {
     persistence: ShowPersistence,
     routeOSC: RouteOSCFn,
     brainService?: BrainService,
+    deckPersistence?: DeckPersistence,
   ) {
     this.config = config;
     this.cueEngine = cueEngine;
@@ -47,6 +51,7 @@ export class ModWebSocket {
     this.persistence = persistence;
     this.routeOSC = routeOSC;
     this.brainService = brainService;
+    this.deckPersistence = deckPersistence ?? new DeckPersistence();
   }
 
   /** Start the WebSocket server */
@@ -229,6 +234,51 @@ export class ModWebSocket {
         break;
       }
 
+      case 'deck-list':
+        this.broadcast({ type: 'deck-profiles', profiles: this.deckPersistence.list() });
+        break;
+
+      case 'deck-load': {
+        const profile = this.deckPersistence.load(msg.name);
+        if (profile) {
+          this.broadcast({ type: 'deck-state', name: msg.name, grid: profile.grid });
+        }
+        break;
+      }
+
+      case 'deck-save':
+        this.deckPersistence.save(msg.name, { name: msg.name, grid: msg.grid });
+        this.broadcast({ type: 'deck-saved', name: msg.name });
+        break;
+
+      case 'deck-delete':
+        this.deckPersistence.delete(msg.name);
+        this.broadcast({ type: 'deck-profiles', profiles: this.deckPersistence.list() });
+        break;
+
+      case 'deck-fire': {
+        const fireActions = msg.actions ?? [];
+        const fireMode = msg.mode ?? 'parallel';
+        const gap = msg.seriesGap ?? 1000;
+
+        fireDeckButton(fireActions, fireMode, gap, (actionId, osc) => {
+          if (osc) {
+            this.routeOSC(osc.address, osc.args);
+          } else {
+            const action = this.actionRegistry.getAction(actionId);
+            if (action) {
+              for (const cmd of action.commands) {
+                const prefix = cmd.prefix ? `/${cmd.prefix}` : this.resolveDevicePrefix(cmd.device);
+                if (prefix) this.routeOSC(`${prefix}${cmd.address}`, cmd.args ?? []);
+              }
+            }
+          }
+        });
+
+        this.broadcast({ type: 'deck-fired', buttonId: msg.buttonId });
+        break;
+      }
+
       default:
         console.warn(`[ModWS] Unknown message type: ${msg.type}`);
     }
@@ -250,5 +300,17 @@ export class ModWebSocket {
         client.send(payload);
       }
     }
+  }
+
+  /** Map device type to its configured prefix (same as CueEngine) */
+  private resolveDevicePrefix(device: string): string | null {
+    const defaults: Record<string, string> = {
+      avantis: '/avantis',
+      chamsys: '/lights',
+      obs: '/obs',
+      visca: '/cam1',
+      touchdesigner: '/td',
+    };
+    return defaults[device] ?? null;
   }
 }

@@ -25,6 +25,7 @@ import { MacroEngine, MacroDef } from './macros';
 import { DriverManager, HubHttpServer, CommandRouter, StatusReporter, StatusSnapshot } from './hub/index';
 import { BrainService } from './brain/brain-service';
 import { BrainConfig } from './brain/types';
+import { DeckPersistence } from './deck/persistence';
 import { getLogger } from './logger';
 
 const log = getLogger('Hub');
@@ -277,6 +278,7 @@ export class ProductionHub {
     // Start MOD UI WebSocket server
     if (this.uiConfig.enabled) {
       this.actionRegistry.watch();
+      const deckPersistence = new DeckPersistence();
       this.modWebSocket = new ModWebSocket(
         { port: this.uiConfig.port },
         this.cueEngine,
@@ -285,6 +287,7 @@ export class ProductionHub {
         this.showPersistence,
         (address, args) => this.routeOSC(address, args),
         this.brainService,
+        deckPersistence,
       );
       this.modWebSocket.start();
     }
