@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Actions": [
+    {
+      "Icon": "imgs/action-icon",
+      "Name": "PH Button",
+      "States": [{ "Image": "imgs/action-icon" }],
+      "UUID": "com.productionhub.deck.button",
+      "UserTitleEnabled": false
+    }
+  ],
+  "Author": "Production Hub",
+  "CodePath": "bin/plugin.js",
+  "Description": "Live production control — house lights, stage, cameras, audio, OBS.",
+  "Icon": "imgs/plugin-icon",
+  "Name": "Production Hub",
+  "Nodejs": { "Version": "20", "Debug": "enabled" },
+  "OS": [
+    { "Platform": "mac", "MinimumVersion": "13" },
+    { "Platform": "windows", "MinimumVersion": "10" }
+  ],
+  "UUID": "com.productionhub.deck",
+  "Version": "1.0.0.0",
+  "SDKVersion": 2,
+  "Software": { "MinimumVersion": "6.6" }
+}

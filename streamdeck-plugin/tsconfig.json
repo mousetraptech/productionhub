@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "com.productionhub.deck.sdPlugin/bin",
+    "rootDir": "src",
+    "declaration": false,
+    "sourceMap": true,
+    "experimentalDecorators": true
+  },
+  "include": ["src/**/*.ts"]
+}
