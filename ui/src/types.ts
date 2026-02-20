@@ -54,6 +54,28 @@ export interface ProposedAction {
 
 export type BrainMode = 'confirm' | 'trusted';
 
+// Deck types
+export interface DeckAction {
+  actionId: string;
+  osc?: InlineOSC;
+}
+
+export interface DeckButton {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  actions: DeckAction[];
+  mode: 'parallel' | 'series';
+  seriesGap: number;
+}
+
+export interface GridSlot {
+  row: number;
+  col: number;
+  button: DeckButton;
+}
+
 // WebSocket message types
 export type ServerMessage =
   | { type: 'state'; show: ShowState }
@@ -63,7 +85,11 @@ export type ServerMessage =
   | { type: 'chat-response'; requestId: string; text: string; actions?: ProposedAction[] }
   | { type: 'chat-executed'; requestId: string; actions: ProposedAction[]; results: string[] }
   | { type: 'chat-error'; requestId: string; error: string }
-  | { type: 'chat-mode'; mode: BrainMode };
+  | { type: 'chat-mode'; mode: BrainMode }
+  | { type: 'deck-profiles'; profiles: string[] }
+  | { type: 'deck-state'; name: string; grid: GridSlot[] }
+  | { type: 'deck-saved'; name: string }
+  | { type: 'deck-fired'; buttonId: string };
 
 export type ClientMessage =
   | { type: 'get-actions' }
@@ -84,4 +110,9 @@ export type ClientMessage =
   | { type: 'chat-message'; requestId: string; text: string }
   | { type: 'chat-confirm'; requestId: string }
   | { type: 'chat-reject'; requestId: string }
-  | { type: 'chat-set-mode'; mode: BrainMode };
+  | { type: 'chat-set-mode'; mode: BrainMode }
+  | { type: 'deck-list' }
+  | { type: 'deck-load'; name: string }
+  | { type: 'deck-save'; name: string; grid: GridSlot[] }
+  | { type: 'deck-delete'; name: string }
+  | { type: 'deck-fire'; buttonId: string; actions: DeckAction[]; mode: 'parallel' | 'series'; seriesGap: number };
