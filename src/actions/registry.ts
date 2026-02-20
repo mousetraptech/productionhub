@@ -124,6 +124,7 @@ export class ActionRegistry {
         id: action.id,
         label: action.label,
         desc: action.description,
+        commands: action.commands.map(c => ({ device: c.device, prefix: c.prefix, address: c.address })),
       });
     }
 

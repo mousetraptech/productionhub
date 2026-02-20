@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { DeckButton as DeckButtonType } from '../../types';
-import { getDeckButtonState, ButtonState } from './useDeckButtonState';
+import { getDeckButtonState, ButtonState, ActionCommandRef } from './useDeckButtonState';
 
 interface DeckButtonProps {
   button: DeckButtonType;
@@ -9,9 +9,10 @@ interface DeckButtonProps {
   onRemove: () => void;
   onClick?: () => void;
   deviceStates?: any;
+  actionCommands?: Map<string, ActionCommandRef[]>;
 }
 
-export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceStates }: DeckButtonProps) {
+export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceStates, actionCommands }: DeckButtonProps) {
   const [firing, setFiring] = useState(false);
 
   const handlePress = useCallback(() => {
@@ -25,7 +26,7 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
   }, [button, editing, onFire, onClick]);
 
   const buttonState: ButtonState = deviceStates
-    ? getDeckButtonState(button, deviceStates)
+    ? getDeckButtonState(button, deviceStates, actionCommands)
     : { level: null, active: false, live: false };
 
   return (
@@ -41,13 +42,14 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
           button.color + (firing ? 'CC' : '55')
         }`,
         borderRadius: 12,
+        width: '100%', height: '100%',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         cursor: editing ? 'default' : 'pointer',
         userSelect: 'none',
         touchAction: 'manipulation',
         position: 'relative',
-        aspectRatio: '1',
+        minHeight: 0,
         transition: 'background 0.2s, border-color 0.2s, transform 0.1s',
         transform: firing ? 'scale(0.95)' : 'scale(1)',
         boxShadow: firing ? `0 0 20px ${button.color}66` : 'none',

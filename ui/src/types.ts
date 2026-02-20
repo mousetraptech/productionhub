@@ -28,6 +28,7 @@ export interface ActionItem {
   id: string;
   label: string;
   desc: string;
+  commands: Array<{ device: string; prefix?: string; address: string }>;
 }
 
 export interface ActionCategory {

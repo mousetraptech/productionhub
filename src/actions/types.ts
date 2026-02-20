@@ -30,5 +30,6 @@ export interface ActionCategory {
     id: string;
     label: string;
     desc: string;
+    commands: Array<{ device: string; prefix?: string; address: string }>;
   }>;
 }

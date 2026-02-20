@@ -67,7 +67,12 @@ export function DeckToolbar({
       <div style={{ flex: 1 }} />
 
       <button
-        onClick={onToggleEdit}
+        onClick={() => {
+          if (editing && currentProfile) {
+            onSaveProfile(currentProfile);
+          }
+          onToggleEdit();
+        }}
         style={toolbarBtn(editing ? '#10B981' : '#475569')}
       >
         {editing ? 'Done' : 'Edit'}

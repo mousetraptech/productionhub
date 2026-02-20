@@ -29,17 +29,19 @@ export function DeckPage() {
             <ActionPalette categories={deck.categories} onNewShow={() => {}} />
           </div>
         )}
-        <DeckGrid
-          grid={deck.grid}
-          editing={deck.editing}
-          categories={deck.categories}
-          onFire={deck.fireButton}
-          onRemove={deck.removeButton}
-          onAssign={deck.assignAction}
-          onUpdate={deck.updateButton}
-          onRemoveAction={deck.removeAction}
-          deviceStates={deviceStates}
-        />
+        <div style={{ flex: 1, position: 'relative' }}>
+          <DeckGrid
+            grid={deck.grid}
+            editing={deck.editing}
+            categories={deck.categories}
+            onFire={deck.fireButton}
+            onRemove={deck.removeButton}
+            onAssign={deck.assignAction}
+            onUpdate={deck.updateButton}
+            onRemoveAction={deck.removeAction}
+            deviceStates={deviceStates}
+          />
+        </div>
       </div>
     </div>
   );

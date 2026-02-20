@@ -9,44 +9,44 @@ actions:
     category: "House Lights"
     icon: "🏠"
     color: "#F59E0B"
-    description: "House lights to 100%"
+    description: "House lights to 100% (3s fade)"
     commands:
       - device: chamsys
         address: /pb/10
-        args: [1.0]
+        args: [1.0, 3.0, "scurve"]
 
   house-half:
     label: "Half"
     category: "House Lights"
     icon: "🏠"
     color: "#F59E0B"
-    description: "House lights to 50%"
+    description: "House lights to 50% (3s fade)"
     commands:
       - device: chamsys
         address: /pb/10
-        args: [0.5]
+        args: [0.5, 3.0, "scurve"]
 
   house-out:
     label: "Out"
     category: "House Lights"
     icon: "🏠"
     color: "#F59E0B"
-    description: "House lights off"
+    description: "House lights off (3s fade)"
     commands:
       - device: chamsys
         address: /pb/10
-        args: [0.0]
+        args: [0.0, 3.0, "scurve"]
 
   house-preset-walk:
     label: "Walk-in"
     category: "House Lights"
     icon: "🏠"
     color: "#F59E0B"
-    description: "Warm walk-in preset (70%)"
+    description: "Warm walk-in preset 70% (3s fade)"
     commands:
       - device: chamsys
         address: /pb/10
-        args: [0.7]
+        args: [0.7, 3.0, "scurve"]
 
   # ─── Stage Lights ───
   stage-full:

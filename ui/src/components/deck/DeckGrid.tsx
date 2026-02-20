@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ActionCategory, GridSlot, DeckButton, InlineOSC } from '../../types';
 import { DeckButton as DeckButtonComponent } from './DeckButton';
 import { DeckButtonEditor } from './DeckButtonEditor';
+import { ActionCommandRef } from './useDeckButtonState';
 
 interface DeckGridProps {
   grid: GridSlot[];
@@ -20,6 +21,19 @@ const COLS = 8;
 
 export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, deviceStates }: DeckGridProps) {
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
+
+  // Build actionId → commands lookup for live state matching on registry actions
+  const actionCommands = useMemo(() => {
+    const map = new Map<string, ActionCommandRef[]>();
+    for (const cat of categories) {
+      for (const item of cat.items) {
+        if (item.commands?.length) {
+          map.set(item.id, item.commands);
+        }
+      }
+    }
+    return map;
+  }, [categories]);
 
   const getButton = (row: number, col: number): DeckButton | null => {
     const slot = grid.find(s => s.row === row && s.col === col);
@@ -69,7 +83,8 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
         display: 'grid',
         gridTemplateColumns: `repeat(${COLS}, 1fr)`,
         gridTemplateRows: `repeat(${ROWS}, 1fr)`,
-        gap: 8, padding: 16, flex: 1,
+        gap: 8, padding: 16,
+        position: 'absolute', inset: 0,
       }}>
         {Array.from({ length: ROWS * COLS }, (_, i) => {
           const row = Math.floor(i / COLS);
@@ -82,12 +97,12 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                 key={`${row}-${col}`}
                 {...dragHandlers(row, col)}
                 style={{
-                  border: editing ? '2px dashed #334155' : '2px solid transparent',
+                  border: editing ? '2px dashed #334155' : '1px solid #1E293B',
                   borderRadius: 12, display: 'flex',
                   alignItems: 'center', justifyContent: 'center',
                   color: '#475569', fontSize: 24,
-                  aspectRatio: '1',
                   transition: 'border-color 0.15s',
+                  minHeight: 0,
                 }}
               >
                 {editing ? '+' : ''}
@@ -99,6 +114,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
             <div
               key={`${row}-${col}`}
               {...dragHandlers(row, col)}
+              style={{ display: 'flex', minHeight: 0 }}
             >
               <DeckButtonComponent
                 button={button}
@@ -107,6 +123,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                 onRemove={() => onRemove(row, col)}
                 onClick={() => editing && setEditingSlot({ row, col })}
                 deviceStates={deviceStates}
+                actionCommands={actionCommands}
               />
             </div>
           );
