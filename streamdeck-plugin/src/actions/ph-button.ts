@@ -15,6 +15,11 @@ function coordKey(row: number, col: number): string {
   return `${row}:${col}`;
 }
 
+const sdLog = streamDeck.logger.createScope("PHButton");
+function log(msg: string): void {
+  sdLog.info(msg);
+}
+
 @action({ UUID: "com.productionhub.deck.button" })
 export class PHButton extends SingletonAction {
   private hub: HubClient;
@@ -29,27 +34,41 @@ export class PHButton extends SingletonAction {
       hubHost: 'localhost',
       modWsPort: 3001,
       dashboardPort: 8081,
-      profileName: 'main',
+      profileName: 'dave',
     };
 
     this.hub = new HubClient(config);
 
-    this.hub.on('profile-loaded', () => this.renderAll());
+    this.hub.on('profile-loaded', () => {
+      log(`Profile loaded — ${this.hub.grid.length} slots, ${this.actionMap.size} keys registered`);
+      this.renderAll();
+    });
     this.hub.on('actions-loaded', () => {
       this.buildCommandLookup();
+      log(`Actions loaded — ${this.actionCommands.size} commands mapped`);
       this.renderAll();
     });
     this.hub.on('device-state', () => this.renderAll());
-    this.hub.on('connected', () => this.renderAll());
-    this.hub.on('disconnected', () => this.renderAllDisconnected());
+    this.hub.on('connected', () => {
+      log('Hub connected, rendering all keys');
+      this.renderAll();
+    });
+    this.hub.on('disconnected', () => {
+      log('Hub disconnected');
+      this.renderAllDisconnected();
+    });
 
     this.hub.start();
   }
 
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
     const coords = (ev.payload as any).coordinates;
-    if (!coords) return;
+    if (!coords) {
+      log('onWillAppear: no coordinates');
+      return;
+    }
     const key = coordKey(coords.row, coords.column);
+    log(`onWillAppear: key ${key}`);
     if (ev.action.isKey()) {
       this.actionMap.set(key, ev.action);
       this.renderKey(key, ev.action);
@@ -129,6 +148,7 @@ export class PHButton extends SingletonAction {
       const svg = this.toDataUrl(renderDisconnected());
       action.setImage(svg);
       this.lastRendered.set(key, svg);
+      log(`renderKey ${key}: disconnected`);
       return;
     }
 
@@ -143,10 +163,11 @@ export class PHButton extends SingletonAction {
     if (this.lastRendered.get(key) === svg) return;
     this.lastRendered.set(key, svg);
 
+    log(`renderKey ${key}: ${button ? button.label : 'empty'} (level=${state.level}, active=${state.active}, live=${state.live}) svgLen=${svg.length}`);
     action.setImage(svg);
   }
 
   private toDataUrl(svg: string): string {
-    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
   }
 }
