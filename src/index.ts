@@ -30,9 +30,19 @@ import { ChamSysDriver } from './drivers/chamsys-driver';
 import { OBSDriver } from './drivers/obs-driver';
 import { VISCADriver } from './drivers/visca-driver';
 import { TouchDesignerDriver } from './drivers/touchdesigner-driver';
+import { QLabDriver } from './drivers/qlab-driver';
 import { DeviceConfig, DeviceDriver, HubContext } from './drivers/device-driver';
-import { createEmulator } from './emulators';
 import { SystemsCheck } from './systems-check';
+
+/** Default ports for the standalone production-emulator */
+const EMULATOR_DEFAULTS: Record<string, { host: string; port: number }> = {
+  avantis: { host: '127.0.0.1', port: 51325 },
+  chamsys: { host: '127.0.0.1', port: 7000 },
+  obs: { host: '127.0.0.1', port: 4455 },
+  visca: { host: '127.0.0.1', port: 5678 },
+  touchdesigner: { host: '127.0.0.1', port: 12000 },
+  qlab: { host: '127.0.0.1', port: 53100 },
+};
 
 function printBanner(): void {
   console.log('');
@@ -251,9 +261,13 @@ function validateCues(cueFile: string, config: { devices: { prefix: string }[] }
 
 /** Create a device driver from a config entry */
 function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbose: boolean): DeviceDriver {
-  // Emulator mode: return a virtual driver instead of a real one
+  // Emulate mode: override host/port to point at the standalone production-emulator
   if (deviceConfig.emulate) {
-    return createEmulator(deviceConfig, hubContext, verbose);
+    const defaults = EMULATOR_DEFAULTS[deviceConfig.type];
+    if (defaults) {
+      deviceConfig.host = defaults.host;
+      deviceConfig.port = defaults.port;
+    }
   }
 
   switch (deviceConfig.type) {
@@ -267,6 +281,8 @@ function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbos
       return new VISCADriver(deviceConfig as any, hubContext, verbose);
     case 'touchdesigner':
       return new TouchDesignerDriver(deviceConfig as any, hubContext, verbose);
+    case 'qlab':
+      return new QLabDriver(deviceConfig as any, hubContext, verbose);
     default:
       throw new Error(`Unknown device type: ${deviceConfig.type}`);
   }
@@ -313,7 +329,7 @@ function main(): void {
   for (const deviceConf of config.devices) {
     const driver = createDriver(deviceConf, hub.hubContext, verbose);
     hub.addDriver(driver, deviceConf);
-    const mode = deviceConf.emulate ? '(emulated)' : `-> ${deviceConf.host}:${deviceConf.port}`;
+    const mode = deviceConf.emulate ? `-> emulator @ ${deviceConf.host}:${deviceConf.port}` : `-> ${deviceConf.host}:${deviceConf.port}`;
     console.log(`[Main] Registered ${deviceConf.type} on ${deviceConf.prefix} ${mode}`);
   }
 

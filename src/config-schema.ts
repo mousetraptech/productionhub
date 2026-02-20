@@ -28,7 +28,7 @@ const prefixSchema = z.string().refine(
 
 // --- Device Type Enum ---
 
-const deviceTypeSchema = z.enum(['avantis', 'chamsys', 'obs', 'visca', 'touchdesigner']);
+const deviceTypeSchema = z.enum(['avantis', 'chamsys', 'obs', 'visca', 'touchdesigner', 'qlab']);
 
 // --- Reconnect & Heartbeat Configs ---
 
@@ -85,6 +85,11 @@ const touchdesignerDeviceSchema = baseDeviceSchema.extend({
   type: z.literal('touchdesigner'),
 });
 
+const qlabDeviceSchema = baseDeviceSchema.extend({
+  type: z.literal('qlab'),
+  passcode: z.string().optional().default(''),
+});
+
 // --- Discriminated Union for Devices ---
 
 const deviceSchema = z.discriminatedUnion('type', [
@@ -93,6 +98,7 @@ const deviceSchema = z.discriminatedUnion('type', [
   obsDeviceSchema,
   viscaDeviceSchema,
   touchdesignerDeviceSchema,
+  qlabDeviceSchema,
 ]);
 
 // --- OSC Config ---
