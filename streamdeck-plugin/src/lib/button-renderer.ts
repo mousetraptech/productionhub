@@ -1,19 +1,5 @@
+import { DeckButton } from './types';
 import { ButtonState } from './state-matcher';
-
-interface DeckAction {
-  actionId: string;
-  osc?: { address: string; args: any[]; label: string };
-}
-
-interface DeckButton {
-  id: string;
-  label: string;
-  icon: string;
-  color: string;
-  actions: DeckAction[];
-  mode: 'parallel' | 'series';
-  seriesGap: number;
-}
 
 const SIZE = 96;
 

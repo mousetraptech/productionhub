@@ -1,36 +1,15 @@
+import { DeckButton, DeviceStates } from './types';
+
 export interface ActionCommandRef {
   device: string;
   prefix?: string;
   address: string;
 }
 
-interface DeviceStates {
-  avantis: any;
-  obs: any;
-  chamsys: any;
-  visca: any;
-  touchdesigner: any;
-}
-
 export interface ButtonState {
   level: number | null;
   active: boolean;
   live: boolean;
-}
-
-interface DeckAction {
-  actionId: string;
-  osc?: { address: string; args: any[]; label: string };
-}
-
-interface DeckButton {
-  id: string;
-  label: string;
-  icon: string;
-  color: string;
-  actions: DeckAction[];
-  mode: 'parallel' | 'series';
-  seriesGap: number;
 }
 
 export function getDeckButtonState(

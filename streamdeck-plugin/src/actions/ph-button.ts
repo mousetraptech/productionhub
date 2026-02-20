@@ -9,20 +9,7 @@ import streamDeck, {
 import { HubClient, HubClientConfig } from '../lib/hub-client';
 import { getDeckButtonState, ActionCommandRef, ButtonState } from '../lib/state-matcher';
 import { renderButton, renderDisconnected } from '../lib/button-renderer';
-
-interface GridSlot {
-  row: number;
-  col: number;
-  button: {
-    id: string;
-    label: string;
-    icon: string;
-    color: string;
-    actions: Array<{ actionId: string; osc?: { address: string; args: any[]; label: string } }>;
-    mode: 'parallel' | 'series';
-    seriesGap: number;
-  };
-}
+import { GridSlot, DeckButton } from '../lib/types';
 
 function coordKey(row: number, col: number): string {
   return `${row}:${col}`;
@@ -99,14 +86,14 @@ export class PHButton extends SingletonAction {
     }, 200);
   }
 
-  private getButton(row: number, col: number): GridSlot['button'] | null {
+  private getButton(row: number, col: number): DeckButton | null {
     const slot = this.hub.grid.find(s => s.row === row && s.col === col);
     return slot?.button ?? null;
   }
 
-  private getButtonState(button: GridSlot['button']): ButtonState {
+  private getButtonState(button: DeckButton): ButtonState {
     return getDeckButtonState(
-      button as any,
+      button,
       this.hub.deviceStates as any,
       this.actionCommands,
     );

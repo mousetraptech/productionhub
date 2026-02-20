@@ -1,28 +1,5 @@
 import { EventEmitter } from 'events';
-
-interface GridSlot {
-  row: number;
-  col: number;
-  button: {
-    id: string;
-    label: string;
-    icon: string;
-    color: string;
-    actions: Array<{ actionId: string; osc?: { address: string; args: any[]; label: string } }>;
-    mode: 'parallel' | 'series';
-    seriesGap: number;
-  };
-}
-
-interface ActionCategory {
-  name: string;
-  items: Array<{
-    id: string;
-    label: string;
-    desc: string;
-    commands: Array<{ device: string; prefix?: string; address: string }>;
-  }>;
-}
+import { GridSlot, ActionCategory, DeckButton } from './types';
 
 export interface HubClientConfig {
   hubHost: string;
@@ -78,7 +55,7 @@ export class HubClient extends EventEmitter {
     this.dashWs?.close();
   }
 
-  fire(button: GridSlot['button']): void {
+  fire(button: DeckButton): void {
     this.sendMod({
       type: 'deck-fire',
       buttonId: button.id,
