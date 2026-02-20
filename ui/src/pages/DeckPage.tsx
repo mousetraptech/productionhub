@@ -1,10 +1,12 @@
 import { useDeck } from '../hooks/useDeck';
+import { useDeviceStates } from '../hooks/useDeviceStates';
 import { DeckToolbar } from '../components/deck/DeckToolbar';
 import { DeckGrid } from '../components/deck/DeckGrid';
 import ActionPalette from '../components/ActionPalette';
 
 export function DeckPage() {
   const deck = useDeck();
+  const { deviceStates } = useDeviceStates();
 
   return (
     <div style={{
@@ -34,6 +36,9 @@ export function DeckPage() {
           onFire={deck.fireButton}
           onRemove={deck.removeButton}
           onAssign={deck.assignAction}
+          onUpdate={deck.updateButton}
+          onRemoveAction={deck.removeAction}
+          deviceStates={deviceStates}
         />
       </div>
     </div>

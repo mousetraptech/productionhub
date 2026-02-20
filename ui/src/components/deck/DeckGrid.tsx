@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { ActionCategory, GridSlot, DeckButton, InlineOSC } from '../../types';
+import { DeckButton as DeckButtonComponent } from './DeckButton';
+import { DeckButtonEditor } from './DeckButtonEditor';
 
 interface DeckGridProps {
   grid: GridSlot[];
@@ -7,12 +10,17 @@ interface DeckGridProps {
   onFire: (button: DeckButton) => void;
   onRemove: (row: number, col: number) => void;
   onAssign: (row: number, col: number, actionId: string, osc?: InlineOSC, meta?: { label: string; icon: string; color: string }) => void;
+  onUpdate: (row: number, col: number, updates: Partial<DeckButton>) => void;
+  onRemoveAction: (row: number, col: number, actionIndex: number) => void;
+  deviceStates?: any;
 }
 
 const ROWS = 4;
 const COLS = 8;
 
-export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign }: DeckGridProps) {
+export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, deviceStates }: DeckGridProps) {
+  const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
+
   const getButton = (row: number, col: number): DeckButton | null => {
     const slot = grid.find(s => s.row === row && s.col === col);
     return slot?.button ?? null;
@@ -56,88 +64,68 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
   } : {};
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-      gridTemplateRows: `repeat(${ROWS}, 1fr)`,
-      gap: 8, padding: 16, flex: 1,
-    }}>
-      {Array.from({ length: ROWS * COLS }, (_, i) => {
-        const row = Math.floor(i / COLS);
-        const col = i % COLS;
-        const button = getButton(row, col);
+    <>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+        gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+        gap: 8, padding: 16, flex: 1,
+      }}>
+        {Array.from({ length: ROWS * COLS }, (_, i) => {
+          const row = Math.floor(i / COLS);
+          const col = i % COLS;
+          const button = getButton(row, col);
 
-        if (!button) {
+          if (!button) {
+            return (
+              <div
+                key={`${row}-${col}`}
+                {...dragHandlers(row, col)}
+                style={{
+                  border: editing ? '2px dashed #334155' : '2px solid transparent',
+                  borderRadius: 12, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  color: '#475569', fontSize: 24,
+                  aspectRatio: '1',
+                  transition: 'border-color 0.15s',
+                }}
+              >
+                {editing ? '+' : ''}
+              </div>
+            );
+          }
+
           return (
             <div
               key={`${row}-${col}`}
               {...dragHandlers(row, col)}
-              style={{
-                border: editing ? '2px dashed #334155' : '2px solid transparent',
-                borderRadius: 12, display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                color: '#475569', fontSize: 24,
-                aspectRatio: '1',
-                transition: 'border-color 0.15s',
-              }}
             >
-              {editing ? '+' : ''}
+              <DeckButtonComponent
+                button={button}
+                editing={editing}
+                onFire={onFire}
+                onRemove={() => onRemove(row, col)}
+                onClick={() => editing && setEditingSlot({ row, col })}
+                deviceStates={deviceStates}
+              />
             </div>
           );
-        }
-
+        })}
+      </div>
+      {editingSlot && (() => {
+        const btn = getButton(editingSlot.row, editingSlot.col);
+        if (!btn) return null;
         return (
-          <div
-            key={`${row}-${col}`}
-            {...dragHandlers(row, col)}
-            onPointerDown={() => !editing && onFire(button)}
-            style={{
-              background: button.color + '26',
-              border: `2px solid ${button.color}55`,
-              borderRadius: 12,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              cursor: editing ? 'default' : 'pointer',
-              userSelect: 'none',
-              position: 'relative',
-              aspectRatio: '1',
-              transition: 'transform 0.1s, box-shadow 0.1s',
-            }}
-          >
-            <span style={{ fontSize: 24 }}>{button.icon}</span>
-            <span style={{
-              fontSize: 11, color: '#E2E8F0', marginTop: 4,
-              textAlign: 'center', padding: '0 4px',
-              overflow: 'hidden', textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap', maxWidth: '100%',
-            }}>
-              {button.label}
-            </span>
-            {button.actions.length > 1 && (
-              <span style={{
-                position: 'absolute', top: 4, right: 6,
-                fontSize: 9, color: '#94A3B8', fontWeight: 700,
-              }}>
-                {button.actions.length}
-              </span>
-            )}
-            {editing && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onRemove(row, col); }}
-                style={{
-                  position: 'absolute', top: -6, right: -6,
-                  background: '#EF4444', color: '#FFF', border: 'none',
-                  borderRadius: '50%', width: 20, height: 20,
-                  fontSize: 12, cursor: 'pointer', lineHeight: '20px',
-                  padding: 0,
-                }}
-              >
-                x
-              </button>
-            )}
-          </div>
+          <DeckButtonEditor
+            button={btn}
+            row={editingSlot.row}
+            col={editingSlot.col}
+            onUpdate={onUpdate}
+            onRemoveAction={onRemoveAction}
+            onClose={() => setEditingSlot(null)}
+          />
         );
-      })}
-    </div>
+      })()}
+    </>
   );
 }
