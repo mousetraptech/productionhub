@@ -1,0 +1,41 @@
+{
+  "Controllers": [
+    {
+      "Actions": {
+        "0,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "1,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "2,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "3,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "4,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "5,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "6,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "7,0": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "0,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "1,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "2,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "3,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "4,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "5,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "6,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "7,1": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "0,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "1,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "2,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "3,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "4,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "5,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "6,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "7,2": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "0,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "1,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "2,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "3,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "4,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "5,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "6,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" },
+        "7,3": { "Name": "PH Button", "Settings": {}, "State": 0, "States": [{ "Image": "imgs/action-icon" }], "UUID": "com.productionhub.deck.button" }
+      },
+      "Type": "Keypad"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "Name": "Production Hub XL",
+  "Pages": {
+    "Current": "67d04818-a823-46a0-9ccf-4b4a91489578",
+    "Pages": ["67d04818-a823-46a0-9ccf-4b4a91489578"]
+  },
+  "Version": "2.0",
+  "Device": {
+    "Model": "StreamDeckXL",
+    "UUID": ""
+  }
+}

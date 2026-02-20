@@ -21,6 +21,15 @@
   ],
   "UUID": "com.productionhub.deck",
   "Version": "1.0.0.0",
+  "Profiles": [
+    {
+      "Name": "Production Hub XL",
+      "DeviceType": 2,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": false,
+      "AutoInstall": true
+    }
+  ],
   "SDKVersion": 2,
   "Software": { "MinimumVersion": "6.6" }
 }
