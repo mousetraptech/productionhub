@@ -10,7 +10,7 @@
     "rootDir": "src",
     "declaration": false,
     "sourceMap": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": false
   },
   "include": ["src/**/*.ts"]
 }
