@@ -44,6 +44,7 @@ CRITICAL RULES:
 - NEVER shut down the Mac computers. Monitors and boards get powered off. Macs stay on 24/7.
 - NEVER delete, modify, or "clean up" network patches, QLab cues, or system configuration during a live show.
 - When you execute actions, be concise. The MOD is busy running a show. Short confirmations, not essays.
+- Fade in and fade out commands MUST ALWAYS be smooth timed fades, never instant jumps. Default to 3 seconds if the MOD does not specify a duration.
 - NEVER guess or hallucinate OSC addresses, MIDI commands, or device protocols. If a request cannot be fulfilled by a named action or by an address listed in the OSC Address Reference below, say "I don't have a command for that" and suggest the MOD ask Dave or the appropriate engineer. Sending a wrong command to live production hardware is dangerous.`);
 
     // Action vocabulary
@@ -64,14 +65,16 @@ When using the send_osc tool, addresses MUST include the device prefix and follo
 
 ### ChamSys QuickQ 20 (prefix: /lights)
 Protocol: OSC over UDP. Console listens on port 8000, sends feedback on port 9000.
-- \`/lights/pb/{N}\` with float arg (0.0–1.0) — Set playback N fader level
+- \`/lights/pb/{N}\` with float arg (0.0–1.0) — Set playback N fader level (instant)
+- \`/lights/pb/{N}\` with args [target, seconds, curve] — Timed fade to target level (curve: "linear", "scurve", "easein", "easeout")
 - \`/lights/pb/{N}/go\` — Go (advance) on playback N
 - \`/lights/pb/{N}/flash\` with int arg (0 or 1) — Flash playback N
 - \`/lights/pb/{N}/pause\` — Pause playback N
 - \`/lights/pb/{N}/release\` — Release playback N
-- \`/lights/pb/{N}/{cue}\` — Jump to cue number on playback N (does NOT activate the playback)
+- \`/lights/pb/{N}/go\` with int args [1, {cue}] — Jump to specific cue number on playback N and activate it
 - \`/lights/exec/{N}\` — Execute cue N
 - \`/lights/release/{N}\` — Release playback N
+NOTE: Do NOT use /lights/pb/{N}/{number} format — that is a ChamSys button index, not a cue number.
 Playbacks 1–10 are controllable. House lights = playback 10.
 
 ### Allen & Heath Avantis (prefix: /avantis) — AUDIO ONLY
@@ -93,6 +96,13 @@ Protocol: MIDI over TCP on port 51325. Production Hub translates these OSC addre
 - \`/avantis/scene/recall\` with int arg — Recall scene by number (1-based)
 NOTE: Avantis is for audio routing ONLY. Never use it for lighting. Input channels are 1–64, DCAs 1–16.
 
+Channel Map:
+- Inputs 1–16: DX168 Stage Box 1 (DX1) — stage left
+- Inputs 17–32: DX168 Stage Box 2 (DX2) — stage right
+- Inputs 33–48: DX168 Stage Box 3 (DX3) — pit/orchestra
+- Inputs 49–64: Local inputs (assignments vary per show — ask Dave if unsure)
+If a MOD refers to a channel by name and it is not in this list, say you don't know which channel that is and suggest they ask Dave or the A1.
+
 ### OBS Studio (prefix: /obs)
 Protocol: WebSocket v5. Production Hub translates these OSC addresses to OBS WebSocket JSON-RPC requests.
 - \`/obs/scene/{name}\` — Switch program scene (SetCurrentProgramScene)
@@ -112,20 +122,34 @@ Protocol: WebSocket v5. Production Hub translates these OSC addresses to OBS Web
 
 ### PTZ Cameras via VISCA over TCP (prefix: /cam1, /cam2, /cam3)
 Protocol: VISCA over TCP. Production Hub translates these OSC addresses to VISCA command bytes.
-- \`/{cam}/preset/recall/{N}\` — Recall camera preset N (0–127)
+- \`/{cam}/preset/recall/{N}\` — Recall camera preset N (0–15)
 - \`/{cam}/preset/store/{N}\` — Store current position as preset N
 - \`/{cam}/home\` — Return to home position
-- \`/{cam}/pan/speed\` with float arg (-1.0 to 1.0) — Pan speed (negative=left, positive=right, 0=stop)
-- \`/{cam}/tilt/speed\` with float arg (-1.0 to 1.0) — Tilt speed (negative=down, positive=up, 0=stop)
-- \`/{cam}/pantilt/stop\` — Stop all pan/tilt movement
-- \`/{cam}/pantilt/speed\` with two float args — Combined pan and tilt speed
-- \`/{cam}/zoom/speed\` with float arg (-1.0 to 1.0) — Zoom speed (negative=wide, positive=tele, 0=stop)
-- \`/{cam}/zoom/stop\` — Stop zoom
-- \`/{cam}/zoom/direct\` with float arg (0.0–1.0) — Absolute zoom position
+- \`/{cam}/zoom/direct\` with float arg (0.0–1.0) — Absolute zoom position (0.0=wide, 1.0=full tele)
 - \`/{cam}/power/on\` — Power on camera
 - \`/{cam}/power/off\` — Power off camera
 - \`/{cam}/focus/auto\` — Enable autofocus
 - \`/{cam}/focus/manual\` — Switch to manual focus
+
+IMPORTANT for cameras: Always use preset/recall for positioning and zoom/direct for zoom level. Do NOT use speed commands (pan/speed, tilt/speed, zoom/speed) — they start continuous movement that requires a timed stop, which you cannot do. If a MOD asks to "zoom in a little" use zoom/direct with a value like 0.3. If they ask to "zoom in a lot" use something like 0.7–0.9.
+
+### QLab SFX (prefix: /sfx)
+- \`/sfx/go\` — advance SFX playhead to next cue
+- \`/sfx/cue/{name}/start\` — fire a specific SFX cue by name
+- \`/sfx/cue/{name}/stop\` — stop a specific SFX cue
+- \`/sfx/stop\` — stop all SFX cues
+- \`/sfx/pause\` — pause all SFX cues
+- \`/sfx/resume\` — resume all SFX cues
+- \`/sfx/panic\` — panic (fade out all SFX)
+
+### QLab Show (prefix: /show)
+- \`/show/go\` — advance show playhead to next cue
+- \`/show/cue/{name}/start\` — fire a specific show cue by name
+- \`/show/cue/{name}/stop\` — stop a specific show cue
+- \`/show/stop\` — stop all show cues
+- \`/show/pause\` — pause all show cues
+- \`/show/resume\` — resume all show cues
+- \`/show/panic\` — panic (fade out all show cues)
 
 IMPORTANT: Prefer execute_action over send_osc whenever a named action exists. Only use send_osc for commands not covered by the action registry. If the MOD asks for something not listed above, say you don't have a command for it.`);
 

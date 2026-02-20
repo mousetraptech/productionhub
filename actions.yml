@@ -225,3 +225,71 @@ actions:
       - device: visca
         prefix: cam1
         address: /preset/recall/4
+
+  # ─── SFX (QLab Utility) ───
+  sfx-go:
+    label: "SFX GO"
+    category: "SFX"
+    icon: "🔈"
+    color: "#6366F1"
+    description: "Advance SFX playhead"
+    commands:
+      - device: qlab
+        prefix: sfx
+        address: /go
+
+  sfx-stop:
+    label: "SFX Stop"
+    category: "SFX"
+    icon: "🔈"
+    color: "#6366F1"
+    description: "Stop all SFX"
+    commands:
+      - device: qlab
+        prefix: sfx
+        address: /stop
+
+  sfx-panic:
+    label: "SFX Panic"
+    category: "SFX"
+    icon: "🔈"
+    color: "#6366F1"
+    description: "Panic — fade out all SFX"
+    commands:
+      - device: qlab
+        prefix: sfx
+        address: /panic
+
+  # ─── Show (QLab Show) ───
+  show-go:
+    label: "Show GO"
+    category: "Show"
+    icon: "🎬"
+    color: "#8B5CF6"
+    description: "Advance show cue list"
+    commands:
+      - device: qlab
+        prefix: show
+        address: /go
+
+  show-stop:
+    label: "Show Stop"
+    category: "Show"
+    icon: "🎬"
+    color: "#8B5CF6"
+    description: "Stop all show cues"
+    commands:
+      - device: qlab
+        prefix: show
+        address: /stop
+
+  show-panic:
+    label: "Show Panic"
+    category: "Show"
+    icon: "🎬"
+    color: "#8B5CF6"
+    description: "Panic — fade out all show cues"
+    commands:
+      - device: qlab
+        prefix: show
+        address: /panic
