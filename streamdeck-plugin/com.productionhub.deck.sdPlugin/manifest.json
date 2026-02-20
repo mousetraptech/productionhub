@@ -4,7 +4,7 @@
     {
       "Icon": "imgs/action-icon",
       "Name": "PH Button",
-      "States": [{ "Image": "imgs/action-icon" }],
+      "States": [{ "Image": "imgs/action-icon", "TitleAlignment": "bottom" }],
       "UUID": "com.productionhub.deck.button",
       "UserTitleEnabled": false
     }

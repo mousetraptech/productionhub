@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import WebSocket from 'ws';
 import { GridSlot, ActionCategory, DeckButton } from './types';
 
 export interface HubClientConfig {
@@ -25,6 +26,7 @@ export class HubClient extends EventEmitter {
   private config: HubClientConfig;
   private modWs: WebSocket | null = null;
   private dashWs: WebSocket | null = null;
+  private static readonly WS_OPEN = 1;
   private modReconnect: ReturnType<typeof setTimeout> | null = null;
   private dashReconnect: ReturnType<typeof setTimeout> | null = null;
   private _modConnected = false;
@@ -70,16 +72,16 @@ export class HubClient extends EventEmitter {
     const ws = new WebSocket(url);
     this.modWs = ws;
 
-    ws.addEventListener('open', () => {
+    ws.on('open', () => {
       this._modConnected = true;
       this.emit('connected');
       this.sendMod({ type: 'deck-load', name: this.config.profileName });
       this.sendMod({ type: 'get-actions' });
     });
 
-    ws.addEventListener('message', (event) => {
+    ws.on('message', (data: WebSocket.Data) => {
       try {
-        const msg = JSON.parse(String(event.data));
+        const msg = JSON.parse(String(data));
         switch (msg.type) {
           case 'deck-state':
             this.grid = msg.grid ?? [];
@@ -96,7 +98,7 @@ export class HubClient extends EventEmitter {
       } catch { /* ignore */ }
     });
 
-    ws.addEventListener('close', () => {
+    ws.on('close', () => {
       if (this.modWs === ws) {
         this._modConnected = false;
         this.modWs = null;
@@ -105,7 +107,7 @@ export class HubClient extends EventEmitter {
       }
     });
 
-    ws.addEventListener('error', () => ws.close());
+    ws.on('error', () => ws.close());
   }
 
   private connectDash(): void {
@@ -113,13 +115,13 @@ export class HubClient extends EventEmitter {
     const ws = new WebSocket(url);
     this.dashWs = ws;
 
-    ws.addEventListener('open', () => {
+    ws.on('open', () => {
       this._dashConnected = true;
     });
 
-    ws.addEventListener('message', (event) => {
+    ws.on('message', (data: WebSocket.Data) => {
       try {
-        const msg = JSON.parse(String(event.data));
+        const msg = JSON.parse(String(data));
         if (msg.type === 'device-state') {
           this.deviceStates[msg.deviceType] = msg.state;
           this.emit('device-state', msg.deviceType, msg.state);
@@ -127,7 +129,7 @@ export class HubClient extends EventEmitter {
       } catch { /* ignore */ }
     });
 
-    ws.addEventListener('close', () => {
+    ws.on('close', () => {
       if (this.dashWs === ws) {
         this._dashConnected = false;
         this.dashWs = null;
@@ -135,11 +137,11 @@ export class HubClient extends EventEmitter {
       }
     });
 
-    ws.addEventListener('error', () => ws.close());
+    ws.on('error', () => ws.close());
   }
 
   private sendMod(msg: Record<string, any>): void {
-    if (this.modWs?.readyState === WebSocket.OPEN) {
+    if (this.modWs?.readyState === HubClient.WS_OPEN) {
       this.modWs.send(JSON.stringify(msg));
     }
   }
