@@ -273,6 +273,8 @@ export class ModWebSocket {
               }
             }
           }
+        }).catch(err => {
+          console.error(`[ModWS] deck-fire error: ${err.message}`);
         });
 
         this.broadcast({ type: 'deck-fired', buttonId: msg.buttonId });

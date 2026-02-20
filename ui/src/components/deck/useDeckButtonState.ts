@@ -61,5 +61,27 @@ export function getDeckButtonState(button: DeckButtonType, deviceStates: DeviceS
     return state;
   }
 
+  // Avantis fader: /avantis/ch/{N}/mix/fader, /avantis/dca/{N}/fader, /avantis/grp/{N}/mix/fader, etc.
+  const avFaderMatch = address.match(/\/avantis\/(ch|dca|grp|mix|mtx|fxsend|fxrtn|main)\/(?:(\d+)\/)?(?:mix\/)?fader$/);
+  if (avFaderMatch && deviceStates.avantis?.strips) {
+    const stripKey = avFaderMatch[2] ? `${avFaderMatch[1]}/${avFaderMatch[2]}` : avFaderMatch[1];
+    const strip = deviceStates.avantis.strips[stripKey];
+    if (strip) {
+      state.level = strip.fader ?? null;
+    }
+    return state;
+  }
+
+  // Avantis mute: /avantis/ch/{N}/mix/mute, /avantis/dca/{N}/mute
+  const avMuteMatch = address.match(/\/avantis\/(ch|dca|grp|mix|mtx)\/(\d+)\/(?:mix\/)?mute$/);
+  if (avMuteMatch && deviceStates.avantis?.strips) {
+    const stripKey = `${avMuteMatch[1]}/${avMuteMatch[2]}`;
+    const strip = deviceStates.avantis.strips[stripKey];
+    if (strip) {
+      state.active = strip.mute === true;
+    }
+    return state;
+  }
+
   return state;
 }

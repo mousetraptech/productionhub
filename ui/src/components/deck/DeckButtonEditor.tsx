@@ -119,12 +119,10 @@ export function DeckButtonEditor({
           ))}
         </div>
 
-        {/* Drop hint */}
         <div style={{
-          marginTop: 8, padding: 8, border: '2px dashed #334155',
-          borderRadius: 6, textAlign: 'center', color: '#475569', fontSize: 12,
+          marginTop: 12, fontSize: 11, color: '#475569', textAlign: 'center',
         }}>
-          Drag actions here to add
+          Close editor and drag actions onto the button to add more
         </div>
       </div>
     </div>

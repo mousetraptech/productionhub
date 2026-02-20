@@ -45,6 +45,7 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
         alignItems: 'center', justifyContent: 'center',
         cursor: editing ? 'default' : 'pointer',
         userSelect: 'none',
+        touchAction: 'manipulation',
         position: 'relative',
         aspectRatio: '1',
         transition: 'background 0.2s, border-color 0.2s, transform 0.1s',

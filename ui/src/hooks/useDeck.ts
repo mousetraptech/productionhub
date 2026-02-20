@@ -21,41 +21,62 @@ export function useDeck(options: UseDeckOptions = {}) {
   const [editing, setEditing] = useState(false);
   const [categories, setCategories] = useState<ActionCategory[]>([]);
 
-  // Connect to ModWS
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Connect to ModWS with auto-reconnect
   useEffect(() => {
     const host = window.location.hostname || 'localhost';
-    const ws = new WebSocket(`ws://${host}:3001`);
-    wsRef.current = ws;
 
-    ws.onopen = () => {
-      setConnected(true);
-      ws.send(JSON.stringify({ type: 'deck-list' }));
-      ws.send(JSON.stringify({ type: 'get-actions' }));
+    function connect() {
+      const ws = new WebSocket(`ws://${host}:3001`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setConnected(true);
+        if (reconnectTimer.current) {
+          clearTimeout(reconnectTimer.current);
+          reconnectTimer.current = undefined;
+        }
+        ws.send(JSON.stringify({ type: 'deck-list' }));
+        ws.send(JSON.stringify({ type: 'get-actions' }));
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data as string);
+        switch (msg.type) {
+          case 'deck-profiles':
+            setProfiles(msg.profiles);
+            break;
+          case 'deck-state':
+            setCurrentProfile(msg.name);
+            setGrid(msg.grid);
+            break;
+          case 'deck-saved':
+            ws.send(JSON.stringify({ type: 'deck-list' }));
+            break;
+          case 'actions':
+            setCategories(msg.categories);
+            break;
+        }
+      };
+
+      ws.onclose = () => {
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+          setConnected(false);
+          reconnectTimer.current = setTimeout(connect, 2000);
+        }
+      };
+
+      ws.onerror = () => { ws.close(); };
+    }
+
+    connect();
+
+    return () => {
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (wsRef.current) wsRef.current.close();
     };
-
-    ws.onclose = () => setConnected(false);
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data as string);
-      switch (msg.type) {
-        case 'deck-profiles':
-          setProfiles(msg.profiles);
-          break;
-        case 'deck-state':
-          setCurrentProfile(msg.name);
-          setGrid(msg.grid);
-          break;
-        case 'deck-saved':
-          // Refresh profile list after save
-          ws.send(JSON.stringify({ type: 'deck-list' }));
-          break;
-        case 'actions':
-          setCategories(msg.categories);
-          break;
-      }
-    };
-
-    return () => { ws.close(); };
   }, []);
 
   // Auto-load initial profile from URL param
@@ -137,12 +158,12 @@ export function useDeck(options: UseDeckOptions = {}) {
   }, []);
 
   const removeAction = useCallback((row: number, col: number, actionIndex: number) => {
-    setGrid(prev => prev.map(s => {
-      if (s.row !== row || s.col !== col) return s;
+    setGrid(prev => prev.flatMap(s => {
+      if (s.row !== row || s.col !== col) return [s];
       const actions = s.button.actions.filter((_, i) => i !== actionIndex);
-      if (actions.length === 0) return null as any; // will be filtered
-      return { ...s, button: { ...s.button, actions } };
-    }).filter(Boolean));
+      if (actions.length === 0) return [];
+      return [{ ...s, button: { ...s.button, actions } }];
+    }));
   }, []);
 
   const toggleEdit = useCallback(() => setEditing(e => !e), []);
