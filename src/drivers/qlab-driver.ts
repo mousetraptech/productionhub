@@ -84,6 +84,7 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
       }
 
       this.pollTimer = setInterval(() => this.poll(), 1000);
+      this.pollTimer.unref();
     });
 
     socket.on('message', (msg: Buffer, _rinfo: dgram.RemoteInfo) => {
