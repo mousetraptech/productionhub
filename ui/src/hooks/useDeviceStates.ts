@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 // Connect to the dashboard WebSocket (health server) for device states
-const DASHBOARD_WS_URL = `ws://${window.location.hostname}:8080`;
+const DASHBOARD_WS_URL = `ws://${window.location.hostname}:8081`;
 const RECONNECT_DELAY = 2000;
 
 export interface AvantisStrip {

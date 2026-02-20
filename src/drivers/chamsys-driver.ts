@@ -22,13 +22,12 @@
  *     /pb/{N}/isActive   int    Active state (0/1)
  *     /pb/{N}/cue        int    Current cue number
  *     /master            float  Grand master level
- *     /scene             int    Current scene number
  */
 
 import { EventEmitter } from 'events';
 import * as dgram from 'dgram';
 import * as osc from 'osc';
-import { DeviceDriver, DeviceConfig, HubContext, FeedbackEvent, OscArg } from './device-driver';
+import { DeviceDriver, DeviceConfig, HubContext, FeedbackEvent, OscArg, DriverFadeRequest } from './device-driver';
 import { normalizeArgs } from './osc-args';
 import { ReconnectQueue } from './reconnect-queue';
 import { getLogger } from '../logger';
@@ -60,17 +59,20 @@ export class ChamSysDriver extends EventEmitter implements DeviceDriver {
   // Feedback state from the desk
   private playbacks: Map<number, PlaybackState> = new Map();
   private masterLevel: number = 0;
-  private scene: number = 0;
   private lastExec: number = 0;
   private lastRelease: number = 0;
+  private lastFadeEmit: number = 0;
 
-  constructor(config: ChamSysConfig, _hubContext: HubContext, verbose = false) {
+  private hubContext: HubContext;
+
+  constructor(config: ChamSysConfig, hubContext: HubContext, verbose = false) {
     super();
     this.name = config.name ?? 'chamsys';
     this.prefix = config.prefix;
     this.host = config.host;
     this.port = config.port;
     this.verbose = verbose;
+    this.hubContext = hubContext;
   }
 
   connect(): void {
@@ -121,6 +123,43 @@ export class ChamSysDriver extends EventEmitter implements DeviceDriver {
    *   /release/1      → sent as /release/1 to QuickQ
    */
   handleOSC(address: string, args: any[]): void {
+    // Detect fade requests: /pb/{N} with [target, duration, curve] or /pb/{N}/fade
+    const fadeMatch = address.match(/^\/pb\/(\d+)(\/fade)?$/);
+    if (fadeMatch && args.length >= 2 && typeof this.getFloat(args) === 'number') {
+      const n = parseInt(fadeMatch[1], 10);
+      const target = this.getFloat(args);
+      const durationSecs = args.length >= 2 ? this.getFloat(args.slice(1)) : 1;
+      const easingStr = args.length >= 3 ? (typeof args[2] === 'string' ? args[2] : (args[2]?.value ?? 'scurve')) : 'scurve';
+      const easing = (['linear', 'scurve', 'easein', 'easeout'].includes(easingStr)
+        ? easingStr
+        : 'scurve') as DriverFadeRequest['easing'];
+
+      // Only treat as fade if duration > 0 — otherwise it's a direct set
+      if (durationSecs > 0) {
+        const fadeKey = `${this.name}:pb/${n}/level`;
+
+        // Seed current value if not yet tracked
+        const current = this.hubContext.getCurrentValue(fadeKey);
+        if (current === undefined) {
+          const pb = this.playbacks.get(n);
+          this.hubContext.setCurrentValue(fadeKey, pb ? pb.level : 0);
+        }
+
+        if (this.verbose) {
+          log.debug({ playback: n, target, durationSecs, easing }, 'Starting fade');
+        }
+
+        this.hubContext.startFade({
+          key: fadeKey,
+          startValue: 0,
+          endValue: target,
+          durationMs: durationSecs * 1000,
+          easing,
+        });
+        return;
+      }
+    }
+
     if (!this.socket || !this.connected) {
       this.queue.push({ address, args });
       if (this.verbose) {
@@ -149,9 +188,43 @@ export class ChamSysDriver extends EventEmitter implements DeviceDriver {
     }
   }
 
-  /** ChamSys doesn't use the fade engine directly */
-  handleFadeTick(_key: string, _value: number): void {
-    // No-op: ChamSys fades are handled by the desk itself
+  /** Handle fade engine ticks — send interpolated level to QuickQ */
+  handleFadeTick(key: string, value: number): void {
+    // key is like "pb/10/level"
+    const match = key.match(/^pb\/(\d+)\/level$/);
+    if (!match) return;
+
+    const n = parseInt(match[1], 10);
+
+    // Update local state
+    const pb = this.getOrCreatePlayback(n);
+    pb.level = value;
+
+    // Send OSC level to QuickQ
+    this.sendLevel(n, value);
+
+    // Emit feedback (throttled to ~10Hz) so dashboard WS broadcasts state
+    const now = Date.now();
+    if (now - this.lastFadeEmit >= 100) {
+      this.lastFadeEmit = now;
+      this.emitFeedback(`/pb/${n}/level`, [{ type: 'f', value }]);
+    }
+  }
+
+  /** Send a playback level as OSC to the QuickQ */
+  private sendLevel(n: number, value: number): void {
+    if (!this.socket || !this.connected) return;
+
+    const msg = osc.writeMessage({
+      address: `/pb/${n}`,
+      args: [{ type: 'f', value }],
+    });
+
+    this.socket.send(msg, 0, msg.length, this.port, this.host, (err) => {
+      if (err) {
+        log.error({ err: err.message }, 'Send error');
+      }
+    });
   }
 
   /**
@@ -215,13 +288,6 @@ export class ChamSysDriver extends EventEmitter implements DeviceDriver {
       return true;
     }
 
-    // /scene — current scene number
-    if (addr === '/scene') {
-      this.scene = this.getInt(args);
-      this.emitFeedback('/scene', [{ type: 'i', value: this.scene }]);
-      return true;
-    }
-
     return false;
   }
 
@@ -237,7 +303,6 @@ export class ChamSysDriver extends EventEmitter implements DeviceDriver {
       lastExec: this.lastExec,
       lastRelease: this.lastRelease,
       masterLevel: this.masterLevel,
-      scene: this.scene,
     };
   }
 
