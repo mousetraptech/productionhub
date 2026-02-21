@@ -6,6 +6,7 @@ Multi-device OSC control hub for live production. Routes OSC messages to device-
 
 ```bash
 npm run dev          # Start backend (ts-node, auto-loads config.yml)
+npm run dev:emulate  # Start with all devices in emulate mode + auto-launch emulator
 cd ui && npm run dev # Start React frontend (Vite dev server)
 ```
 
@@ -131,6 +132,7 @@ cd ui && npx tsc --noEmit   # Type check frontend
 - The OSC server has an error listener in `hub.ts` to prevent crashes from malformed packets
 - The MIDI TCP transport uses socket identity guards to prevent reconnect loops from stale socket close events
 - `emulate: true` on a device config overrides host/port to point at the standalone production-emulator defaults (127.0.0.1 + emulator port). Emulator default ports: avantis=51325, chamsys=7000, obs=4455, visca=5678, touchdesigner=12000
+- `--emulate-all` CLI flag sets all devices to emulate mode and auto-launches the production-emulator process. Requires `../production-emulator` or `EMULATOR_PATH` env var. Use `npm run dev:emulate` for convenience.
 
 ## Booth Brain (AI Reasoning Layer)
 
