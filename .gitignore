@@ -3,7 +3,7 @@ dist/
 logs/
 *.js.map
 *.d.ts.map
-shows/
+/shows/
 ui/dist/
 ui/node_modules/
 
