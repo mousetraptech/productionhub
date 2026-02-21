@@ -248,7 +248,11 @@ export class ProductionHub {
     });
 
     // Wire OSC incoming messages to prefix router
-    this.oscServer.onRawMessage((address, args, _info) => {
+    this.oscServer.onRawMessage((address, args, info) => {
+      if (this.verbose) {
+        const argStr = args.map((a: any) => a?.value ?? a).join(', ');
+        log.debug({ address, args: argStr, from: `${info?.address}:${info?.port}` }, 'OSC in');
+      }
       this.routeOSC(address, args);
     });
 
