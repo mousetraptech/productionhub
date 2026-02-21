@@ -23,6 +23,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { spawn, ChildProcess } from 'child_process';
 import { loadConfig } from './config';
 import { ProductionHub } from './hub';
 import { AvantisDriver } from './drivers/avantis-driver';
@@ -136,6 +137,9 @@ function parseArgs(argv: string[]): { configPath?: string; overrides: Record<str
           process.exit(1);
         }
         break;
+      case '--emulate-all':
+        overrides['emulateAll'] = true;
+        break;
       case '--help':
       case '-h':
         printBanner();
@@ -147,6 +151,7 @@ function parseArgs(argv: string[]): { configPath?: string; overrides: Record<str
         console.log('    --verbose, -v         Enable verbose logging');
         console.log('    --check               Run systems check and exit');
         console.log('    --validate <file>     Validate OSC addresses against config prefixes');
+        console.log('    --emulate-all         Set all devices to emulate mode and auto-launch emulator');
         console.log('    --help, -h            Show this help');
         console.log('');
         process.exit(0);
@@ -288,7 +293,78 @@ function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbos
   }
 }
 
-function main(): void {
+/* ── Emulator auto-launcher ──────────────────────────────────────────── */
+
+let emulatorProcess: ChildProcess | null = null;
+
+function findEmulatorPath(): string | null {
+  const candidates = [
+    process.env.EMULATOR_PATH,
+    path.join(process.cwd(), '..', 'production-emulator'),
+    path.join(__dirname, '..', '..', 'production-emulator'),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'server.js'))) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+async function launchEmulator(): Promise<void> {
+  const emulatorPath = findEmulatorPath();
+  if (!emulatorPath) {
+    console.error('[Emulator] Cannot find production-emulator. Set EMULATOR_PATH or place it at ../production-emulator');
+    process.exit(1);
+  }
+
+  console.log(`[Emulator] Launching from ${emulatorPath}`);
+  emulatorProcess = spawn('node', ['server.js'], {
+    cwd: emulatorPath,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  emulatorProcess.stdout?.on('data', (data: Buffer) => {
+    for (const line of data.toString().split('\n').filter(Boolean)) {
+      console.log(`[emulator] ${line}`);
+    }
+  });
+
+  emulatorProcess.stderr?.on('data', (data: Buffer) => {
+    for (const line of data.toString().split('\n').filter(Boolean)) {
+      console.error(`[emulator] ${line}`);
+    }
+  });
+
+  emulatorProcess.on('exit', (code) => {
+    console.log(`[Emulator] Process exited with code ${code}`);
+    emulatorProcess = null;
+  });
+
+  // Wait for HTTP port to respond
+  const maxWait = 5000;
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    try {
+      await fetch('http://127.0.0.1:8080');
+      console.log('[Emulator] Ready on http://127.0.0.1:8080');
+      return;
+    } catch {
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+  console.warn('[Emulator] Timeout waiting for emulator — continuing anyway');
+}
+
+function stopEmulator(): void {
+  if (emulatorProcess) {
+    emulatorProcess.kill();
+    emulatorProcess = null;
+  }
+}
+
+async function main(): Promise<void> {
   const { configPath, overrides } = parseArgs(process.argv);
 
   printBanner();
@@ -313,6 +389,15 @@ function main(): void {
 
   const verbose = config.logging?.verbose ?? false;
 
+  // --emulate-all: set all devices to emulate mode and launch the emulator
+  const emulateAll = overrides['emulateAll'] === true;
+  if (emulateAll) {
+    for (const device of config.devices) {
+      device.emulate = true;
+    }
+    await launchEmulator();
+  }
+
   // Create hub
   const hub = new ProductionHub({
     osc: config.osc,
@@ -336,11 +421,13 @@ function main(): void {
   // Graceful shutdown
   process.on('SIGINT', () => {
     console.log('\n[Hub] Shutting down...');
+    stopEmulator();
     hub.stop();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
+    stopEmulator();
     hub.stop();
     process.exit(0);
   });
