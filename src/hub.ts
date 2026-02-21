@@ -227,6 +227,7 @@ export class ProductionHub {
       getDrivers: () => this.driverManager.getDrivers(),
       runSystemsCheck: () => this.runSystemsCheck(),
       routeOSC: (address, args) => this.routeOSC(address, args),
+      getDevices: () => Array.from(this.driverManager.getDrivers().values()).map(d => ({ type: d.name, prefix: d.prefix })),
       dashboardWs: this.dashboardWs,
     });
   }

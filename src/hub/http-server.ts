@@ -52,6 +52,7 @@ export interface HttpServerDeps {
   getDrivers: () => Map<string, DeviceDriver>;
   runSystemsCheck: () => Promise<SystemsCheckReport>;
   routeOSC: (address: string, args: any[]) => void;
+  getDevices: () => Array<{ type: string; prefix: string }>;
   dashboardWs: DashboardWebSocket;
 }
 
@@ -198,6 +199,34 @@ export class HubHttpServer {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       });
+      return;
+    }
+
+    // Devices API
+    if (method === 'GET' && url === '/api/devices') {
+      const devices = this.deps.getDevices();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(devices));
+      return;
+    }
+
+    // Command reference docs
+    if (method === 'GET' && url === '/docs') {
+      const docsPath = path.join(__dirname, '..', '..', 'docs', 'command-reference.html');
+      if (fs.existsSync(docsPath)) {
+        fs.readFile(docsPath, (err, data) => {
+          if (err) {
+            res.writeHead(500);
+            res.end();
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(data);
+        });
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Command reference not found. Expected: docs/command-reference.html');
+      }
       return;
     }
 
