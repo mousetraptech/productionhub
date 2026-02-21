@@ -177,8 +177,8 @@ const COMMANDS: CmdDef[] = [
       const n = parseInt(v.n, 10);
       if (isNaN(n) || n < 1) return null;
       return {
-        address: `/lights/pb/${n}/1`,
-        args: [],
+        address: `/lights/pb/${n}/go`,
+        args: [{ type: 'i', value: 1 }],
         label: `PB ${n} GO`,
       };
     },

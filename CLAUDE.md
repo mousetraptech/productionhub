@@ -79,7 +79,7 @@ The sidebar CommandBuilder supports these command types:
 - **Mute / Unmute** — `/avantis/ch/{n}/mix/mute [1|0]`
 - **Recall Scene** — `/avantis/scene/recall [n]`
 - **Playback** (level) — `/lights/pb/{n} [level]`
-- **PB Go** — `/lights/pb/{n}/1` (ChamSys button 1 = go)
+- **PB Go** — `/lights/pb/{n}/go [1]` (advance to next cue)
 - **PB Jump** — `/lights/pb/{pb}/go [1, cue]` (jump to specific cue)
 - **Cam Preset** — `/cam1/preset/recall/{n}`
 - **OBS Scene** — `/obs/scene/{name}` (sets program scene directly)
@@ -96,14 +96,19 @@ Drag a configured command onto the cue stack to create an inline OSC cue action.
 - NRPN fader: `Bn 63 <strip> Bn 62 17 Bn 06 <level>` (level 0x00-0x7F)
 - Mute: Note On `9n <note> <vel>` (vel >= 0x40 = mute on, <= 0x3F = mute off)
 - Scene recall: Program Change `Cn <scene>`
-- MIDI channels (0-indexed, base=11): +0 inputs 1-48, +1 inputs 49-64, +2 mix/FX, +3 DCA/groups, +4 main
+- MIDI channels (0-indexed, base=0): +0 inputs 1-48, +1 inputs 49-64, +2 mix/FX, +3 DCA/groups, +4 main
 - `NRPN_PARAM.FADER_LEVEL = 0x17` (hex, not decimal 17)
 
 ### ChamSys QuickQ (OSC over UDP)
 
-Two addressing formats:
-- **Single-index:** `/pb/{N}` (level), `/pb/{N}/go`, `/pb/{N}/flash`, `/pb/{N}/release`
-- **Two-index:** `/pb/{X}/{Y}` where Y = button number (1=go, 2=toggle, 3=release, 4/5=flash)
+Documented OSC commands (QuickQ RX port 8000):
+- `/pb/{N}` — Set playback N fader level (float 0.0-1.0 or int 0-100)
+- `/pb/{N}/go` — Advance to next cue on playback N (requires non-zero int arg)
+- `/pb/{N}/flash` — Flash playback N (non-zero=on, zero=off)
+- `/pb/{N}/pause` — Pause playback N
+- `/pb/{N}/release` — Release playback N
+
+**WARNING:** `/pb/{N}/{cue}` (two integers) jumps to a specific cue number — it does NOT mean "button number". Do NOT use `/pb/{N}/1` for "go" — use `/pb/{N}/go` instead.
 
 The hub's ChamSys driver is a transparent OSC relay — addresses are forwarded verbatim (minus the `/lights` prefix).
 
@@ -120,11 +125,51 @@ cd ui && npx tsc --noEmit   # Type check frontend
 
 ## Configuration Notes
 
-- `heartbeat.enabled: false` should be set for the Avantis device when using the emulator (emulator doesn't send unsolicited MIDI)
+- `heartbeat.enabled: false` should be set for the Avantis device when using the emulator (emulator doesn't send unsolicited MIDI) and for all VISCA cameras (VISCA cameras never send unsolicited data, so heartbeat timeout causes a reconnect loop)
 - The OSC server has an error listener in `hub.ts` to prevent crashes from malformed packets
 - The MIDI TCP transport uses socket identity guards to prevent reconnect loops from stale socket close events
-- `emulate: true` on a device config uses the built-in emulator instead of connecting to real hardware
+- `emulate: true` on a device config overrides host/port to point at the standalone production-emulator defaults (127.0.0.1 + emulator port). Emulator default ports: avantis=51325, chamsys=7000, obs=4455, visca=5678, touchdesigner=12000
+
+## Booth Brain (AI Reasoning Layer)
+
+The Brain is an AI-powered reasoning layer that lets the MOD (director) control production devices via natural language chat. Located in `src/brain/`.
+
+| File | Purpose |
+|------|---------|
+| `src/brain/brain-service.ts` | Core service — manages Claude API calls, conversation history, tool execution, confirm/trusted modes |
+| `src/brain/system-prompt.ts` | Builds system prompt from manual, device state, and action registry |
+| `src/brain/tools.ts` | Tool definitions and execution for Claude function calling |
+| `src/brain/types.ts` | BrainConfig, ChatRequest, ChatResponse, ProposedAction, etc. |
+
+**Modes:**
+- `confirm` — Brain proposes actions, MOD must approve before execution
+- `trusted` — Brain executes actions immediately (except forced-confirm like `/hub/panic`, `/fade/stop`)
+
+**Conversation history:** BrainService maintains a rolling `MessageParam[]` buffer (10 turns / 20 messages max). Assistant responses are stored as text-only (no tool_use blocks) to avoid needing matching tool_result messages. History is trimmed on overflow and can be cleared via `clearHistory()` (e.g., on show change). On API error, the failed user message is rolled back from history.
+
+**System prompt rules:**
+- Fade in/out commands MUST always be smooth timed fades (default 3 seconds), never instant jumps
+- Brain uses Anthropic Claude API with tool definitions for `execute_action`, `send_osc`, `fire_cue`, `get_device_state`, `get_show_state`, `get_actions`, `recall_scene`, `camera_preset`
+
+**Avantis output fader addressing (OSC):**
+- Groups: `/avantis/grp/{N}/mix/fader`
+- Aux/Mix: `/avantis/mix/{N}/mix/fader`
+- Matrix: `/avantis/mtx/{N}/mix/fader`
+- FX Send: `/avantis/fxsend/{N}/mix/fader`
+- FX Return: `/avantis/fxrtn/{N}/mix/fader`
+- Main: `/avantis/main/mix/fader`
+- DCA: `/avantis/dca/{N}/fader`
+
+### ChamSys Driver Notes
+
+The ChamSys QuickQ 20 does NOT support scenes via OSC. The driver is a transparent OSC relay — no `/scene` address exists. Playback state feedback includes: `/pb/{N}/level`, `/pb/{N}/active`, `/pb/{N}/flash`, `/pb/{N}/cue`, `/master`.
+
+### VISCA Driver Notes
+
+- VISCA driver does NOT have built-in reconnect — reconnection is handled exclusively by DeviceHealthManager
+- Heartbeat MUST be disabled for VISCA cameras in `config.yml` because VISCA cameras never send unsolicited data (heartbeat timeout would cause a reconnect loop)
+- Each camera gets its own driver instance with a unique prefix (e.g., `/cam1`, `/cam2`, `/cam3`)
 
 ## Companion Project
 
-The **production-emulator** (`/Users/dave/projects/production-emulator`) is a standalone multi-protocol emulator that simulates an Allen & Heath Avantis (MIDI TCP), ChamSys QuickQ 20 (OSC UDP), and OBS Studio (WebSocket v5). It provides a web UI at http://localhost:8080 for visual feedback. See its own CLAUDE.md for details.
+The **production-emulator** (`/Users/dave/projects/production-emulator`) is a standalone multi-protocol emulator that simulates an Allen & Heath Avantis (MIDI TCP), ChamSys QuickQ 20 (OSC UDP), OBS Studio (WebSocket v5), and PTZ cameras (VISCA TCP). It provides a web UI at http://localhost:8080 for visual feedback. Set `emulate: true` on devices in `config.yml` to auto-redirect to localhost emulator ports. See its own CLAUDE.md for details.
