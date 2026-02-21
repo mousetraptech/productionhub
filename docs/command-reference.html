@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Hub — Command Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 72px;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0F172A;
+      color: #E2E8F0;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #1E293B;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 100;
+    }
+
+    .topbar-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #E2E8F0;
+      white-space: nowrap;
+    }
+
+    .topbar-title span {
+      color: #94A3B8;
+      font-weight: 400;
+    }
+
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #94A3B8;
+    }
+
+    .toggle-label {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-label.active {
+      color: #E2E8F0;
+      font-weight: 500;
+    }
+
+    /* ── Toggle Switch ── */
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #334155;
+      border-radius: 12px;
+      transition: background 0.2s;
+    }
+
+    .slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #E2E8F0;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .switch input:checked + .slider {
+      background: #38BDF8;
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      width: 220px;
+      height: calc(100vh - 56px);
+      background: #1E293B;
+      border-right: 1px solid #334155;
+      overflow-y: auto;
+      padding: 16px 0;
+      z-index: 90;
+    }
+
+    #sidebar a {
+      display: block;
+      padding: 8px 20px;
+      color: #94A3B8;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+
+    #sidebar a:hover {
+      color: #E2E8F0;
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    #sidebar a.active {
+      color: #38BDF8;
+      border-left-color: #38BDF8;
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    #sidebar a.dimmed {
+      opacity: 0.3;
+    }
+
+    .sidebar-group {
+      margin-top: 16px;
+      padding: 0 20px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #475569;
+    }
+
+    .sidebar-group:first-child {
+      margin-top: 0;
+    }
+
+    /* ── Main Content ── */
+    .main {
+      margin-left: 220px;
+      margin-top: 56px;
+      padding: 32px 40px 80px;
+      max-width: 960px;
+    }
+
+    /* ── Device Sections ── */
+    .device-section {
+      margin-bottom: 48px;
+      transition: opacity 0.3s;
+    }
+
+    .device-section.dimmed {
+      opacity: 0.3;
+    }
+
+    .device-section.dimmed .table-wrap {
+      max-height: 0;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    .device-section.dimmed .examples,
+    .device-section.dimmed .note-box,
+    .device-section.dimmed .warn-box,
+    .device-section.dimmed .info-table-wrap,
+    .device-section.dimmed .desc-para {
+      max-height: 0;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .section-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #E2E8F0;
+    }
+
+    .section-prefix {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #38BDF8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .section-desc {
+      color: #94A3B8;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .sub-heading {
+      font-size: 15px;
+      font-weight: 600;
+      color: #CBD5E1;
+      margin: 24px 0 10px;
+    }
+
+    /* ── Tables ── */
+    .table-wrap {
+      overflow-x: auto;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      transition: max-height 0.3s;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: #1E293B;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      color: #94A3B8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #334155;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: rgba(56, 189, 248, 0.03);
+    }
+
+    .addr {
+      font-family: 'JetBrains Mono', monospace;
+      color: #38BDF8;
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+
+    .args {
+      font-family: 'JetBrains Mono', monospace;
+      color: #A78BFA;
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+
+    .addr-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Copy Button ── */
+    .copy-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      background: #0F172A;
+      color: #94A3B8;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover {
+      border-color: #38BDF8;
+      color: #38BDF8;
+    }
+
+    .copy-btn.copied {
+      border-color: #4ADE80;
+      color: #4ADE80;
+      background: rgba(74, 222, 128, 0.08);
+    }
+
+    /* ── Examples ── */
+    .examples {
+      margin: 16px 0 8px;
+      transition: max-height 0.3s;
+    }
+
+    .examples h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .example-item {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .example-desc {
+      color: #94A3B8;
+    }
+
+    .example-cmd {
+      font-family: 'JetBrains Mono', monospace;
+      color: #38BDF8;
+      font-size: 12.5px;
+      background: rgba(56, 189, 248, 0.06);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* ── Note & Warning Boxes ── */
+    .note-box {
+      font-size: 13px;
+      color: #94A3B8;
+      background: rgba(56, 189, 248, 0.05);
+      border-left: 3px solid #38BDF8;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      transition: max-height 0.3s;
+    }
+
+    .warn-box {
+      font-size: 13px;
+      color: #E2E8F0;
+      background: rgba(245, 158, 11, 0.08);
+      border-left: 3px solid #F59E0B;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      margin: 12px 0;
+      transition: max-height 0.3s;
+    }
+
+    .warn-box code, .note-box code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(0,0,0,0.2);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* ── Info Table (Fader Value Reference) ── */
+    .info-table-wrap {
+      overflow-x: auto;
+      margin: 12px 0;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      max-width: 280px;
+      transition: max-height 0.3s;
+    }
+
+    .info-table-wrap table {
+      font-size: 13px;
+    }
+
+    .info-table-wrap td {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+    }
+
+    .info-table-wrap td:first-child {
+      color: #A78BFA;
+    }
+
+    .info-table-wrap td:last-child {
+      color: #94A3B8;
+    }
+
+    .desc-para {
+      font-size: 14px;
+      color: #94A3B8;
+      margin-bottom: 16px;
+      line-height: 1.7;
+      transition: max-height 0.3s;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #sidebar .sidebar-group {
+        display: none;
+      }
+
+      #sidebar a {
+        display: inline-block;
+        padding: 10px 16px;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        font-size: 12px;
+      }
+
+      #sidebar a.active {
+        border-left-color: transparent;
+        border-bottom-color: #38BDF8;
+      }
+
+      .main {
+        margin-left: 0;
+        margin-top: 100px;
+        padding: 20px 16px 60px;
+      }
+
+      html {
+        scroll-padding-top: 116px;
+      }
+
+      .section-header {
+        flex-wrap: wrap;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      .topbar {
+        padding: 0 16px;
+      }
+
+      .topbar-title {
+        font-size: 14px;
+      }
+
+      .addr-cell {
+        min-width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top Bar ── -->
+  <header class="topbar">
+    <div class="topbar-title">Production Hub <span>— Command Reference</span></div>
+    <div class="toggle-wrap">
+      <span class="toggle-label active" id="labelMyDevices">My Devices</span>
+      <label class="switch">
+        <input type="checkbox" id="showAll">
+        <span class="slider"></span>
+      </label>
+      <span class="toggle-label" id="labelAllCmds">All Commands</span>
+    </div>
+  </header>
+
+  <!-- ── Sidebar ── -->
+  <nav id="sidebar">
+    <div class="sidebar-group">Devices</div>
+    <a href="#audio" data-type="avantis">Audio — Avantis</a>
+    <a href="#lights" data-type="chamsys">Lights — ChamSys</a>
+    <a href="#cameras" data-type="visca">Cameras — VISCA</a>
+    <a href="#obs" data-type="obs">OBS Studio</a>
+    <a href="#touchdesigner" data-type="touchdesigner">TouchDesigner</a>
+    <div class="sidebar-group">System</div>
+    <a href="#global">Global / Hub</a>
+  </nav>
+
+  <!-- ── Main Content ── -->
+  <main class="main">
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- AUDIO — AVANTIS                              -->
+    <!-- ════════════════════════════════════════════ -->
+    <section id="audio" class="device-section" data-type="avantis">
+      <div class="section-header">
+        <h2>Audio — Avantis</h2>
+        <span class="section-prefix">/avantis</span>
+      </div>
+      <p class="section-desc">Allen &amp; Heath Avantis digital mixer via MIDI TCP (port 51325)</p>
+
+      <!-- Faders -->
+      <h3 class="sub-heading">Faders</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/ch/{1-64}/mix/fader</span><button class="copy-btn" data-copy="/avantis/ch/{1-64}/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Input channel fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/dca/{1-16}/fader</span><button class="copy-btn" data-copy="/avantis/dca/{1-16}/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>DCA fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/grp/{1-16}/mix/fader</span><button class="copy-btn" data-copy="/avantis/grp/{1-16}/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Group fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/mix/{1-12}/mix/fader</span><button class="copy-btn" data-copy="/avantis/mix/{1-12}/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Mix/Aux fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/fxsend/{1-4}/mix/fader</span><button class="copy-btn" data-copy="/avantis/fxsend/{1-4}/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>FX Send fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/fxrtn/{1-8}/mix/fader</span><button class="copy-btn" data-copy="/avantis/fxrtn/{1-8}/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>FX Return fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/mtx/{1-6}/mix/fader</span><button class="copy-btn" data-copy="/avantis/mtx/{1-6}/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Matrix fader</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/main/mix/fader</span><button class="copy-btn" data-copy="/avantis/main/mix/fader">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Main LR fader</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mutes -->
+      <h3 class="sub-heading">Mutes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/ch/{1-64}/mix/mute</span><button class="copy-btn" data-copy="/avantis/ch/{1-64}/mix/mute">Copy</button></div></td>
+              <td class="args">int 1|0</td>
+              <td>Input channel mute</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/dca/{1-16}/mute</span><button class="copy-btn" data-copy="/avantis/dca/{1-16}/mute">Copy</button></div></td>
+              <td class="args">int 1|0</td>
+              <td>DCA mute</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/main/mix/mute</span><button class="copy-btn" data-copy="/avantis/main/mix/mute">Copy</button></div></td>
+              <td class="args">int 1|0</td>
+              <td>Main LR mute</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pan -->
+      <h3 class="sub-heading">Pan</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/ch/{1-64}/mix/pan</span><button class="copy-btn" data-copy="/avantis/ch/{1-64}/mix/pan">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Pan (0=L, 0.5=C, 1=R)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Timed Fades -->
+      <h3 class="sub-heading">Timed Fades</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/ch/{n}/mix/fade</span><button class="copy-btn" data-copy="/avantis/ch/{n}/mix/fade">Copy</button></div></td>
+              <td class="args">float target, float secs, [string easing]</td>
+              <td>Channel fader fade</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/dca/{n}/fade</span><button class="copy-btn" data-copy="/avantis/dca/{n}/fade">Copy</button></div></td>
+              <td class="args">float target, float secs, [string easing]</td>
+              <td>DCA fade</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/grp/{n}/mix/fade</span><button class="copy-btn" data-copy="/avantis/grp/{n}/mix/fade">Copy</button></div></td>
+              <td class="args">float target, float secs, [string easing]</td>
+              <td>Group fade</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/mix/{n}/mix/fade</span><button class="copy-btn" data-copy="/avantis/mix/{n}/mix/fade">Copy</button></div></td>
+              <td class="args">float target, float secs, [string easing]</td>
+              <td>Mix/Aux fade</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/main/mix/fade</span><button class="copy-btn" data-copy="/avantis/main/mix/fade">Copy</button></div></td>
+              <td class="args">float target, float secs, [string easing]</td>
+              <td>Main LR fade</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note-box">Easing: <code>linear</code>, <code>scurve</code> (default), <code>easein</code>, <code>easeout</code>. Interpolated at 50Hz.</div>
+
+      <!-- Scene -->
+      <h3 class="sub-heading">Scene</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/avantis/scene/recall</span><button class="copy-btn" data-copy="/avantis/scene/recall">Copy</button></div></td>
+              <td class="args">int 0-127</td>
+              <td>Recall scene by number</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Fader Value Reference -->
+      <h3 class="sub-heading">Fader Value Reference</h3>
+      <div class="info-table-wrap">
+        <table>
+          <thead><tr><th>Value</th><th>Level</th></tr></thead>
+          <tbody>
+            <tr><td>0.0</td><td>-inf (silence)</td></tr>
+            <tr><td>0.5</td><td>-12dB</td></tr>
+            <tr><td>0.75</td><td>-6dB</td></tr>
+            <tr><td>1.0</td><td>0dB (unity)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Examples -->
+      <div class="examples">
+        <h4>Examples</h4>
+        <div class="example-item">
+          <span class="example-desc">Fade DCA 1 to silence over 3s:</span>
+          <span class="example-cmd">/avantis/dca/1/fade 0.0 3.0 scurve</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Mute channel 5:</span>
+          <span class="example-cmd">/avantis/ch/5/mix/mute 1</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Recall scene 3:</span>
+          <span class="example-cmd">/avantis/scene/recall 3</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- LIGHTS — CHAMSYS                             -->
+    <!-- ════════════════════════════════════════════ -->
+    <section id="lights" class="device-section" data-type="chamsys">
+      <div class="section-header">
+        <h2>Lights — ChamSys QuickQ</h2>
+        <span class="section-prefix">/lights</span>
+      </div>
+      <p class="section-desc">ChamSys QuickQ lighting console via OSC relay (UDP port 8000)</p>
+
+      <h3 class="sub-heading">Commands</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/lights/pb/{N}/go</span><button class="copy-btn" data-copy="/lights/pb/{N}/go">Copy</button></div></td>
+              <td class="args">int 1</td>
+              <td>Advance playback N to next cue</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/lights/pb/{N}</span><button class="copy-btn" data-copy="/lights/pb/{N}">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Set playback N fader level</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/lights/pb/{N}/flash</span><button class="copy-btn" data-copy="/lights/pb/{N}/flash">Copy</button></div></td>
+              <td class="args">int 1|0</td>
+              <td>Flash playback (1=on, 0=off)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/lights/pb/{N}/pause</span><button class="copy-btn" data-copy="/lights/pb/{N}/pause">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Pause playback N</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/lights/pb/{N}/release</span><button class="copy-btn" data-copy="/lights/pb/{N}/release">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Release playback N</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="warn-box">Use <code>/pb/{N}/go 1</code> to advance to the next cue. Do <strong>NOT</strong> use <code>/pb/{N}/1</code> &mdash; that jumps to cue number 1, not button 1.</div>
+
+      <div class="examples">
+        <h4>Examples</h4>
+        <div class="example-item">
+          <span class="example-desc">Advance playback 1:</span>
+          <span class="example-cmd">/lights/pb/1/go 1</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Set playback 2 to 50%:</span>
+          <span class="example-cmd">/lights/pb/2 0.5</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Release playback 3:</span>
+          <span class="example-cmd">/lights/pb/3/release</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- CAMERAS — VISCA                              -->
+    <!-- ════════════════════════════════════════════ -->
+    <section id="cameras" class="device-section" data-type="visca">
+      <div class="section-header">
+        <h2>Cameras — VISCA PTZ</h2>
+        <span class="section-prefix">/cam1 /cam2 /cam3</span>
+      </div>
+      <p class="section-desc">PTZ cameras via VISCA over IP. Each camera has its own prefix.</p>
+
+      <h3 class="sub-heading">Commands</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/preset/recall/{P}</span><button class="copy-btn" data-copy="/cam{N}/preset/recall/{P}">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Recall preset P (0-255)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/preset/store/{P}</span><button class="copy-btn" data-copy="/cam{N}/preset/store/{P}">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Store current position as preset P</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/home</span><button class="copy-btn" data-copy="/cam{N}/home">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Return to home position</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/pantilt/speed</span><button class="copy-btn" data-copy="/cam{N}/pantilt/speed">Copy</button></div></td>
+              <td class="args">float pan, float tilt</td>
+              <td>Pan/tilt (-1.0 to 1.0 each)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/pantilt/stop</span><button class="copy-btn" data-copy="/cam{N}/pantilt/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop pan/tilt movement</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/pan/speed</span><button class="copy-btn" data-copy="/cam{N}/pan/speed">Copy</button></div></td>
+              <td class="args">float -1.0 to 1.0</td>
+              <td>Pan only (neg=left, pos=right)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/tilt/speed</span><button class="copy-btn" data-copy="/cam{N}/tilt/speed">Copy</button></div></td>
+              <td class="args">float -1.0 to 1.0</td>
+              <td>Tilt only (neg=down, pos=up)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/zoom/speed</span><button class="copy-btn" data-copy="/cam{N}/zoom/speed">Copy</button></div></td>
+              <td class="args">float -1.0 to 1.0</td>
+              <td>Zoom (neg=wide, pos=tele)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/zoom/direct</span><button class="copy-btn" data-copy="/cam{N}/zoom/direct">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Set absolute zoom position</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/zoom/stop</span><button class="copy-btn" data-copy="/cam{N}/zoom/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop zoom</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/focus/auto</span><button class="copy-btn" data-copy="/cam{N}/focus/auto">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Enable auto focus</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/focus/manual</span><button class="copy-btn" data-copy="/cam{N}/focus/manual">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Switch to manual focus</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/power/on</span><button class="copy-btn" data-copy="/cam{N}/power/on">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Power on</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/cam{N}/power/off</span><button class="copy-btn" data-copy="/cam{N}/power/off">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Power off</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="examples">
+        <h4>Examples</h4>
+        <div class="example-item">
+          <span class="example-desc">Recall preset 2 on camera 1:</span>
+          <span class="example-cmd">/cam1/preset/recall/2</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Zoom camera 2 in at half speed:</span>
+          <span class="example-cmd">/cam2/zoom/speed 0.5</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Stop camera 1 movement:</span>
+          <span class="example-cmd">/cam1/pantilt/stop</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- OBS STUDIO                                   -->
+    <!-- ════════════════════════════════════════════ -->
+    <section id="obs" class="device-section" data-type="obs">
+      <div class="section-header">
+        <h2>OBS Studio</h2>
+        <span class="section-prefix">/obs</span>
+      </div>
+      <p class="section-desc">OBS Studio via WebSocket v5 protocol (port 4455)</p>
+
+      <h3 class="sub-heading">Commands</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/scene/{name}</span><button class="copy-btn" data-copy="/obs/scene/{name}">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Switch program scene</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/scene/preview/{name}</span><button class="copy-btn" data-copy="/obs/scene/preview/{name}">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Switch preview scene</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/transition/trigger</span><button class="copy-btn" data-copy="/obs/transition/trigger">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Execute transition (preview to program)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/transition/{name}</span><button class="copy-btn" data-copy="/obs/transition/{name}">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Set transition type</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/transition/duration</span><button class="copy-btn" data-copy="/obs/transition/duration">Copy</button></div></td>
+              <td class="args">int ms</td>
+              <td>Set transition duration</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/stream/start</span><button class="copy-btn" data-copy="/obs/stream/start">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Start streaming</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/stream/stop</span><button class="copy-btn" data-copy="/obs/stream/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop streaming</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/stream/toggle</span><button class="copy-btn" data-copy="/obs/stream/toggle">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Toggle streaming</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/record/start</span><button class="copy-btn" data-copy="/obs/record/start">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Start recording</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/record/stop</span><button class="copy-btn" data-copy="/obs/record/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop recording</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/record/toggle</span><button class="copy-btn" data-copy="/obs/record/toggle">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Toggle recording</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/virtualcam/start</span><button class="copy-btn" data-copy="/obs/virtualcam/start">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Start virtual camera</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/obs/virtualcam/stop</span><button class="copy-btn" data-copy="/obs/virtualcam/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop virtual camera</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="examples">
+        <h4>Examples</h4>
+        <div class="example-item">
+          <span class="example-desc">Switch to Live scene:</span>
+          <span class="example-cmd">/obs/scene/Live</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Start streaming:</span>
+          <span class="example-cmd">/obs/stream/start</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Set 500ms fade transition:</span>
+          <span class="example-cmd">/obs/transition/Fade</span> then <span class="example-cmd">/obs/transition/duration 500</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- TOUCHDESIGNER                                -->
+    <!-- ════════════════════════════════════════════ -->
+    <section id="touchdesigner" class="device-section" data-type="touchdesigner">
+      <div class="section-header">
+        <h2>TouchDesigner</h2>
+        <span class="section-prefix">/td</span>
+      </div>
+      <p class="section-desc">Transparent OSC relay to TouchDesigner (OSC In CHOP, port 12000)</p>
+
+      <p class="desc-para">Transparent OSC relay to TouchDesigner's OSC In CHOP. Any address is forwarded as-is (minus the <code>/td</code> prefix). Design your namespace in TD to match.</p>
+
+      <h3 class="sub-heading">Example Addresses</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/td/render/start</span><button class="copy-btn" data-copy="/td/render/start">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Trigger render</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/td/render/stop</span><button class="copy-btn" data-copy="/td/render/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop render</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/td/param/{name}</span><button class="copy-btn" data-copy="/td/param/{name}">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Control named parameter</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/td/cue/{n}</span><button class="copy-btn" data-copy="/td/cue/{n}">Copy</button></div></td>
+              <td class="args">int</td>
+              <td>Trigger cue N</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/td/opacity</span><button class="copy-btn" data-copy="/td/opacity">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Master opacity</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/td/blend/{layer}</span><button class="copy-btn" data-copy="/td/blend/{layer}">Copy</button></div></td>
+              <td class="args">float 0.0-1.0</td>
+              <td>Layer blend level</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- GLOBAL / HUB COMMANDS                        -->
+    <!-- ════════════════════════════════════════════ -->
+    <section id="global">
+      <div class="section-header">
+        <h2>Global / Hub Commands</h2>
+      </div>
+      <p class="section-desc">System-level commands for cue sequencing, fade control, and hub status</p>
+
+      <h3 class="sub-heading">Commands</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Address</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/go</span><button class="copy-btn" data-copy="/hub/go">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Fire next cue in sequence</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/go/{cueId}</span><button class="copy-btn" data-copy="/hub/go/{cueId}">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Fire specific cue by ID</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/stop</span><button class="copy-btn" data-copy="/hub/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop/pause cue sequencer</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/back</span><button class="copy-btn" data-copy="/hub/back">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Go back one cue</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/panic</span><button class="copy-btn" data-copy="/hub/panic">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Emergency: stop all fades + stop sequencer</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/status</span><button class="copy-btn" data-copy="/hub/status">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Request status (replies via OSC)</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/hub/cuelist/load</span><button class="copy-btn" data-copy="/hub/cuelist/load">Copy</button></div></td>
+              <td class="args">string path</td>
+              <td>Load cue list from file</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/fade/stop</span><button class="copy-btn" data-copy="/fade/stop">Copy</button></div></td>
+              <td class="args">(none)</td>
+              <td>Stop all active fades</td>
+            </tr>
+            <tr>
+              <td><div class="addr-cell"><span class="addr">/fade/stop</span><button class="copy-btn" data-copy="/fade/stop">Copy</button></div></td>
+              <td class="args">string key</td>
+              <td>Stop specific fade by key</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="examples">
+        <h4>Examples</h4>
+        <div class="example-item">
+          <span class="example-desc">Fire next cue:</span>
+          <span class="example-cmd">/hub/go</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Emergency stop:</span>
+          <span class="example-cmd">/hub/panic</span>
+        </div>
+        <div class="example-item">
+          <span class="example-desc">Stop all fades:</span>
+          <span class="example-cmd">/fade/stop</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const toggle = document.getElementById('showAll');
+      const labelMyDevices = document.getElementById('labelMyDevices');
+      const labelAllCmds = document.getElementById('labelAllCmds');
+      const sections = document.querySelectorAll('.device-section[data-type]');
+      let configuredTypes = new Set();
+
+      // Fetch configured devices
+      try {
+        const res = await fetch('/api/devices');
+        if (!res.ok) throw new Error('API returned ' + res.status);
+        const devices = await res.json();
+        configuredTypes = new Set(devices.map(d => d.type));
+      } catch {
+        // API failed, show all
+        toggle.checked = true;
+      }
+
+      function updateToggleLabels() {
+        if (toggle.checked) {
+          labelAllCmds.classList.add('active');
+          labelMyDevices.classList.remove('active');
+        } else {
+          labelMyDevices.classList.add('active');
+          labelAllCmds.classList.remove('active');
+        }
+      }
+
+      function applyFilter() {
+        const showAll = toggle.checked;
+        updateToggleLabels();
+        sections.forEach(section => {
+          const type = section.dataset.type;
+          if (showAll || configuredTypes.has(type)) {
+            section.classList.remove('dimmed');
+            section.style.display = '';
+          } else {
+            section.classList.add('dimmed');
+            // Still show it but dimmed, don't hide completely
+          }
+        });
+        // Update sidebar
+        document.querySelectorAll('#sidebar a[data-type]').forEach(link => {
+          const type = link.dataset.type;
+          if (showAll || configuredTypes.has(type)) {
+            link.classList.remove('dimmed');
+          } else {
+            link.classList.add('dimmed');
+          }
+        });
+      }
+
+      toggle.addEventListener('change', applyFilter);
+      applyFilter();
+
+      // Clickable toggle labels
+      labelMyDevices.addEventListener('click', () => {
+        toggle.checked = false;
+        toggle.dispatchEvent(new Event('change'));
+      });
+      labelAllCmds.addEventListener('click', () => {
+        toggle.checked = true;
+        toggle.dispatchEvent(new Event('change'));
+      });
+
+      // Copy buttons
+      document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const text = btn.dataset.copy;
+          await navigator.clipboard.writeText(text);
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.classList.remove('copied');
+          }, 1500);
+        });
+      });
+
+      // Sidebar scroll spy
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+            const id = entry.target.id;
+            const link = document.querySelector('#sidebar a[href="#' + id + '"]');
+            if (link) link.classList.add('active');
+          }
+        });
+      }, { threshold: 0.3 });
+
+      document.querySelectorAll('section[id]').forEach(section => observer.observe(section));
+    });
+  </script>
+</body>
+</html>
