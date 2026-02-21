@@ -6,7 +6,7 @@
  * - Cue sequencer API (/api/cues/*)
  * - Macro API (/api/macros/*)
  * - Systems check (/system/check)
- * - Dashboard (/), checklist, smoke tests, emulators
+ * - Dashboard (/), checklist, smoke tests
  */
 
 import * as http from 'http';
@@ -14,7 +14,6 @@ import { SystemsCheck, SystemsCheckReport } from '../systems-check';
 import { getDashboardHTML } from '../dashboard';
 import { PreshowChecklist } from '../preshow-checklist';
 import { SmokeTest, SmokeTestResult } from '../smoke-test';
-import { DeviceEmulator } from '../emulators';
 import { CueSequencer } from '../cue-sequencer';
 import { MacroEngine } from '../macros';
 import { DashboardWebSocket } from '../server/dashboard-ws';
@@ -248,43 +247,6 @@ export class HubHttpServer {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
-      return;
-    }
-
-    // Emulator endpoints
-    if (method === 'GET' && url === '/emulators') {
-      const result: Record<string, any> = {};
-      for (const [prefix, driver] of this.deps.getDrivers()) {
-        if (driver instanceof DeviceEmulator) {
-          result[prefix] = {
-            name: driver.name,
-            emulated: true,
-            state: driver.getState(),
-          };
-        }
-      }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result, null, 2));
-      return;
-    }
-
-    if (method === 'GET' && url === '/emulators/log') {
-      const entries: Array<{ driver: string; timestamp: number; action: string; details: string }> = [];
-      for (const [_prefix, driver] of this.deps.getDrivers()) {
-        if (driver instanceof DeviceEmulator) {
-          for (const entry of driver.getLog()) {
-            entries.push({
-              driver: driver.name,
-              timestamp: entry.timestamp,
-              action: entry.action,
-              details: entry.details,
-            });
-          }
-        }
-      }
-      entries.sort((a, b) => a.timestamp - b.timestamp);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(entries, null, 2));
       return;
     }
 

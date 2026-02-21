@@ -1,8 +1,16 @@
 /**
  * VISCA over IP Device Driver
  *
- * Controls PTZ cameras via the VISCA protocol over TCP.
+ * Controls PTZ cameras via the VISCA-over-IP protocol over UDP.
  * Each camera gets its own driver instance with a unique prefix.
+ *
+ * VISCA-over-IP wraps standard VISCA commands in an 8-byte UDP header:
+ *   Bytes 0-1: Payload type (0x01 0x00 = command)
+ *   Bytes 2-3: Payload length (big-endian uint16)
+ *   Bytes 4-7: Sequence number (big-endian uint32, incrementing)
+ *   Bytes 8+:  Raw VISCA payload
+ *
+ * Standard port: 52381 (UDP)
  *
  * OSC namespace (after prefix stripping):
  *   /preset/recall/{N}       Recall preset N (0-127, standard VISCA 7-bit)
@@ -36,10 +44,15 @@
  */
 
 import { EventEmitter } from 'events';
-import * as net from 'net';
+import * as dgram from 'dgram';
 import { DeviceDriver, DeviceConfig, HubContext } from './device-driver';
 import { getFloat } from './osc-args';
 import { ReconnectQueue } from './reconnect-queue';
+
+/** VISCA-over-IP payload types */
+const VISCA_IP_COMMAND = 0x0100;   // Command payload
+const VISCA_IP_INQUIRY = 0x0110;   // Inquiry payload
+const VISCA_IP_REPLY   = 0x0111;   // Reply payload
 
 export interface VISCAConfig extends DeviceConfig {
   type: 'visca';
@@ -53,11 +66,11 @@ export class VISCADriver extends EventEmitter implements DeviceDriver {
   private host: string;
   private port: number;
   private cameraAddr: number;  // VISCA address byte (0x81 for camera 1)
-  private socket: net.Socket | null = null;
+  private socket: dgram.Socket | null = null;
   private connected: boolean = false;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectQueue = new ReconnectQueue<{ address: string; args: any[] }>();
   private verbose: boolean;
+  private sequenceNumber: number = 0;
 
   constructor(config: VISCAConfig, _hubContext: HubContext, verbose = false) {
     super();
@@ -71,59 +84,41 @@ export class VISCADriver extends EventEmitter implements DeviceDriver {
 
   connect(): void {
     if (this.socket) {
-      this.socket.destroy();
+      try { this.socket.close(); } catch (_) { /* ignore */ }
     }
 
-    this.socket = new net.Socket();
+    this.socket = dgram.createSocket('udp4');
+    this.sequenceNumber = 0;
 
-    this.socket.on('connect', () => {
+    this.socket.on('error', (err: Error) => {
+      console.error(`[VISCA] UDP error: ${err.message}`);
+      this.emit('error', err);
+    });
+
+    this.socket.on('message', (data: Buffer) => {
+      // VISCA-over-IP replies have the same 8-byte header + VISCA payload
+      if (this.verbose) {
+        console.log(`[VISCA] <- ${data.toString('hex')}`);
+      }
+    });
+
+    this.socket.on('listening', () => {
+      // UDP is connectionless — mark as connected once socket is bound
       this.connected = true;
       this.emit('connected');
       if (this.verbose) {
-        console.log(`[VISCA] Connected to camera at ${this.host}:${this.port}`);
+        console.log(`[VISCA] UDP ready, target ${this.host}:${this.port}`);
       }
       this.flushQueue();
     });
 
-    this.socket.on('data', (data: Buffer) => {
-      // VISCA responses: ACK (x0 41 FF) and Completion (x0 51 FF)
-      // We don't parse them for now — just log in verbose mode
-      if (this.verbose) {
-        console.log(`[VISCA] <- ${Buffer.from(data).toString('hex')}`);
-      }
-    });
-
-    this.socket.on('error', (err: Error) => {
-      console.error(`[VISCA] Connection error: ${err.message}`);
-      this.emit('error', err);
-    });
-
-    this.socket.on('close', () => {
-      this.connected = false;
-      this.emit('disconnected');
-      if (this.verbose) console.log('[VISCA] Disconnected');
-      this.scheduleReconnect();
-    });
-
-    this.socket.connect(this.port, this.host);
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer) return;
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      if (this.verbose) console.log('[VISCA] Attempting reconnect...');
-      this.connect();
-    }, 3000);
+    // Bind to any available local port
+    this.socket.bind(0);
   }
 
   disconnect(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
     if (this.socket) {
-      this.socket.destroy();
+      try { this.socket.close(); } catch (_) { /* ignore */ }
       this.socket = null;
     }
     this.connected = false;
@@ -307,14 +302,41 @@ export class VISCADriver extends EventEmitter implements DeviceDriver {
 
   // --- Transport ---
 
-  private sendVISCA(bytes: number[]): void {
+  /**
+   * Wrap a raw VISCA command in a VISCA-over-IP header and send via UDP.
+   *
+   * Header format (8 bytes):
+   *   Bytes 0-1: Payload type (0x01 0x00 = command)
+   *   Bytes 2-3: Payload length (big-endian uint16)
+   *   Bytes 4-7: Sequence number (big-endian uint32)
+   */
+  private sendVISCA(payload: number[]): void {
     if (!this.socket || !this.connected) {
       if (this.verbose) console.warn('[VISCA] Not connected, dropping command');
       return;
     }
-    this.socket.write(Buffer.from(bytes));
+
+    const payloadLen = payload.length;
+    const seq = this.sequenceNumber++;
+
+    // Build 8-byte header + payload
+    const buf = Buffer.alloc(8 + payloadLen);
+    buf.writeUInt16BE(VISCA_IP_COMMAND, 0);   // Payload type: command
+    buf.writeUInt16BE(payloadLen, 2);          // Payload length
+    buf.writeUInt32BE(seq, 4);                 // Sequence number
+    for (let i = 0; i < payloadLen; i++) {
+      buf[8 + i] = payload[i];
+    }
+
+    this.socket.send(buf, 0, buf.length, this.port, this.host, (err) => {
+      if (err) {
+        console.error(`[VISCA] Send error: ${err.message}`);
+        this.emit('error', err);
+      }
+    });
+
     if (this.verbose) {
-      console.log(`[VISCA] -> ${bytes.map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+      console.log(`[VISCA] -> seq=${seq} ${payload.map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
     }
   }
 

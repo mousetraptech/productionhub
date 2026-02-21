@@ -35,16 +35,16 @@ devices:
   # OBS Studio — streaming/recording
   - type: obs
     prefix: /obs
-    host: "127.0.0.1"
+    host: "192.168.10.11"
     port: 4455
     emulate: true
-    # password: "your-obs-websocket-password"
+    password: "DMMSBooth!"
 
   # PTZ Camera 1
   - type: visca
     prefix: /cam1
     host: "192.168.10.31"
-    port: 5678
+    port: 52381
     emulate: true
     heartbeat:
       enabled: false  # VISCA cameras don't send unsolicited data
@@ -53,7 +53,7 @@ devices:
   - type: visca
     prefix: /cam2
     host: "192.168.10.32"
-    port: 5678
+    port: 52381
     emulate: true
     heartbeat:
       enabled: false
@@ -62,7 +62,7 @@ devices:
   - type: visca
     prefix: /cam3
     host: "192.168.10.33"
-    port: 5678
+    port: 52381
     emulate: true
     heartbeat:
       enabled: false
@@ -77,8 +77,8 @@ devices:
   # QLab — SFX / utility workspace
   - type: qlab
     prefix: /sfx
-    host: 192.168.1.50
-    port: 53000
+    host: 192.168.10.11
+    port: 53053
     emulate: true
     heartbeat:
       enabled: false
@@ -86,8 +86,8 @@ devices:
   # QLab — show-specific workspace
   - type: qlab
     prefix: /show
-    host: 192.168.1.50
-    port: 53001
+    host: 192.168.10.11
+    port: 53000
     emulate: true
     heartbeat:
       enabled: false
