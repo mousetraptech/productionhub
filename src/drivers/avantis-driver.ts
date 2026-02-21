@@ -39,7 +39,7 @@ import { EasingType } from '../fade-engine';
 
 export interface AvantisConfig extends DeviceConfig {
   type: 'avantis';
-  midiBaseChannel?: number;    // 1-indexed, default 12
+  midiBaseChannel?: number;    // 1-indexed, default 1
   feedback?: {
     enabled?: boolean;         // default true
     echoSuppressionMs?: number; // default 100
@@ -74,7 +74,7 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     this.hubContext = hubContext;
     this.verbose = verbose;
 
-    this.baseMidiChannel = ((config.midiBaseChannel ?? 12) - 1); // 1-indexed to 0-indexed
+    this.baseMidiChannel = ((config.midiBaseChannel ?? 1) - 1); // 1-indexed to 0-indexed
     this.feedbackEnabled = config.feedback?.enabled ?? true;
     this.echoSuppressionMs = config.feedback?.echoSuppressionMs ?? 100;
 
@@ -304,7 +304,8 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     if (this.verbose) {
       console.log(
         `[Avantis] Fader ${strip.type}/${strip.number} = ${value.toFixed(3)} ` +
-        `-> NRPN ch=${midiChannel} strip=0x${stripHex.toString(16)} lvl=${level}`
+        `-> NRPN ch=${midiChannel} strip=0x${stripHex.toString(16)} lvl=${level} ` +
+        `bytes=[${bytes.map(b => b.toString(16).padStart(2, '0')).join(' ')}]`
       );
     }
 
@@ -321,7 +322,8 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     if (this.verbose) {
       console.log(
         `[Avantis] Mute ${strip.type}/${strip.number} = ${value} ` +
-        `-> Note On ch=${midiChannel} note=0x${stripHex.toString(16)} vel=${value ? 0x7f : 0x00}`
+        `-> Note On ch=${midiChannel} note=0x${stripHex.toString(16)} vel=${value ? 0x7f : 0x3f} ` +
+        `bytes=[${bytes.map(b => b.toString(16).padStart(2, '0')).join(' ')}]`
       );
     }
 

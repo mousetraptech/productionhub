@@ -124,7 +124,7 @@ export function loadConfig(configPath?: string): Config {
         prefix: '/avantis',
         host: '192.168.1.70',
         port: 51325,
-        midiBaseChannel: 12,
+        midiBaseChannel: 1,
         feedback: { enabled: true, echoSuppressionMs: 100 },
       }],
       logging: { verbose: false },

@@ -14,333 +14,270 @@ const {
 } = require('../midi-protocol');
 
 describe('resolveStrip', () => {
-  describe('Input channels', () => {
-    it('should resolve Input 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Input, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 11, stripHex: 0x00 });
+  describe('Input channels (base+0)', () => {
+    it('should resolve Input 1', () => {
+      const result = resolveStrip({ type: StripType.Input, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 0, stripHex: 0x00 });
     });
-
-    it('should resolve Input 48 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Input, number: 48 });
-      assert.deepStrictEqual(result, { midiChannel: 11, stripHex: 0x2f });
+    it('should resolve Input 48', () => {
+      const result = resolveStrip({ type: StripType.Input, number: 48 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 0, stripHex: 0x2f });
     });
-
-    it('should resolve Input 49 to MIDI channel 12 (offset +1)', () => {
-      const result = resolveStrip({ type: StripType.Input, number: 49 });
-      assert.deepStrictEqual(result, { midiChannel: 12, stripHex: 0x30 });
+    it('should resolve Input 49', () => {
+      const result = resolveStrip({ type: StripType.Input, number: 49 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 0, stripHex: 0x30 });
     });
-
-    it('should resolve Input 64 to MIDI channel 12 with strip hex 0x3f', () => {
-      const result = resolveStrip({ type: StripType.Input, number: 64 });
-      assert.deepStrictEqual(result, { midiChannel: 12, stripHex: 0x3f });
+    it('should resolve Input 64', () => {
+      const result = resolveStrip({ type: StripType.Input, number: 64 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 0, stripHex: 0x3f });
     });
-
-    it('should throw error for Input 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Input, number: 0 }), /Input channel 0 out of range/);
+    it('should throw for Input 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Input, number: 0 }, 0));
     });
-
-    it('should throw error for Input 65', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Input, number: 65 }), /Input channel 65 out of range/);
-    });
-
-    it('should throw error for negative Input', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Input, number: -1 }), /Input channel -1 out of range/);
+    it('should throw for Input 65', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Input, number: 65 }, 0));
     });
   });
 
-  describe('FXReturn channels', () => {
-    it('should resolve FXReturn 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.FXReturn, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 12, stripHex: 0x40 });
+  describe('Group channels (base+1)', () => {
+    it('should resolve Group 1', () => {
+      const result = resolveStrip({ type: StripType.Group, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 1, stripHex: 0x00 });
     });
-
-    it('should resolve FXReturn 8 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.FXReturn, number: 8 });
-      assert.deepStrictEqual(result, { midiChannel: 12, stripHex: 0x47 });
+    it('should resolve Group 16', () => {
+      const result = resolveStrip({ type: StripType.Group, number: 16 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 1, stripHex: 0x0f });
     });
-
-    it('should throw error for FXReturn 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.FXReturn, number: 0 }), /FX Return 0 out of range/);
+    it('should throw for Group 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Group, number: 0 }, 0));
     });
-
-    it('should throw error for FXReturn 9', () => {
-      assert.throws(() => resolveStrip({ type: StripType.FXReturn, number: 9 }), /FX Return 9 out of range/);
+    it('should throw for Group 41', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Group, number: 41 }, 0));
     });
   });
 
-  describe('Mix channels', () => {
-    it('should resolve Mix 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Mix, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 13, stripHex: 0x00 });
+  describe('Mix/Aux channels (base+2)', () => {
+    it('should resolve Mix 1', () => {
+      const result = resolveStrip({ type: StripType.Mix, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 2, stripHex: 0x00 });
     });
-
-    it('should resolve Mix 12 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Mix, number: 12 });
-      assert.deepStrictEqual(result, { midiChannel: 13, stripHex: 0x0b });
+    it('should resolve Mix 12', () => {
+      const result = resolveStrip({ type: StripType.Mix, number: 12 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 2, stripHex: 0x0b });
     });
-
-    it('should throw error for Mix 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Mix, number: 0 }), /Mix 0 out of range/);
+    it('should throw for Mix 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Mix, number: 0 }, 0));
     });
-
-    it('should throw error for Mix 13', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Mix, number: 13 }), /Mix 13 out of range/);
+    it('should throw for Mix 41', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Mix, number: 41 }, 0));
     });
   });
 
-  describe('FXSend channels', () => {
-    it('should resolve FXSend 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.FXSend, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 13, stripHex: 0x0c });
+  describe('Matrix channels (base+3)', () => {
+    it('should resolve Matrix 1', () => {
+      const result = resolveStrip({ type: StripType.Matrix, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 3, stripHex: 0x00 });
     });
-
-    it('should resolve FXSend 4 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.FXSend, number: 4 });
-      assert.deepStrictEqual(result, { midiChannel: 13, stripHex: 0x0f });
+    it('should resolve Matrix 6', () => {
+      const result = resolveStrip({ type: StripType.Matrix, number: 6 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 3, stripHex: 0x05 });
     });
-
-    it('should throw error for FXSend 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.FXSend, number: 0 }), /FX Send 0 out of range/);
+    it('should throw for Matrix 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Matrix, number: 0 }, 0));
     });
-
-    it('should throw error for FXSend 5', () => {
-      assert.throws(() => resolveStrip({ type: StripType.FXSend, number: 5 }), /FX Send 5 out of range/);
+    it('should throw for Matrix 41', () => {
+      assert.throws(() => resolveStrip({ type: StripType.Matrix, number: 41 }, 0));
     });
   });
 
-  describe('Matrix channels', () => {
-    it('should resolve Matrix 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Matrix, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 13, stripHex: 0x10 });
+  describe('FX Send channels (base+4)', () => {
+    it('should resolve FXSend 1', () => {
+      const result = resolveStrip({ type: StripType.FXSend, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x00 });
     });
-
-    it('should resolve Matrix 6 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Matrix, number: 6 });
-      assert.deepStrictEqual(result, { midiChannel: 13, stripHex: 0x15 });
+    it('should resolve FXSend 4', () => {
+      const result = resolveStrip({ type: StripType.FXSend, number: 4 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x03 });
     });
-
-    it('should throw error for Matrix 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Matrix, number: 0 }), /Matrix 0 out of range/);
+    it('should throw for FXSend 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.FXSend, number: 0 }, 0));
     });
-
-    it('should throw error for Matrix 7', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Matrix, number: 7 }), /Matrix 7 out of range/);
+    it('should throw for FXSend 13', () => {
+      assert.throws(() => resolveStrip({ type: StripType.FXSend, number: 13 }, 0));
     });
   });
 
-  describe('DCA channels', () => {
-    it('should resolve DCA 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.DCA, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 14, stripHex: 0x00 });
+  describe('FX Return channels (base+4)', () => {
+    it('should resolve FXReturn 1', () => {
+      const result = resolveStrip({ type: StripType.FXReturn, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x20 });
     });
-
-    it('should resolve DCA 16 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.DCA, number: 16 });
-      assert.deepStrictEqual(result, { midiChannel: 14, stripHex: 0x0f });
+    it('should resolve FXReturn 8', () => {
+      const result = resolveStrip({ type: StripType.FXReturn, number: 8 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x27 });
     });
-
-    it('should throw error for DCA 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.DCA, number: 0 }), /DCA 0 out of range/);
+    it('should throw for FXReturn 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.FXReturn, number: 0 }, 0));
     });
-
-    it('should throw error for DCA 17', () => {
-      assert.throws(() => resolveStrip({ type: StripType.DCA, number: 17 }), /DCA 17 out of range/);
+    it('should throw for FXReturn 13', () => {
+      assert.throws(() => resolveStrip({ type: StripType.FXReturn, number: 13 }, 0));
     });
   });
 
-  describe('Group channels', () => {
-    it('should resolve Group 1 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Group, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 14, stripHex: 0x10 });
-    });
-
-    it('should resolve Group 16 to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Group, number: 16 });
-      assert.deepStrictEqual(result, { midiChannel: 14, stripHex: 0x1f });
-    });
-
-    it('should throw error for Group 0', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Group, number: 0 }), /Group 0 out of range/);
-    });
-
-    it('should throw error for Group 17', () => {
-      assert.throws(() => resolveStrip({ type: StripType.Group, number: 17 }), /Group 17 out of range/);
+  describe('Main channel (base+4)', () => {
+    it('should resolve Main LR', () => {
+      const result = resolveStrip({ type: StripType.Main, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x30 });
     });
   });
 
-  describe('Main channel', () => {
-    it('should resolve Main to correct MIDI channel and strip hex', () => {
-      const result = resolveStrip({ type: StripType.Main, number: 1 });
-      assert.deepStrictEqual(result, { midiChannel: 15, stripHex: 0x00 });
+  describe('DCA channels (base+4)', () => {
+    it('should resolve DCA 1', () => {
+      const result = resolveStrip({ type: StripType.DCA, number: 1 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x36 });
+    });
+    it('should resolve DCA 16', () => {
+      const result = resolveStrip({ type: StripType.DCA, number: 16 }, 0);
+      assert.deepStrictEqual(result, { midiChannel: 4, stripHex: 0x45 });
+    });
+    it('should throw for DCA 0', () => {
+      assert.throws(() => resolveStrip({ type: StripType.DCA, number: 0 }, 0));
+    });
+    it('should throw for DCA 17', () => {
+      assert.throws(() => resolveStrip({ type: StripType.DCA, number: 17 }, 0));
     });
   });
 
   describe('Custom baseMidiChannel', () => {
-    it('should respect custom baseMidiChannel', () => {
-      const result = resolveStrip({ type: StripType.Input, number: 1 }, 0);
-      assert.deepStrictEqual(result, { midiChannel: 0, stripHex: 0x00 });
+    it('should offset all channels from baseMidiChannel', () => {
+      const result = resolveStrip({ type: StripType.Input, number: 1 }, 5);
+      assert.deepStrictEqual(result, { midiChannel: 5, stripHex: 0x00 });
     });
-
-    it('should apply custom baseMidiChannel offset correctly', () => {
-      const result = resolveStrip({ type: StripType.Mix, number: 1 }, 0);
-      assert.deepStrictEqual(result, { midiChannel: 2, stripHex: 0x00 });
+    it('should offset DCA from baseMidiChannel', () => {
+      const result = resolveStrip({ type: StripType.DCA, number: 1 }, 5);
+      assert.deepStrictEqual(result, { midiChannel: 9, stripHex: 0x36 });
     });
   });
 });
 
 describe('reverseResolveStrip', () => {
-  describe('Input channels offset 0', () => {
-    it('should reverse Input 1 correctly', () => {
-      const result = reverseResolveStrip(11, 0x00);
-      assert.deepStrictEqual(result, { type: StripType.Input, number: 1 });
+  describe('Input channels (offset 0)', () => {
+    it('should reverse Input 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(0, 0x00, 0), { type: StripType.Input, number: 1 });
     });
-
-    it('should reverse Input 48 correctly', () => {
-      const result = reverseResolveStrip(11, 0x2f);
-      assert.deepStrictEqual(result, { type: StripType.Input, number: 48 });
+    it('should reverse Input 48', () => {
+      assert.deepStrictEqual(reverseResolveStrip(0, 0x2f, 0), { type: StripType.Input, number: 48 });
     });
-
-    it('should return null for out-of-range hex on Input channel', () => {
-      const result = reverseResolveStrip(11, 0x40);
-      assert.strictEqual(result, null);
+    it('should reverse Input 49', () => {
+      assert.deepStrictEqual(reverseResolveStrip(0, 0x30, 0), { type: StripType.Input, number: 49 });
     });
-  });
-
-  describe('Input 49-64 and FXReturn offset 1', () => {
-    it('should reverse Input 49 correctly', () => {
-      const result = reverseResolveStrip(12, 0x30);
-      assert.deepStrictEqual(result, { type: StripType.Input, number: 49 });
+    it('should reverse Input 64', () => {
+      assert.deepStrictEqual(reverseResolveStrip(0, 0x3f, 0), { type: StripType.Input, number: 64 });
     });
-
-    it('should reverse Input 64 correctly', () => {
-      const result = reverseResolveStrip(12, 0x3f);
-      assert.deepStrictEqual(result, { type: StripType.Input, number: 64 });
-    });
-
-    it('should reverse FXReturn 1 correctly', () => {
-      const result = reverseResolveStrip(12, 0x40);
-      assert.deepStrictEqual(result, { type: StripType.FXReturn, number: 1 });
-    });
-
-    it('should reverse FXReturn 8 correctly', () => {
-      const result = reverseResolveStrip(12, 0x47);
-      assert.deepStrictEqual(result, { type: StripType.FXReturn, number: 8 });
-    });
-
-    it('should return null for out-of-range hex on offset 1', () => {
-      const result = reverseResolveStrip(12, 0x50);
-      assert.strictEqual(result, null);
+    it('should return null for out-of-range strip on offset 0', () => {
+      assert.strictEqual(reverseResolveStrip(0, 0x40, 0), null);
     });
   });
 
-  describe('Mix, FXSend, Matrix offset 2', () => {
-    it('should reverse Mix 1 correctly', () => {
-      const result = reverseResolveStrip(13, 0x00);
-      assert.deepStrictEqual(result, { type: StripType.Mix, number: 1 });
+  describe('Group channels (offset 1)', () => {
+    it('should reverse Group 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(1, 0x00, 0), { type: StripType.Group, number: 1 });
     });
-
-    it('should reverse Mix 12 correctly', () => {
-      const result = reverseResolveStrip(13, 0x0b);
-      assert.deepStrictEqual(result, { type: StripType.Mix, number: 12 });
+    it('should reverse Group 16', () => {
+      assert.deepStrictEqual(reverseResolveStrip(1, 0x0f, 0), { type: StripType.Group, number: 16 });
     });
-
-    it('should reverse FXSend 1 correctly', () => {
-      const result = reverseResolveStrip(13, 0x0c);
-      assert.deepStrictEqual(result, { type: StripType.FXSend, number: 1 });
-    });
-
-    it('should reverse FXSend 4 correctly', () => {
-      const result = reverseResolveStrip(13, 0x0f);
-      assert.deepStrictEqual(result, { type: StripType.FXSend, number: 4 });
-    });
-
-    it('should reverse Matrix 1 correctly', () => {
-      const result = reverseResolveStrip(13, 0x10);
-      assert.deepStrictEqual(result, { type: StripType.Matrix, number: 1 });
-    });
-
-    it('should reverse Matrix 6 correctly', () => {
-      const result = reverseResolveStrip(13, 0x15);
-      assert.deepStrictEqual(result, { type: StripType.Matrix, number: 6 });
-    });
-
-    it('should return null for out-of-range hex on offset 2', () => {
-      const result = reverseResolveStrip(13, 0x20);
-      assert.strictEqual(result, null);
+    it('should return null for out-of-range strip on offset 1', () => {
+      assert.strictEqual(reverseResolveStrip(1, 0x28, 0), null);
     });
   });
 
-  describe('DCA and Group offset 3', () => {
-    it('should reverse DCA 1 correctly', () => {
-      const result = reverseResolveStrip(14, 0x00);
-      assert.deepStrictEqual(result, { type: StripType.DCA, number: 1 });
+  describe('Mix channels (offset 2)', () => {
+    it('should reverse Mix 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(2, 0x00, 0), { type: StripType.Mix, number: 1 });
     });
-
-    it('should reverse DCA 16 correctly', () => {
-      const result = reverseResolveStrip(14, 0x0f);
-      assert.deepStrictEqual(result, { type: StripType.DCA, number: 16 });
+    it('should reverse Mix 12', () => {
+      assert.deepStrictEqual(reverseResolveStrip(2, 0x0b, 0), { type: StripType.Mix, number: 12 });
     });
-
-    it('should reverse Group 1 correctly', () => {
-      const result = reverseResolveStrip(14, 0x10);
-      assert.deepStrictEqual(result, { type: StripType.Group, number: 1 });
-    });
-
-    it('should reverse Group 16 correctly', () => {
-      const result = reverseResolveStrip(14, 0x1f);
-      assert.deepStrictEqual(result, { type: StripType.Group, number: 16 });
-    });
-
-    it('should return null for out-of-range hex on offset 3', () => {
-      const result = reverseResolveStrip(14, 0x30);
-      assert.strictEqual(result, null);
+    it('should return null for out-of-range strip on offset 2', () => {
+      assert.strictEqual(reverseResolveStrip(2, 0x28, 0), null);
     });
   });
 
-  describe('Main offset 4', () => {
-    it('should reverse Main correctly', () => {
-      const result = reverseResolveStrip(15, 0x00);
-      assert.deepStrictEqual(result, { type: StripType.Main, number: 1 });
+  describe('Matrix channels (offset 3)', () => {
+    it('should reverse Matrix 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(3, 0x00, 0), { type: StripType.Matrix, number: 1 });
     });
+    it('should reverse Matrix 6', () => {
+      assert.deepStrictEqual(reverseResolveStrip(3, 0x05, 0), { type: StripType.Matrix, number: 6 });
+    });
+    it('should return null for out-of-range strip on offset 3', () => {
+      assert.strictEqual(reverseResolveStrip(3, 0x28, 0), null);
+    });
+  });
 
-    it('should return null for non-zero hex on Main channel', () => {
-      const result = reverseResolveStrip(15, 0x01);
-      assert.strictEqual(result, null);
+  describe('Offset 4 (FX Send, FX Return, Main, DCA)', () => {
+    it('should reverse FXSend 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x00, 0), { type: StripType.FXSend, number: 1 });
+    });
+    it('should reverse FXSend 4', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x03, 0), { type: StripType.FXSend, number: 4 });
+    });
+    it('should reverse FXReturn 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x20, 0), { type: StripType.FXReturn, number: 1 });
+    });
+    it('should reverse FXReturn 8', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x27, 0), { type: StripType.FXReturn, number: 8 });
+    });
+    it('should reverse Main LR', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x30, 0), { type: StripType.Main, number: 1 });
+    });
+    it('should reverse DCA 1', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x36, 0), { type: StripType.DCA, number: 1 });
+    });
+    it('should reverse DCA 16', () => {
+      assert.deepStrictEqual(reverseResolveStrip(4, 0x45, 0), { type: StripType.DCA, number: 16 });
+    });
+    it('should return null for gap between FX Send and FX Return', () => {
+      assert.strictEqual(reverseResolveStrip(4, 0x0c, 0), null);
+    });
+    it('should return null for gap between FX Return and Main', () => {
+      assert.strictEqual(reverseResolveStrip(4, 0x2c, 0), null);
+    });
+    it('should return null for gap between Main and DCA', () => {
+      assert.strictEqual(reverseResolveStrip(4, 0x33, 0), null);
     });
   });
 
   describe('Unknown offset', () => {
-    it('should return null for unknown MIDI channel offset', () => {
-      const result = reverseResolveStrip(20, 0x00);
-      assert.strictEqual(result, null);
+    it('should return null for offset 5+', () => {
+      assert.strictEqual(reverseResolveStrip(5, 0x00, 0), null);
     });
   });
 
   describe('Custom baseMidiChannel', () => {
-    it('should work with custom baseMidiChannel', () => {
-      const result = reverseResolveStrip(2, 0x00, 0);
-      assert.deepStrictEqual(result, { type: StripType.Mix, number: 1 });
+    it('should work with custom base', () => {
+      assert.deepStrictEqual(reverseResolveStrip(7, 0x00, 5), { type: StripType.Mix, number: 1 });
     });
   });
 
   describe('Round-trip conversion', () => {
     const stripTypes = [
       { type: StripType.Input, numbers: [1, 25, 48, 49, 64] },
-      { type: StripType.FXReturn, numbers: [1, 4, 8] },
-      { type: StripType.Mix, numbers: [1, 6, 12] },
-      { type: StripType.FXSend, numbers: [1, 2, 4] },
-      { type: StripType.Matrix, numbers: [1, 3, 6] },
-      { type: StripType.DCA, numbers: [1, 8, 16] },
       { type: StripType.Group, numbers: [1, 8, 16] },
+      { type: StripType.Mix, numbers: [1, 6, 12] },
+      { type: StripType.Matrix, numbers: [1, 3, 6] },
+      { type: StripType.FXSend, numbers: [1, 2, 4] },
+      { type: StripType.FXReturn, numbers: [1, 4, 8] },
+      { type: StripType.DCA, numbers: [1, 8, 16] },
       { type: StripType.Main, numbers: [1] },
     ];
 
     for (const { type, numbers } of stripTypes) {
       for (const number of numbers) {
-        it(`should convert ${type} ${number} and reverse back correctly`, () => {
+        it(`should round-trip ${type} ${number}`, () => {
           const strip = { type, number };
-          const resolved = resolveStrip(strip);
-          const reversed = reverseResolveStrip(resolved.midiChannel, resolved.stripHex);
+          const resolved = resolveStrip(strip, 0);
+          const reversed = reverseResolveStrip(resolved.midiChannel, resolved.stripHex, 0);
           assert.deepStrictEqual(reversed, strip);
         });
       }
@@ -502,79 +439,71 @@ describe('buildNRPNFader', () => {
 });
 
 describe('buildMuteMessage', () => {
-  it('should build mute ON message with velocity 0x7f', () => {
-    const result = buildMuteMessage(11, 0x30, true);
-    assert.deepStrictEqual(result, [0x9b, 0x30, 0x7f]);
+  it('should build mute ON with vel 0x7f then note-off vel 0x00', () => {
+    const result = buildMuteMessage(0, 0x05, true);
+    assert.deepStrictEqual(result, [0x90, 0x05, 0x7f, 0x90, 0x05, 0x00]);
   });
 
-  it('should build mute OFF message with velocity 0x3F', () => {
-    const result = buildMuteMessage(11, 0x30, false);
-    assert.deepStrictEqual(result, [0x9b, 0x30, 0x3f]);
+  it('should build mute OFF with vel 0x3f then note-off vel 0x00', () => {
+    const result = buildMuteMessage(0, 0x05, false);
+    assert.deepStrictEqual(result, [0x90, 0x05, 0x3f, 0x90, 0x05, 0x00]);
   });
 
   it('should have status byte 0x90 | channel', () => {
     const result = buildMuteMessage(5, 0x30, true);
-    assert.strictEqual(result[0], 0x95); // 0x90 | 0x05
+    assert.strictEqual(result[0], 0x95);
+    assert.strictEqual(result[3], 0x95);
   });
 
-  it('should handle all MIDI channels 0-15', () => {
-    for (let ch = 0; ch <= 15; ch++) {
-      const result = buildMuteMessage(ch, 0x30, true);
-      const expectedStatus = 0x90 | ch;
-      assert.strictEqual(result[0], expectedStatus);
-    }
+  it('should be 6 bytes long', () => {
+    const result = buildMuteMessage(0, 0x30, true);
+    assert.strictEqual(result.length, 6);
   });
 
   it('should mask note number to 7 bits', () => {
-    const result = buildMuteMessage(11, 0x80, true);
-    assert.strictEqual(result[1], 0x00); // 0x80 & 0x7f = 0x00
-  });
-
-  it('should be 3 bytes long', () => {
-    const result = buildMuteMessage(11, 0x30, true);
-    assert.strictEqual(result.length, 3);
+    const result = buildMuteMessage(0, 0x80, true);
+    assert.strictEqual(result[1], 0x00);
+    assert.strictEqual(result[4], 0x00);
   });
 });
 
 describe('buildSceneRecall', () => {
-  it('should build Program Change for scene 0', () => {
-    const result = buildSceneRecall(11, 0);
-    assert.deepStrictEqual(result, [0xcb, 0x00]);
+  it('should build scene 0 as just Program Change (no bank select needed)', () => {
+    const result = buildSceneRecall(0, 0);
+    assert.deepStrictEqual(result, [0xc0, 0x00]);
   });
 
-  it('should build Program Change for scene 127', () => {
-    const result = buildSceneRecall(11, 127);
-    assert.deepStrictEqual(result, [0xcb, 0x7f]);
+  it('should build scene 127 as just Program Change', () => {
+    const result = buildSceneRecall(0, 127);
+    assert.deepStrictEqual(result, [0xc0, 0x7f]);
   });
 
-  it('should have status byte 0xc0 | channel', () => {
-    const result = buildSceneRecall(5, 50);
-    assert.strictEqual(result[0], 0xc5); // 0xc0 | 0x05
+  it('should build scene 128 with Bank Select CC0=1 then PC=0', () => {
+    const result = buildSceneRecall(0, 128);
+    assert.deepStrictEqual(result, [0xb0, 0x00, 0x01, 0xc0, 0x00]);
   });
 
-  it('should handle all MIDI channels 0-15', () => {
-    for (let ch = 0; ch <= 15; ch++) {
-      const result = buildSceneRecall(ch, 50);
-      const expectedStatus = 0xc0 | ch;
-      assert.strictEqual(result[0], expectedStatus);
-    }
+  it('should build scene 255 with Bank Select CC0=1 then PC=127', () => {
+    const result = buildSceneRecall(0, 255);
+    assert.deepStrictEqual(result, [0xb0, 0x00, 0x01, 0xc0, 0x7f]);
   });
 
-  it('should be 2 bytes long', () => {
-    const result = buildSceneRecall(11, 50);
-    assert.strictEqual(result.length, 2);
+  it('should build scene 256 with Bank Select CC0=2 then PC=0', () => {
+    const result = buildSceneRecall(0, 256);
+    assert.deepStrictEqual(result, [0xb0, 0x00, 0x02, 0xc0, 0x00]);
   });
 
-  it('should throw error for scene -1', () => {
-    assert.throws(() => buildSceneRecall(11, -1), /Scene number -1 out of range/);
+  it('should throw for negative scene', () => {
+    assert.throws(() => buildSceneRecall(0, -1));
   });
 
-  it('should throw error for scene 128', () => {
-    assert.throws(() => buildSceneRecall(11, 128), /Scene number 128 out of range/);
+  it('should throw for scene >= 500 (A&H limit)', () => {
+    assert.throws(() => buildSceneRecall(0, 500));
   });
 
-  it('should throw error for scene 200', () => {
-    assert.throws(() => buildSceneRecall(11, 200), /Scene number 200 out of range/);
+  it('should use correct MIDI channel', () => {
+    const result = buildSceneRecall(5, 0);
+    assert.strictEqual(result[0], 0xc5);
   });
 });
 

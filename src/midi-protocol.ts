@@ -40,38 +40,18 @@ export interface StripAddress {
   number: number; // 1-based user-facing number
 }
 
-// Avantis channel hex offsets by strip type.
-// Input channels 1-64 map to hex 0x00-0x3F
-// Mix 1-12 map to hex 0x00-0x0B (on a different MIDI channel range)
-// FX Send 1-4 map to hex 0x0C-0x0F
-// FX Return 1-8 map to hex 0x10-0x17
-// DCA 1-16 map to hex 0x40-0x4F
-// Group 1-16 map to hex 0x00-0x0F (shared with inputs on different MIDI ch)
-// Main LR = hex 0x00 on its own MIDI channel
-
-// The Avantis uses MIDI channels 12-16 by default:
-//   Ch 12 (0x0B): Inputs 1-48
-//   Ch 13 (0x0C): Inputs 49-64, FX Returns
-//   Ch 14 (0x0D): Mix masters, FX Sends, Matrix
-//   Ch 15 (0x0E): DCA, Groups
-//   Ch 16 (0x0F): Main LR
-
-// With CC Translator, the mapping is simpler:
-// CC numbers 0-127 across MIDI channels map linearly to strips.
+// Bitfocus Companion-verified channel layout (5 channels from configurable base):
+//   base+0: Inputs 1-64 (strip 0x00-0x3F)
+//   base+1: Groups 1-40 (mono 0x00-0x27, stereo 0x40-0x53)
+//   base+2: Aux/Mix 1-40 (mono 0x00-0x27, stereo 0x40-0x53)
+//   base+3: Matrix 1-40 (mono 0x00-0x27, stereo 0x40-0x53)
+//   base+4: FX Send (0x00-0x0B), FX Return (0x20-0x2B), Main (0x30-0x32),
+//           DCA (0x36-0x45), Mute Groups (0x46-0x4D)
 
 export const NRPN_PARAM = {
   FADER_LEVEL: 0x17,
   PAN: 0x18,     // Not officially documented for all models - verify
   ASSIGN: 0x19,  // Mix assignment on/off
-} as const;
-
-/** MIDI channel assignment defaults (0-indexed, so ch12 = 0x0B) */
-export const DEFAULT_MIDI_CHANNELS = {
-  inputs_1_48: 0x0b,    // MIDI ch 12
-  inputs_49_64: 0x0c,   // MIDI ch 13
-  mix_masters: 0x0d,    // MIDI ch 14
-  dca_groups: 0x0e,     // MIDI ch 15
-  main: 0x0f,           // MIDI ch 16
 } as const;
 
 export interface AvantisStripMap {
@@ -82,57 +62,55 @@ export interface AvantisStripMap {
 /**
  * Resolve a user-facing strip address to MIDI channel + strip hex.
  *
- * Default Avantis MIDI channel layout (channels 12-16):
- *   Ch 12: Input 1-48    (strip hex 0x00-0x2F)
- *   Ch 13: Input 49-64   (strip hex 0x30-0x3F), FX Return 1-8 (0x40-0x47)
- *   Ch 14: Mix 1-12 (0x00-0x0B), FX Send 1-4 (0x0C-0x0F), Matrix 1-6 (0x10-0x15)
- *   Ch 15: DCA 1-16 (0x00-0x0F), Group 1-16 (0x10-0x1F)
- *   Ch 16: Main LR (0x00)
+ * Bitfocus Companion-verified channel layout (5 channels from base):
+ *   base+0: Inputs 1-64 (strip 0x00-0x3F)
+ *   base+1: Groups 1-40 (mono 0x00-0x27, stereo 0x40-0x53)
+ *   base+2: Aux/Mix 1-40 (mono 0x00-0x27, stereo 0x40-0x53)
+ *   base+3: Matrix 1-40 (mono 0x00-0x27, stereo 0x40-0x53)
+ *   base+4: FX Send (0x00-0x0B), FX Return (0x20-0x2B),
+ *           Main (0x30 LR, 0x31 C, 0x32 mono),
+ *           DCA (0x36-0x45), Mute Groups (0x46-0x4D)
  */
-export function resolveStrip(strip: StripAddress, baseMidiChannel = 11): AvantisStripMap {
-  const ch = baseMidiChannel; // 0-indexed, default = 11 = MIDI ch 12
+export function resolveStrip(strip: StripAddress, baseMidiChannel = 0): AvantisStripMap {
+  const ch = baseMidiChannel;
   switch (strip.type) {
     case StripType.Input: {
       const n = strip.number;
       if (n < 1 || n > 64) throw new Error(`Input channel ${n} out of range (1-64)`);
-      if (n <= 48) {
-        return { midiChannel: ch, stripHex: n - 1 };
-      } else {
-        return { midiChannel: ch + 1, stripHex: 0x30 + (n - 49) };
-      }
+      return { midiChannel: ch, stripHex: n - 1 };
     }
-    case StripType.FXReturn: {
+    case StripType.Group: {
       const n = strip.number;
-      if (n < 1 || n > 8) throw new Error(`FX Return ${n} out of range (1-8)`);
-      return { midiChannel: ch + 1, stripHex: 0x40 + (n - 1) };
+      if (n < 1 || n > 40) throw new Error(`Group ${n} out of range (1-40)`);
+      return { midiChannel: ch + 1, stripHex: n - 1 };
     }
     case StripType.Mix: {
       const n = strip.number;
-      if (n < 1 || n > 12) throw new Error(`Mix ${n} out of range (1-12)`);
+      if (n < 1 || n > 40) throw new Error(`Mix ${n} out of range (1-40)`);
       return { midiChannel: ch + 2, stripHex: n - 1 };
-    }
-    case StripType.FXSend: {
-      const n = strip.number;
-      if (n < 1 || n > 4) throw new Error(`FX Send ${n} out of range (1-4)`);
-      return { midiChannel: ch + 2, stripHex: 0x0c + (n - 1) };
     }
     case StripType.Matrix: {
       const n = strip.number;
-      if (n < 1 || n > 6) throw new Error(`Matrix ${n} out of range (1-6)`);
-      return { midiChannel: ch + 2, stripHex: 0x10 + (n - 1) };
+      if (n < 1 || n > 40) throw new Error(`Matrix ${n} out of range (1-40)`);
+      return { midiChannel: ch + 3, stripHex: n - 1 };
+    }
+    case StripType.FXSend: {
+      const n = strip.number;
+      if (n < 1 || n > 12) throw new Error(`FX Send ${n} out of range (1-12)`);
+      return { midiChannel: ch + 4, stripHex: n - 1 };
+    }
+    case StripType.FXReturn: {
+      const n = strip.number;
+      if (n < 1 || n > 12) throw new Error(`FX Return ${n} out of range (1-12)`);
+      return { midiChannel: ch + 4, stripHex: 0x20 + (n - 1) };
+    }
+    case StripType.Main: {
+      return { midiChannel: ch + 4, stripHex: 0x30 };
     }
     case StripType.DCA: {
       const n = strip.number;
       if (n < 1 || n > 16) throw new Error(`DCA ${n} out of range (1-16)`);
-      return { midiChannel: ch + 3, stripHex: n - 1 };
-    }
-    case StripType.Group: {
-      const n = strip.number;
-      if (n < 1 || n > 16) throw new Error(`Group ${n} out of range (1-16)`);
-      return { midiChannel: ch + 3, stripHex: 0x10 + (n - 1) };
-    }
-    case StripType.Main: {
-      return { midiChannel: ch + 4, stripHex: 0x00 };
+      return { midiChannel: ch + 4, stripHex: 0x36 + (n - 1) };
     }
     default:
       throw new Error(`Unknown strip type: ${strip.type}`);
@@ -143,49 +121,46 @@ export function resolveStrip(strip: StripAddress, baseMidiChannel = 11): Avantis
  * Reverse-resolve: given MIDI channel + strip hex, return the strip type & number.
  * Used for parsing incoming MIDI from the desk back into user-facing addresses.
  */
-export function reverseResolveStrip(midiChannel: number, stripHex: number, baseMidiChannel = 11): StripAddress | null {
+export function reverseResolveStrip(midiChannel: number, stripHex: number, baseMidiChannel = 0): StripAddress | null {
   const offset = midiChannel - baseMidiChannel;
 
   switch (offset) {
-    case 0: // Inputs 1-48
-      if (stripHex >= 0x00 && stripHex <= 0x2f) {
+    case 0: // Inputs 1-64
+      if (stripHex >= 0x00 && stripHex <= 0x3f) {
         return { type: StripType.Input, number: stripHex + 1 };
       }
       break;
 
-    case 1: // Inputs 49-64, FX Returns
-      if (stripHex >= 0x30 && stripHex <= 0x3f) {
-        return { type: StripType.Input, number: 49 + (stripHex - 0x30) };
-      }
-      if (stripHex >= 0x40 && stripHex <= 0x47) {
-        return { type: StripType.FXReturn, number: 1 + (stripHex - 0x40) };
+    case 1: // Groups 1-40
+      if (stripHex >= 0x00 && stripHex <= 0x27) {
+        return { type: StripType.Group, number: stripHex + 1 };
       }
       break;
 
-    case 2: // Mix 1-12, FX Send 1-4, Matrix 1-6
-      if (stripHex >= 0x00 && stripHex <= 0x0b) {
+    case 2: // Mix/Aux 1-40
+      if (stripHex >= 0x00 && stripHex <= 0x27) {
         return { type: StripType.Mix, number: stripHex + 1 };
       }
-      if (stripHex >= 0x0c && stripHex <= 0x0f) {
-        return { type: StripType.FXSend, number: 1 + (stripHex - 0x0c) };
-      }
-      if (stripHex >= 0x10 && stripHex <= 0x15) {
-        return { type: StripType.Matrix, number: 1 + (stripHex - 0x10) };
+      break;
+
+    case 3: // Matrix 1-40
+      if (stripHex >= 0x00 && stripHex <= 0x27) {
+        return { type: StripType.Matrix, number: stripHex + 1 };
       }
       break;
 
-    case 3: // DCA 1-16, Group 1-16
-      if (stripHex >= 0x00 && stripHex <= 0x0f) {
-        return { type: StripType.DCA, number: stripHex + 1 };
+    case 4: // FX Send, FX Return, Main, DCA, Mute Groups
+      if (stripHex >= 0x00 && stripHex <= 0x0b) {
+        return { type: StripType.FXSend, number: stripHex + 1 };
       }
-      if (stripHex >= 0x10 && stripHex <= 0x1f) {
-        return { type: StripType.Group, number: 1 + (stripHex - 0x10) };
+      if (stripHex >= 0x20 && stripHex <= 0x2b) {
+        return { type: StripType.FXReturn, number: 1 + (stripHex - 0x20) };
       }
-      break;
-
-    case 4: // Main LR
-      if (stripHex === 0x00) {
+      if (stripHex >= 0x30 && stripHex <= 0x32) {
         return { type: StripType.Main, number: 1 };
+      }
+      if (stripHex >= 0x36 && stripHex <= 0x45) {
+        return { type: StripType.DCA, number: 1 + (stripHex - 0x36) };
       }
       break;
   }
@@ -221,20 +196,29 @@ export function buildNRPNFader(midiChannel: number, stripHex: number, level: num
   ];
 }
 
-/** Build Note On message for mute control */
+/** Build Note On message pair for mute control (mute + note-off release) */
 export function buildMuteMessage(midiChannel: number, noteNumber: number, muteOn: boolean): number[] {
   const status = 0x90 | (midiChannel & 0x0f);
-  const velocity = muteOn ? 0x7f : 0x3f; // >= 0x40 = mute on, <= 0x3F = mute off (0x00 would be Note Off per MIDI spec)
-  return [status, noteNumber & 0x7f, velocity];
+  const note = noteNumber & 0x7f;
+  const velocity = muteOn ? 0x7f : 0x3f;
+  return [status, note, velocity, status, note, 0x00];
 }
 
-/** Build Program Change for scene recall */
+/** Build Bank Select + Program Change for scene recall */
 export function buildSceneRecall(midiChannel: number, sceneNumber: number): number[] {
-  if (sceneNumber < 0 || sceneNumber > 127) {
-    throw new Error(`Scene number ${sceneNumber} out of range (0-127)`);
+  if (sceneNumber < 0 || sceneNumber >= 500) {
+    throw new Error(`Scene number ${sceneNumber} out of range (0-499)`);
   }
-  const status = 0xc0 | (midiChannel & 0x0f);
-  return [status, sceneNumber & 0x7f];
+  const bank = Math.floor(sceneNumber / 128);
+  const program = sceneNumber % 128;
+  const pcStatus = 0xc0 | (midiChannel & 0x0f);
+
+  if (bank === 0) {
+    return [pcStatus, program & 0x7f];
+  }
+
+  const ccStatus = 0xb0 | (midiChannel & 0x0f);
+  return [ccStatus, 0x00, bank & 0x7f, pcStatus, program & 0x7f];
 }
 
 // --- Utility ---
