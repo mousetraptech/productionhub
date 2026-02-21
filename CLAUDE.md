@@ -81,7 +81,9 @@ The sidebar CommandBuilder supports these command types:
 - **Playback** (level) — `/lights/pb/{n} [level]`
 - **PB Go** — `/lights/pb/{n}/go [1]` (advance to next cue)
 - **PB Jump** — `/lights/pb/{pb}/go [1, cue]` (jump to specific cue)
-- **Cam Preset** — `/cam1/preset/recall/{n}`
+- **Cam {1-3} Preset** — `/{cam}/preset/recall/{n}`
+- **Cam {1-3} Zoom** — `/{cam}/zoom/direct [0.0-1.0]`
+- **Cam {1-3} Home** — `/{cam}/home`
 - **OBS Scene** — `/obs/scene/{name}` (sets program scene directly)
 - **OBS Preview** — `/obs/scene/preview/{name}` (sets preview scene)
 - **OBS Transition** — `/obs/transition/trigger` (preview → program)

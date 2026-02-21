@@ -16,7 +16,9 @@ type CmdType =
   | 'playback'
   | 'playback-go'
   | 'playback-jump'
-  | 'cam-preset'
+  | 'cam1-preset' | 'cam1-zoom' | 'cam1-home'
+  | 'cam2-preset' | 'cam2-zoom' | 'cam2-home'
+  | 'cam3-preset' | 'cam3-zoom' | 'cam3-home'
   | 'obs-scene'
   | 'obs-preview'
   | 'obs-transition'
@@ -201,22 +203,34 @@ const COMMANDS: CmdDef[] = [
       };
     },
   },
-  {
-    type: 'cam-preset',
-    label: 'Cam Preset',
-    fields: [
-      { key: 'n', placeholder: '#', type: 'number', width: 48 },
-    ],
-    build: (v) => {
-      const n = parseInt(v.n, 10);
-      if (isNaN(n) || n < 1) return null;
-      return {
-        address: `/cam1/preset/recall/${n}`,
-        args: [],
-        label: `Cam Preset ${n}`,
-      };
+  // Camera commands — 3 per camera (preset, zoom, home)
+  ...([1, 2, 3] as const).flatMap((cam): CmdDef[] => [
+    {
+      type: `cam${cam}-preset` as CmdType,
+      label: `Cam ${cam} Preset`,
+      fields: [{ key: 'n', placeholder: '#', type: 'number', width: 48 }],
+      build: (v) => {
+        const n = parseInt(v.n, 10);
+        if (isNaN(n) || n < 1) return null;
+        return { address: `/cam${cam}/preset/recall/${n}`, args: [], label: `C${cam} Preset ${n}` };
+      },
     },
-  },
+    {
+      type: `cam${cam}-zoom` as CmdType,
+      label: `Cam ${cam} Zoom`,
+      fields: [{ key: 'val', placeholder: 'Level', type: 'number', width: 56 }],
+      build: (v) => {
+        const val = normFader(v.val);
+        return { address: `/cam${cam}/zoom/direct`, args: [val], label: `C${cam} Zoom ${Math.round(val * 100)}%` };
+      },
+    },
+    {
+      type: `cam${cam}-home` as CmdType,
+      label: `Cam ${cam} Home`,
+      fields: [],
+      build: () => ({ address: `/cam${cam}/home`, args: [], label: `C${cam} Home` }),
+    },
+  ]),
   {
     type: 'obs-scene',
     label: 'OBS Scene',

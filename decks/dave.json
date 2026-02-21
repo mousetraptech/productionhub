@@ -1,0 +1,455 @@
+{
+  "name": "dave",
+  "grid": [
+    {
+      "row": 0,
+      "col": 0,
+      "button": {
+        "id": "btn-1771571674585-lstq",
+        "label": "Full",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-full"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "button": {
+        "id": "btn-1771571677136-miqn",
+        "label": "Walk-in",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-preset-walk"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "button": {
+        "id": "btn-1771571678951-80pl",
+        "label": "Half",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-half"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3,
+      "col": 0,
+      "button": {
+        "id": "btn-1771571681136-musp",
+        "label": "Out",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-out"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "button": {
+        "id": "btn-1771572884604-0ia3",
+        "label": "Full Wash",
+        "icon": "🎤",
+        "color": "#8B5CF6",
+        "actions": [
+          {
+            "actionId": "stage-full"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "button": {
+        "id": "btn-1771572886637-l2ia",
+        "label": "Warm",
+        "icon": "🎤",
+        "color": "#8B5CF6",
+        "actions": [
+          {
+            "actionId": "stage-warm"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2,
+      "col": 1,
+      "button": {
+        "id": "btn-1771572889219-8g3z",
+        "label": "Cool",
+        "icon": "🎤",
+        "color": "#8B5CF6",
+        "actions": [
+          {
+            "actionId": "stage-cool"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3,
+      "col": 1,
+      "button": {
+        "id": "btn-1771572891784-xv11",
+        "label": "Spotlight",
+        "icon": "🎤",
+        "color": "#8B5CF6",
+        "actions": [
+          {
+            "actionId": "stage-spot"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "button": {
+        "id": "btn-1771572898569-15f2",
+        "label": "Wide Shot",
+        "icon": "🎥",
+        "color": "#06B6D4",
+        "actions": [
+          {
+            "actionId": "cam1-wide"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 3,
+      "button": {
+        "id": "btn-1771572900633-5j7r",
+        "label": "Stage",
+        "icon": "🎥",
+        "color": "#06B6D4",
+        "actions": [
+          {
+            "actionId": "cam1-stage"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2,
+      "col": 3,
+      "button": {
+        "id": "btn-1771572902747-ieww",
+        "label": "Piano",
+        "icon": "🎥",
+        "color": "#06B6D4",
+        "actions": [
+          {
+            "actionId": "cam1-piano"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "button": {
+        "id": "btn-1771572904818-0ylf",
+        "label": "Audience",
+        "icon": "🎥",
+        "color": "#06B6D4",
+        "actions": [
+          {
+            "actionId": "cam1-audience"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "button": {
+        "id": "btn-1771572925251-pqgn",
+        "label": "House Left",
+        "icon": "🎥",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:obs-scene:1771572923946",
+            "osc": {
+              "address": "/obs/scene/1",
+              "args": [],
+              "label": "OBS → 1"
+            }
+          },
+          {
+            "actionId": "inline:obs-transition:1771572927471",
+            "osc": {
+              "address": "/obs/transition/trigger",
+              "args": [],
+              "label": "OBS Transition"
+            }
+          }
+        ],
+        "mode": "series",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 7,
+      "button": {
+        "id": "btn-1771614654753-tcuc",
+        "label": "Lights GO",
+        "icon": "💡",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:playback-go:1771614653266",
+            "osc": {
+              "address": "/lights/pb/1/go",
+              "args": [
+                {
+                  "type": "i",
+                  "value": 1
+                }
+              ],
+              "label": "PB 1 GO"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 4,
+      "button": {
+        "id": "btn-1771622955162-ogld",
+        "label": "Fade Ch 56 → 0% (3s)",
+        "icon": "",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:fade-fader:1771622953157",
+            "osc": {
+              "address": "/avantis/ch/56/mix/fade",
+              "args": [
+                0,
+                3
+              ],
+              "label": "Fade Ch 56 → 0% (3s)"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 4,
+      "button": {
+        "id": "btn-1771622972027-46mv",
+        "label": "Mute Ch 56",
+        "icon": "",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:mute:1771622971190",
+            "osc": {
+              "address": "/avantis/ch/56/mix/mute",
+              "args": [
+                1
+              ],
+              "label": "Mute Ch 56"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2,
+      "col": 4,
+      "button": {
+        "id": "btn-1771622982293-k5c3",
+        "label": "Unmute Ch 56",
+        "icon": "",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:unmute:1771622981306",
+            "osc": {
+              "address": "/avantis/ch/56/mix/mute",
+              "args": [
+                0
+              ],
+              "label": "Unmute Ch 56"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 2,
+      "button": {
+        "id": "btn-1771625494880-2lun",
+        "label": "Center",
+        "icon": "🎥",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:obs-scene:1771625493856",
+            "osc": {
+              "address": "/obs/scene/2",
+              "args": [],
+              "label": "OBS → 2"
+            }
+          },
+          {
+            "actionId": "inline:obs-transition:1771625496914",
+            "osc": {
+              "address": "/obs/transition/trigger",
+              "args": [],
+              "label": "OBS Transition"
+            }
+          }
+        ],
+        "mode": "series",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "button": {
+        "id": "btn-1771625602644-dltv",
+        "label": "House Right",
+        "icon": "🎥",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:obs-scene:1771625601664",
+            "osc": {
+              "address": "/obs/scene/3",
+              "args": [],
+              "label": "OBS → 3"
+            }
+          },
+          {
+            "actionId": "inline:obs-transition:1771625603831",
+            "osc": {
+              "address": "/obs/transition/trigger",
+              "args": [],
+              "label": "OBS Transition"
+            }
+          }
+        ],
+        "mode": "series",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 5,
+      "button": {
+        "id": "btn-1771635807797-6k9d",
+        "label": "Cam Preset 1",
+        "icon": "",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:cam-preset:1771635806607",
+            "osc": {
+              "address": "/cam1/preset/recall/1",
+              "args": [],
+              "label": "Cam Preset 1"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 5,
+      "button": {
+        "id": "btn-1771636873144-7znr",
+        "label": "Show GO",
+        "icon": "🎬",
+        "color": "#8B5CF6",
+        "actions": [
+          {
+            "actionId": "show-go"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2,
+      "col": 5,
+      "button": {
+        "id": "btn-1771637204965-1u4y",
+        "label": "SFX GO",
+        "icon": "🔈",
+        "color": "#6366F1",
+        "actions": [
+          {
+            "actionId": "sfx-go"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    }
+  ]
+}

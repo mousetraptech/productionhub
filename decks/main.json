@@ -1,0 +1,73 @@
+{
+  "name": "main",
+  "grid": [
+    {
+      "row": 0,
+      "col": 0,
+      "button": {
+        "id": "btn-1771613617169-f6qg",
+        "label": "Full",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-full"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "button": {
+        "id": "btn-1771613619385-wwjg",
+        "label": "Half",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-half"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "button": {
+        "id": "btn-1771613620934-jfgj",
+        "label": "Out",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-out"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "button": {
+        "id": "btn-1771613623468-wpl0",
+        "label": "Walk-in",
+        "icon": "🏠",
+        "color": "#F59E0B",
+        "actions": [
+          {
+            "actionId": "house-preset-walk"
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
+      }
+    }
+  ]
+}

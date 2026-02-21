@@ -30,7 +30,7 @@ export function getToolDefinitions(): Anthropic.Tool[] {
         properties: {
           action_id: {
             type: 'string',
-            description: 'The action ID from the registry (e.g. "house-half", "stream-start", "cam-wide")',
+            description: 'The action ID from the registry (e.g. "house-half", "stream-start", "cam1-wide")',
           },
         },
         required: ['action_id'],

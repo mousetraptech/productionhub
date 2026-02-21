@@ -181,50 +181,173 @@ actions:
       - device: obs
         address: /stream/stop
 
-  # ─── Camera ───
-  cam-wide:
+  # ─── Camera 1 ───
+  cam1-wide:
     label: "Wide Shot"
-    category: "Camera"
+    category: "Camera 1"
     icon: "🎥"
     color: "#06B6D4"
-    description: "Camera to wide angle"
+    description: "Cam 1 to wide angle"
     commands:
       - device: visca
         prefix: cam1
         address: /preset/recall/1
 
-  cam-stage:
+  cam1-stage:
     label: "Stage"
-    category: "Camera"
+    category: "Camera 1"
     icon: "🎥"
     color: "#06B6D4"
-    description: "Camera to stage center"
+    description: "Cam 1 to stage center"
     commands:
       - device: visca
         prefix: cam1
         address: /preset/recall/2
 
-  cam-piano:
+  cam1-piano:
     label: "Piano"
-    category: "Camera"
+    category: "Camera 1"
     icon: "🎥"
     color: "#06B6D4"
-    description: "Camera to piano position"
+    description: "Cam 1 to piano position"
     commands:
       - device: visca
         prefix: cam1
         address: /preset/recall/3
 
-  cam-audience:
+  cam1-audience:
     label: "Audience"
-    category: "Camera"
+    category: "Camera 1"
     icon: "🎥"
     color: "#06B6D4"
-    description: "Camera to audience"
+    description: "Cam 1 to audience"
     commands:
       - device: visca
         prefix: cam1
         address: /preset/recall/4
+
+  cam1-home:
+    label: "Home"
+    category: "Camera 1"
+    icon: "🎥"
+    color: "#06B6D4"
+    description: "Cam 1 to home position"
+    commands:
+      - device: visca
+        prefix: cam1
+        address: /home
+
+  # ─── Camera 2 ───
+  cam2-wide:
+    label: "Wide Shot"
+    category: "Camera 2"
+    icon: "🎥"
+    color: "#0891B2"
+    description: "Cam 2 to wide angle"
+    commands:
+      - device: visca
+        prefix: cam2
+        address: /preset/recall/1
+
+  cam2-stage:
+    label: "Stage"
+    category: "Camera 2"
+    icon: "🎥"
+    color: "#0891B2"
+    description: "Cam 2 to stage center"
+    commands:
+      - device: visca
+        prefix: cam2
+        address: /preset/recall/2
+
+  cam2-piano:
+    label: "Piano"
+    category: "Camera 2"
+    icon: "🎥"
+    color: "#0891B2"
+    description: "Cam 2 to piano position"
+    commands:
+      - device: visca
+        prefix: cam2
+        address: /preset/recall/3
+
+  cam2-audience:
+    label: "Audience"
+    category: "Camera 2"
+    icon: "🎥"
+    color: "#0891B2"
+    description: "Cam 2 to audience"
+    commands:
+      - device: visca
+        prefix: cam2
+        address: /preset/recall/4
+
+  cam2-home:
+    label: "Home"
+    category: "Camera 2"
+    icon: "🎥"
+    color: "#0891B2"
+    description: "Cam 2 to home position"
+    commands:
+      - device: visca
+        prefix: cam2
+        address: /home
+
+  # ─── Camera 3 ───
+  cam3-wide:
+    label: "Wide Shot"
+    category: "Camera 3"
+    icon: "🎥"
+    color: "#0E7490"
+    description: "Cam 3 to wide angle"
+    commands:
+      - device: visca
+        prefix: cam3
+        address: /preset/recall/1
+
+  cam3-stage:
+    label: "Stage"
+    category: "Camera 3"
+    icon: "🎥"
+    color: "#0E7490"
+    description: "Cam 3 to stage center"
+    commands:
+      - device: visca
+        prefix: cam3
+        address: /preset/recall/2
+
+  cam3-piano:
+    label: "Piano"
+    category: "Camera 3"
+    icon: "🎥"
+    color: "#0E7490"
+    description: "Cam 3 to piano position"
+    commands:
+      - device: visca
+        prefix: cam3
+        address: /preset/recall/3
+
+  cam3-audience:
+    label: "Audience"
+    category: "Camera 3"
+    icon: "🎥"
+    color: "#0E7490"
+    description: "Cam 3 to audience"
+    commands:
+      - device: visca
+        prefix: cam3
+        address: /preset/recall/4
+
+  cam3-home:
+    label: "Home"
+    category: "Camera 3"
+    icon: "🎥"
+    color: "#0E7490"
+    description: "Cam 3 to home position"
+    commands:
+      - device: visca
+        prefix: cam3
+        address: /home
 
   # ─── SFX (QLab Utility) ───
   sfx-go:
@@ -292,4 +415,45 @@ actions:
     commands:
       - device: qlab
         prefix: show
+        address: /panic
+
+  # ─── Production Hub (Cue Sequencer) ───
+  ph-go:
+    label: "Cue GO"
+    category: "PH"
+    icon: "▶️"
+    color: "#22C55E"
+    description: "Fire next cue in the PH cue sequencer"
+    commands:
+      - prefix: hub
+        address: /go
+
+  ph-stop:
+    label: "Stop"
+    category: "PH"
+    icon: "⏹️"
+    color: "#EF4444"
+    description: "Stop the PH cue sequencer"
+    commands:
+      - prefix: hub
+        address: /stop
+
+  ph-back:
+    label: "Back"
+    category: "PH"
+    icon: "⏮️"
+    color: "#F59E0B"
+    description: "Move playhead back one cue"
+    commands:
+      - prefix: hub
+        address: /back
+
+  ph-panic:
+    label: "Panic"
+    category: "PH"
+    icon: "🚨"
+    color: "#DC2626"
+    description: "Emergency stop — kill all fades and stop sequencer"
+    commands:
+      - prefix: hub
         address: /panic
