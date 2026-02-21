@@ -16,6 +16,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { MessageParam } from '@anthropic-ai/sdk/resources/messages';
 import { ActionRegistry } from '../actions/registry';
 import { CueEngine } from '../cue-engine/engine';
 import { SystemPromptBuilder } from './system-prompt';
@@ -38,6 +39,9 @@ const ALWAYS_CONFIRM_TOOLS = new Set<string>([
 
 const ALWAYS_CONFIRM_ADDRESSES = ['/hub/panic', '/fade/stop'];
 
+/** Max conversation turns to keep in history (each turn = user + assistant) */
+const MAX_HISTORY_TURNS = 10;
+
 export class BrainService {
   private client: Anthropic;
   private model: string;
@@ -49,6 +53,9 @@ export class BrainService {
   private getDeviceStates: () => Record<string, any>;
   private processing = false;
   private queue: Array<{ request: ChatRequest; resolve: (result: ChatResponse | ChatError) => void }> = [];
+
+  /** Conversation history for multi-turn context */
+  private history: MessageParam[] = [];
 
   /** Pending confirmations: requestId → proposed actions */
   private pendingConfirms = new Map<string, ProposedAction[]>();
@@ -120,24 +127,41 @@ export class BrainService {
     this.pendingConfirms.delete(requestId);
   }
 
+  /** Clear conversation history (e.g. on show change) */
+  clearHistory(): void {
+    this.history = [];
+    console.log('[Brain] Conversation history cleared');
+  }
+
   private async process(request: ChatRequest): Promise<ChatResponse | ChatExecuted | ChatError> {
     try {
       const systemPrompt = this.promptBuilder.build(this.actionRegistry, this.getDeviceStates());
+
+      // Append user message to history
+      this.history.push({ role: 'user', content: request.text });
 
       const response = await this.client.messages.create({
         model: this.model,
         max_tokens: 1024,
         system: systemPrompt,
         tools: getToolDefinitions(),
-        messages: [
-          { role: 'user', content: request.text },
-        ],
+        messages: this.history,
       });
 
       // Extract text and tool use blocks
       const textBlocks = response.content.filter(b => b.type === 'text');
       const toolBlocks = response.content.filter(b => b.type === 'tool_use');
       const text = textBlocks.map(b => b.type === 'text' ? b.text : '').join('\n').trim();
+
+      // Append assistant response to history
+      // For text-only responses, store the text
+      // For tool_use responses, store text only (tool calls are ephemeral — the MOD
+      // sees proposed actions, not raw tool blocks). This keeps history simple and
+      // avoids needing tool_result messages in the history.
+      this.history.push({ role: 'assistant', content: text || 'Done.' });
+
+      // Trim history to keep it bounded
+      this.trimHistory();
 
       // No tool calls — just text response
       if (toolBlocks.length === 0) {
@@ -173,7 +197,21 @@ export class BrainService {
 
     } catch (err: any) {
       console.error(`[Brain] API error: ${err.message}`);
+      // Remove the user message we just added since the request failed
+      if (this.history.length > 0 && this.history[this.history.length - 1].role === 'user') {
+        this.history.pop();
+      }
       return { requestId: request.requestId, error: `Brain error: ${err.message}` };
+    }
+  }
+
+  /** Keep history bounded to MAX_HISTORY_TURNS user/assistant pairs */
+  private trimHistory(): void {
+    // Each turn is 2 messages (user + assistant)
+    const maxMessages = MAX_HISTORY_TURNS * 2;
+    if (this.history.length > maxMessages) {
+      // Remove oldest messages, keeping the last maxMessages
+      this.history = this.history.slice(-maxMessages);
     }
   }
 
