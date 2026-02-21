@@ -10,7 +10,7 @@ npm run dev:emulate  # Start with all devices in emulate mode + auto-launch emul
 cd ui && npm run dev # Start React frontend (Vite dev server)
 ```
 
-The hub listens on UDP 9000 for OSC, WebSocket 3001 for the MOD UI, and HTTP 8081 for health/dashboard.
+The hub listens on UDP 9000 for OSC, WebSocket 3001 for the MOD UI, and HTTP 8081 for health/dashboard/docs.
 
 ## Architecture
 
@@ -37,6 +37,7 @@ OSC (UDP 9000) ──> Hub ──> DriverManager ──> Device Drivers
 
 | Path | Purpose |
 |------|---------|
+| `docs/command-reference.html` | OSC command reference served at GET /docs |
 | `config.yml` | Device configuration (hosts, ports, prefixes, emulation flags) |
 | `actions.yml` | Pre-defined action catalog (house lights, audio, camera, etc.) |
 | `src/index.ts` | CLI entry point |
