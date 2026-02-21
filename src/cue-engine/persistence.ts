@@ -37,8 +37,12 @@ export class ShowPersistence {
         id: cue.id,
         name: cue.name,
         actions: cue.actions.map(a => {
-          if (a.delay) return { actionId: a.actionId, delay: a.delay };
-          return a.actionId;
+          const entry: any = { actionId: a.actionId };
+          if (a.delay) entry.delay = a.delay;
+          if (a.osc) entry.osc = { address: a.osc.address, args: a.osc.args, label: a.osc.label };
+          // Keep shorthand for simple registry-only actions (string ID)
+          if (!a.delay && !a.osc) return a.actionId;
+          return entry;
         }),
         ...(cue.autoFollow ? { autoFollow: cue.autoFollow } : {}),
       })),
@@ -68,7 +72,11 @@ export class ShowPersistence {
         name: cue.name ?? '',
         actions: (cue.actions ?? []).map((a: any) => {
           if (typeof a === 'string') return { actionId: a };
-          return { actionId: a.actionId, delay: a.delay };
+          return {
+            actionId: a.actionId,
+            ...(a.delay ? { delay: a.delay } : {}),
+            ...(a.osc ? { osc: { address: a.osc.address, args: a.osc.args ?? [], label: a.osc.label ?? a.osc.address } } : {}),
+          };
         }),
         autoFollow: cue.autoFollow,
       })),
