@@ -45,7 +45,7 @@
     "touchdesigner"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.77.0",

@@ -6,3 +6,14 @@ logs/
 shows/
 ui/dist/
 ui/node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

@@ -242,6 +242,10 @@ npm run test:visca      # VISCA driver
 - **net** — TCP for MIDI (Avantis) and VISCA (cameras)
 - **yaml** — config parsing
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on reporting issues, submitting PRs, and code style.
+
 ## License
 
-ISC
+[GPLv3](LICENSE) — Production Hub is free and open source, and must stay that way.
