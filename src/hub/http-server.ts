@@ -6,10 +6,13 @@
  * - Cue sequencer API (/api/cues/*)
  * - Macro API (/api/macros/*)
  * - Systems check (/system/check)
- * - Dashboard (/), checklist, smoke tests
+ * - Dashboard (/dashboard), checklist, smoke tests
+ * - Static file serving for MOD UI (ui/dist/)
  */
 
 import * as http from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
 import { SystemsCheck, SystemsCheckReport } from '../systems-check';
 import { getDashboardHTML } from '../dashboard';
 import { PreshowChecklist } from '../preshow-checklist';
@@ -21,6 +24,24 @@ import { DeviceDriver } from '../drivers/device-driver';
 import { getLogger } from '../logger';
 
 const log = getLogger('HttpServer');
+
+/** MIME types for static file serving */
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.js':   'application/javascript',
+  '.css':  'text/css',
+  '.json': 'application/json',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif':  'image/gif',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf':  'font/ttf',
+  '.map':  'application/json',
+};
 
 export interface HttpServerDeps {
   getStatus: () => any;
@@ -37,9 +58,14 @@ export interface HttpServerDeps {
 export class HubHttpServer {
   private server?: http.Server;
   private deps: HttpServerDeps;
+  private uiDir: string;
+  private uiAvailable: boolean;
 
   constructor(deps: HttpServerDeps) {
     this.deps = deps;
+    // Resolve ui/dist relative to project root (two levels up from dist/hub/)
+    this.uiDir = path.join(__dirname, '..', '..', 'ui', 'dist');
+    this.uiAvailable = fs.existsSync(path.join(this.uiDir, 'index.html'));
   }
 
   start(port: number): void {
@@ -50,7 +76,12 @@ export class HubHttpServer {
     this.deps.dashboardWs.attach(this.server);
 
     this.server.listen(port, '0.0.0.0', () => {
-      log.info({ port }, 'Dashboard server started');
+      log.info({ port }, 'HTTP server started');
+      if (this.uiAvailable) {
+        log.info({ url: `http://localhost:${port}` }, 'MOD UI available');
+      } else {
+        log.warn({ uiDir: this.uiDir }, 'MOD UI not built — run: cd ui && npm run build');
+      }
     });
 
     this.server.on('error', (err: NodeJS.ErrnoException) => {
@@ -170,8 +201,8 @@ export class HubHttpServer {
       return;
     }
 
-    // Dashboard
-    if (method === 'GET' && url === '/') {
+    // Dashboard (monitoring page)
+    if (method === 'GET' && url === '/dashboard') {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(getDashboardHTML());
       return;
@@ -250,8 +281,46 @@ export class HubHttpServer {
       return;
     }
 
+    // Static file serving for MOD UI (ui/dist/)
+    if (method === 'GET' && this.uiAvailable) {
+      this.serveStatic(url ?? '/', res);
+      return;
+    }
+
     res.writeHead(404);
     res.end();
+  }
+
+  /** Serve a static file from ui/dist, falling back to index.html for SPA routes */
+  private serveStatic(url: string, res: http.ServerResponse): void {
+    // Strip query string
+    const cleanPath = url.split('?')[0];
+
+    // Resolve requested file path (prevent directory traversal)
+    const requested = path.normalize(path.join(this.uiDir, cleanPath));
+    if (!requested.startsWith(this.uiDir)) {
+      res.writeHead(403);
+      res.end();
+      return;
+    }
+
+    // Try the exact file first, then fall back to index.html (SPA routing)
+    const filePath = fs.existsSync(requested) && fs.statSync(requested).isFile()
+      ? requested
+      : path.join(this.uiDir, 'index.html');
+
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end();
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    });
   }
 
   getServer(): http.Server | undefined {

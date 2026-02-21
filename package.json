@@ -4,7 +4,7 @@
   "description": "Multi-device OSC production hub for live production control",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:ui",
     "start": "node dist/index.js",
     "dev": "ts-node --files src/index.ts",
     "dev:emulate": "ts-node --files src/index.ts --emulate-all",
