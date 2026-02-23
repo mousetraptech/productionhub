@@ -59,12 +59,26 @@ export interface TouchDesignerState {
   messageCount: number;
 }
 
+export interface RecorderSource {
+  id: string;
+  name: string;
+  frames: number;
+  vuDb: number;
+}
+
+export interface RecorderState {
+  state: 'stopped' | 'recording' | 'archiving';
+  sources: RecorderSource[];
+  archiveProgress: number;
+}
+
 export interface DeviceStates {
   avantis: AvantisState | null;
   chamsys: ChamSysState | null;
   obs: OBSState | null;
   visca: VISCAState | null;
   touchdesigner: TouchDesignerState | null;
+  'ndi-recorder': RecorderState | null;
 }
 
 export function useDeviceStates() {
@@ -74,6 +88,7 @@ export function useDeviceStates() {
     obs: null,
     visca: null,
     touchdesigner: null,
+    'ndi-recorder': null,
   });
   const [connected, setConnected] = useState(false);
 
