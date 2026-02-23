@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { ActionCategory } from '../types';
 import DragTile from './DragTile';
-import CommandBuilder from './CommandBuilder';
+import CommandTile from './CommandTile';
+import { TILE_CATEGORIES } from './command-defs';
 
 interface ActionPaletteProps {
   categories: ActionCategory[];
@@ -10,12 +11,11 @@ interface ActionPaletteProps {
 
 export default function ActionPalette({ categories, onNewShow }: ActionPaletteProps) {
   const [expandedCats, setExpandedCats] = useState<string[]>(
-    [...categories.map(c => c.category), '__custom__']
+    [...categories.map(c => c.category), ...TILE_CATEGORIES.map(t => `__cmd_${t.category}`)]
   );
 
-  // Keep expanded list in sync when categories arrive
-  if (categories.length > 0 && expandedCats.length <= 1) {
-    setExpandedCats([...categories.map(c => c.category), '__custom__']);
+  if (categories.length > 0 && expandedCats.length <= TILE_CATEGORIES.length) {
+    setExpandedCats([...categories.map(c => c.category), ...TILE_CATEGORIES.map(t => `__cmd_${t.category}`)]);
   }
 
   const toggleCat = (cat: string) =>
@@ -39,6 +39,7 @@ export default function ActionPalette({ categories, onNewShow }: ActionPalettePr
         </div>
       </div>
       <div style={{ flex: 1, overflow: 'auto', padding: '6px 10px' }}>
+        {/* Registry actions from backend */}
         {categories.map(cat => {
           const expanded = expandedCats.includes(cat.category);
           return (
@@ -74,34 +75,56 @@ export default function ActionPalette({ categories, onNewShow }: ActionPalettePr
           );
         })}
 
-        {/* Custom Commands */}
-        <div style={{ marginBottom: 2 }}>
-          <button
-            onClick={() => toggleCat('__custom__')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              width: '100%', padding: '9px 8px',
-              background: 'none', border: 'none',
-              color: '#94A3B8', cursor: 'pointer',
-              fontSize: 12.5, fontWeight: 600, textAlign: 'left', borderRadius: 6,
-              transition: 'background 0.1s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#0F172A')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-          >
-            <span style={{ fontSize: 15 }}>⚡</span>
-            <span style={{ flex: 1 }}>Custom Commands</span>
-            <span style={{
-              fontSize: 9, transition: 'transform 0.2s',
-              transform: expandedCats.includes('__custom__') ? 'rotate(180deg)' : 'rotate(0)',
-            }}>▼</span>
-          </button>
-          {expandedCats.includes('__custom__') && (
-            <div style={{ padding: '3px 0 6px' }}>
-              <CommandBuilder />
+        {/* Divider between registry and command tiles */}
+        {categories.length > 0 && (
+          <div style={{ borderTop: '1px solid #1E293B', margin: '8px 0' }} />
+        )}
+
+        {/* Command tiles by category */}
+        {TILE_CATEGORIES.map(tileCat => {
+          const catKey = `__cmd_${tileCat.category}`;
+          const expanded = expandedCats.includes(catKey);
+          return (
+            <div key={catKey} style={{ marginBottom: 2 }}>
+              <button
+                onClick={() => toggleCat(catKey)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', padding: '9px 8px',
+                  background: 'none', border: 'none',
+                  color: '#94A3B8', cursor: 'pointer',
+                  fontSize: 12.5, fontWeight: 600, textAlign: 'left', borderRadius: 6,
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#0F172A')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <span style={{ fontSize: 15 }}>{tileCat.icon}</span>
+                <span style={{ flex: 1 }}>{tileCat.category}</span>
+                <span style={{
+                  fontSize: 9, transition: 'transform 0.2s',
+                  transform: expanded ? 'rotate(180deg)' : 'rotate(0)',
+                }}>▼</span>
+              </button>
+              {expanded && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '3px 0 6px' }}>
+                  {tileCat.commands.map(cmd => (
+                    <CommandTile
+                      key={cmd.type}
+                      def={{
+                        type: cmd.type,
+                        label: cmd.label,
+                        icon: tileCat.icon,
+                        color: tileCat.color,
+                        category: tileCat.category,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
       </div>
       <div style={{ padding: '12px 14px', borderTop: '1px solid #1E293B' }}>
         <button
