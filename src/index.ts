@@ -32,6 +32,7 @@ import { OBSDriver } from './drivers/obs-driver';
 import { VISCADriver } from './drivers/visca-driver';
 import { TouchDesignerDriver } from './drivers/touchdesigner-driver';
 import { QLabDriver } from './drivers/qlab-driver';
+import { NDIRecorderDriver } from './drivers/ndi-recorder-driver';
 import { DeviceConfig, DeviceDriver, HubContext } from './drivers/device-driver';
 import { SystemsCheck } from './systems-check';
 
@@ -288,6 +289,8 @@ function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbos
       return new TouchDesignerDriver(deviceConfig as any, hubContext, verbose);
     case 'qlab':
       return new QLabDriver(deviceConfig as any, hubContext, verbose);
+    case 'ndi-recorder':
+      return new NDIRecorderDriver(deviceConfig as any, hubContext, verbose);
     default:
       throw new Error(`Unknown device type: ${deviceConfig.type}`);
   }
