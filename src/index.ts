@@ -47,6 +47,11 @@ const EMULATOR_DEFAULTS: Record<string, { host: string; port: number }> = {
   'ndi-recorder': { host: '127.0.0.1', port: 7200 },
 };
 
+/** Prefix-specific overrides for devices with multiple emulator instances */
+const EMULATOR_PREFIX_OVERRIDES: Record<string, { host: string; port: number }> = {
+  '/show': { host: '127.0.0.1', port: 53101 },
+};
+
 function printBanner(): void {
   console.log('');
   console.log('  Production Hub');
@@ -270,7 +275,8 @@ function validateCues(cueFile: string, config: { devices: { prefix: string }[] }
 function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbose: boolean): DeviceDriver {
   // Emulate mode: override host/port to point at the standalone production-emulator
   if (deviceConfig.emulate) {
-    const defaults = EMULATOR_DEFAULTS[deviceConfig.type];
+    const prefixOverride = EMULATOR_PREFIX_OVERRIDES[deviceConfig.prefix];
+    const defaults = prefixOverride ?? EMULATOR_DEFAULTS[deviceConfig.type];
     if (defaults) {
       deviceConfig.host = defaults.host;
       deviceConfig.port = defaults.port;
