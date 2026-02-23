@@ -110,7 +110,7 @@ function SourceRow({ source }: { source: RecorderSource }) {
 }
 
 function ArchiveProgress({ progress }: { progress: number }) {
-  const clamped = Math.max(0, Math.min(100, progress));
+  const clamped = Math.max(0, Math.min(100, progress * 100));
 
   return (
     <div style={{

@@ -213,7 +213,8 @@ function parseRecorderXml(sourceId, tag, attrs, recorder) {
 
   if (tag === 'recording') {
     const frames = parseInt(attrMap.no_frames, 10) || 0;
-    const vuDb = parseFloat(attrMap.vu_dB) || -60;
+    const vuDbRaw = parseFloat(attrMap.vu_dB);
+    const vuDb = isNaN(vuDbRaw) ? -60 : vuDbRaw;
     recorder.frames = frames;
     recorder.vuDb = vuDb;
 
@@ -274,7 +275,7 @@ function startArchive() {
 
   robo.on('exit', (code) => {
     // Robocopy exit codes 0-7 are success
-    if (code <= 7) {
+    if (code !== null && code <= 7) {
       console.log(`[Agent] Archive complete (exit ${code}): ${destDir}`);
       broadcast({ type: 'archive-done', path: destDir });
     } else {
