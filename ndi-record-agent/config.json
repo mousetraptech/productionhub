@@ -1,0 +1,12 @@
+{
+  "port": 7200,
+  "ndiRecordPath": "C:\\Program Files\\NDI\\NDI 6 Tools\\NDI Record.exe",
+  "recordingPath": "D:\\Recordings",
+  "archivePath": "\\\\nas\\shows",
+  "sources": [
+    { "name": "OBS (Program)", "id": "program" },
+    { "name": "CAM1 (PTZ1)", "id": "cam1" },
+    { "name": "CAM2 (PTZ2)", "id": "cam2" },
+    { "name": "CAM3 (PTZ3)", "id": "cam3" }
+  ]
+}

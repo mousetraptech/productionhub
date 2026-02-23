@@ -1,0 +1,12 @@
+{
+  "name": "ndi-record-agent",
+  "version": "1.0.0",
+  "description": "NDI Record agent — spawns NDI Record.exe processes, controlled by Production Hub over WebSocket",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
