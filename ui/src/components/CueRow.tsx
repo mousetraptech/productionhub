@@ -15,11 +15,12 @@ interface CueRowProps {
   onRenameCue: (cueId: string, name: string) => void;
   onMoveCue: (cueId: string, direction: -1 | 1) => void;
   onDrop: (cueId: string, actionId: string, osc?: InlineOSC, delay?: number) => void;
+  onCommandTypeDrop?: (cueId: string, commandType: string) => void;
 }
 
 export default function CueRow({
   cue, index, total, isActive, isFired,
-  lookup, onRemoveAction, onRemoveCue, onRenameCue, onMoveCue, onDrop,
+  lookup, onRemoveAction, onRemoveCue, onRenameCue, onMoveCue, onDrop, onCommandTypeDrop,
 }: CueRowProps) {
   const [isOver, setIsOver] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -45,7 +46,13 @@ export default function CueRow({
         e.preventDefault();
         e.stopPropagation();
         setIsOver(false);
-        // Check for inline OSC (CommandBuilder drag)
+        // Check for command type (CommandTile drag)
+        const cmdType = e.dataTransfer.getData('application/x-command-type');
+        if (cmdType) {
+          onCommandTypeDrop?.(cue.id, cmdType);
+          return;
+        }
+        // Check for inline OSC (legacy drag)
         const jsonData = e.dataTransfer.getData('application/json');
         if (jsonData) {
           try {

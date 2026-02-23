@@ -55,6 +55,9 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
   private pendingRequests: Map<string, { resolve: (data: any) => void; timer: ReturnType<typeof setTimeout> }> = new Map();
   private reconnectQueue = new ReconnectQueue<{ address: string; args: any[] }>();
   private verbose: boolean;
+  private scenes: string[] = [];
+  private currentScene: string = '';
+  private previewScene: string = '';
 
   constructor(config: OBSConfig, _hubContext: HubContext, verbose = false) {
     super();
@@ -336,6 +339,7 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
         this.emit('connected');
         if (this.verbose) console.log('[OBS] Identified successfully');
         this.flushQueue();
+        this.querySceneList();
         break;
       case 5: // Event
         this.handleEvent(msg.d);
@@ -379,9 +383,19 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
     switch (eventType) {
       case 'CurrentProgramSceneChanged':
+        this.currentScene = data.eventData?.sceneName ?? '';
         this.emitFeedback('/scene/current', [
-          { type: 's', value: data.eventData?.sceneName ?? '' },
+          { type: 's', value: this.currentScene },
         ]);
+        break;
+      case 'CurrentPreviewSceneChanged':
+        this.previewScene = data.eventData?.sceneName ?? '';
+        this.emitFeedback('/scene/preview', [
+          { type: 's', value: this.previewScene },
+        ]);
+        break;
+      case 'SceneListChanged':
+        this.querySceneList();
         break;
       case 'StreamStateChanged':
         this.emitFeedback('/stream/status', [
@@ -471,6 +485,28 @@ export class OBSDriver extends EventEmitter implements DeviceDriver {
 
   private emitFeedback(address: string, args: OscArg[]): void {
     this.emit('feedback', { address, args } as FeedbackEvent);
+  }
+
+  getState(): Record<string, any> {
+    return {
+      scenes: this.scenes,
+      currentScene: this.currentScene,
+      previewScene: this.previewScene,
+    };
+  }
+
+  private async querySceneList(): Promise<void> {
+    try {
+      const resp = await this.sendRequestAsync('GetSceneList');
+      if (resp?.requestStatus?.result && resp.responseData?.scenes) {
+        this.scenes = resp.responseData.scenes.map((s: any) => s.sceneName);
+        if (this.verbose) console.log(`[OBS] Scene list: ${this.scenes.join(', ')}`);
+        // Emit feedback to trigger state broadcast to UI
+        this.emitFeedback('/scenes/list', [{ type: 's', value: this.scenes.join(',') }]);
+      }
+    } catch (err: any) {
+      console.error(`[OBS] Failed to get scene list: ${err.message}`);
+    }
   }
 
 }

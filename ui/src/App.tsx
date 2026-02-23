@@ -8,6 +8,8 @@ import CueStack from './components/CueStack';
 import GoBar from './components/GoBar';
 import CollapsiblePanel from './components/CollapsiblePanel';
 import ChatDrawer from './components/ChatDrawer';
+import CommandModal, { type CommandModalTarget } from './components/CommandModal';
+import type { InlineOSC } from './types';
 import {
   AvantisPanel,
   OBSPanel,
@@ -21,6 +23,7 @@ export default function App() {
   const { deviceStates, connected: devicesConnected } = useDeviceStates();
   const [showPicker, setShowPicker] = useState(true);
   const chat = useChat(send);
+  const [modalTarget, setModalTarget] = useState<CommandModalTarget | null>(null);
 
   // Wire chat message handler
   useEffect(() => {
@@ -33,6 +36,20 @@ export default function App() {
   const selectTemplate = (templateId: string) => {
     send({ type: 'load-template', templateId });
     setShowPicker(false);
+  };
+
+  const handleCommandDrop = (commandType: string, cueId: string | null) => {
+    setModalTarget({ commandType, cueId });
+  };
+
+  const handleModalSubmit = (target: CommandModalTarget, osc: InlineOSC, delay?: number) => {
+    const actionId = `inline:${target.commandType}:${Date.now()}`;
+    if (target.cueId) {
+      send({ type: 'add-action-to-cue', cueId: target.cueId, actionId, osc, ...(delay ? { delay } : {}) });
+    } else {
+      send({ type: 'add-cue', cue: { name: osc.label, actions: [{ actionId, osc, ...(delay ? { delay } : {}) }] } });
+    }
+    setModalTarget(null);
   };
 
   return (
@@ -89,7 +106,7 @@ export default function App() {
 
       {/* Center: Cue Stack + GO Bar */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <CueStack show={show} categories={categories} send={send} />
+        <CueStack show={show} categories={categories} send={send} onCommandDrop={handleCommandDrop} />
         <GoBar show={show} send={send} />
       </div>
 
@@ -156,6 +173,14 @@ export default function App() {
         onReject={chat.reject}
         onToggleMode={chat.toggleMode}
       />
+      {modalTarget && (
+        <CommandModal
+          target={modalTarget}
+          obsScenes={deviceStates.obs?.scenes}
+          onSubmit={handleModalSubmit}
+          onCancel={() => setModalTarget(null)}
+        />
+      )}
     </div>
   );
 }

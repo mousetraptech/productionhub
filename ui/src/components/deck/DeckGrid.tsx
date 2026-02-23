@@ -45,7 +45,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
     (e.currentTarget as HTMLElement).style.borderColor = '';
     if (!editing) return;
 
-    // Try application/json first (inline OSC from CommandBuilder)
+    // Try application/json first (inline OSC)
     const jsonData = e.dataTransfer.getData('application/json');
     if (jsonData) {
       try {
