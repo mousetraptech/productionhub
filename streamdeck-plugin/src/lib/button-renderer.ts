@@ -19,13 +19,18 @@ export function renderButton(
 ): string {
   if (!button) return renderEmpty();
 
-  const bg = hexToRgb(button.color);
+  const isToggled = !!(button.toggle && state.active);
+  const displayColor = isToggled ? button.toggle!.activeColor : button.color;
+  const displayIcon = isToggled ? button.toggle!.activeIcon : button.icon;
+  const displayLabel = isToggled ? button.toggle!.activeLabel : button.label;
+
+  const bg = hexToRgb(displayColor);
   const bgFill = firing
     ? compositeOnBlack(bg.r, bg.g, bg.b, 0.6)
     : compositeOnBlack(bg.r, bg.g, bg.b, 0.3);
   const borderColor = state.live
     ? '#EF4444'
-    : state.active
+    : state.active && !button.toggle
       ? '#10B981'
       : compositeOnBlack(bg.r, bg.g, bg.b, 0.5);
   const fillHeight = state.level !== null ? Math.round(state.level * SIZE) : 0;
@@ -38,9 +43,9 @@ export function renderButton(
   ${fillHeight > 0 ? `<rect x="4" y="${SIZE - 2 - fillHeight}" width="${SIZE - 8}" height="${fillHeight}"
     rx="10" fill="${fillColor}"/>` : ''}
   <text x="${SIZE / 2}" y="62" text-anchor="middle" font-size="42"
-    font-family="sans-serif">${escapeXml(button.icon)}</text>
+    font-family="sans-serif">${escapeXml(displayIcon)}</text>
   <text x="${SIZE / 2}" y="100" text-anchor="middle" font-size="16" font-weight="600"
-    font-family="sans-serif" fill="#E2E8F0">${escapeXml(truncate(button.label, 12))}</text>
+    font-family="sans-serif" fill="#E2E8F0">${escapeXml(truncate(displayLabel, 12))}</text>
   ${state.live ? `<circle cx="16" cy="16" r="6" fill="#EF4444"/>
   <text x="28" y="20" font-size="10" font-family="sans-serif" fill="#EF4444" font-weight="700">LIVE</text>` : ''}
   ${button.actions.length > 1 ? `<text x="${SIZE - 12}" y="${SIZE - 8}" text-anchor="end" font-size="13"

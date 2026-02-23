@@ -154,9 +154,13 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
 
     switch (cmd) {
       case 'start':
+        this.recorderState.state = 'recording';
+        this.emitFeedback('/state', [{ type: 's', value: 'recording' }]);
         this.sendToAgent({ type: 'start' });
         break;
       case 'stop':
+        this.recorderState.state = 'stopped';
+        this.emitFeedback('/state', [{ type: 's', value: 'stopped' }]);
         this.sendToAgent({ type: 'stop' });
         break;
       case 'status':

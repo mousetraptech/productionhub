@@ -90,12 +90,16 @@ export class PHButton extends SingletonAction {
     const button = this.getButton(coords.row, coords.column);
     if (!button) return;
 
-    // Fire
-    this.hub.fire(button);
+    // Compute toggle state and fire effective actions
+    const state = this.getButtonState(button);
+    const isToggled = !!(button.toggle && state.active);
+    const effectiveButton = isToggled
+      ? { ...button, actions: button.toggle!.activeActions }
+      : button;
+    this.hub.fire(effectiveButton);
 
     // Flash animation
     const key = coordKey(coords.row, coords.column);
-    const state = this.getButtonState(button);
     const flashSvg = this.toDataUrl(renderButton(button, state, true));
     await ev.action.setImage(flashSvg);
 

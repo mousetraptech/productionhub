@@ -40,6 +40,7 @@ export function getDeckButtonState(
     else if (address.startsWith('/lights/') || address.match(/^\/pb\//)) deviceType = 'chamsys';
     else if (address.startsWith('/obs/')) deviceType = 'obs';
     else if (address.match(/^\/cam\d+\//)) deviceType = 'visca';
+    else if (address.startsWith('/recorder/')) deviceType = 'ndi-recorder';
   }
 
   // --- ChamSys ---
@@ -86,6 +87,15 @@ export function getDeckButtonState(
     }
   }
 
+  // --- NDI Recorder ---
+  if (deviceType === 'ndi-recorder') {
+    const recState = (deviceStates as any)['ndi-recorder'];
+    if (recState) {
+      state.active = recState.state === 'recording';
+    }
+    return state;
+  }
+
   // --- Avantis ---
   if (deviceType === 'avantis' && deviceStates.avantis?.strips) {
     // Fader: /ch/{N}/mix/fader, /dca/{N}/fader, /grp/{N}/mix/fader, etc.
@@ -125,6 +135,14 @@ export function getDeckButtonState(
     const obsMatch = address.match(/\/obs\/scene\/([^/]+)$/);
     if (obsMatch && deviceStates.obs) {
       state.live = deviceStates.obs.currentScene === obsMatch[1];
+      return state;
+    }
+    // Recorder with /recorder/ prefix
+    if (address.startsWith('/recorder/')) {
+      const recState = (deviceStates as any)['ndi-recorder'];
+      if (recState) {
+        state.active = recState.state === 'recording';
+      }
       return state;
     }
     // Avantis with /avantis/ prefix
