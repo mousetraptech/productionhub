@@ -31,6 +31,7 @@ export interface ChamSysState {
 }
 
 export interface OBSState {
+  scenes: string[];
   currentScene: string;
   previewScene: string;
   streaming: boolean;
