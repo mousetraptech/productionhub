@@ -16,6 +16,7 @@ import {
   ChamSysPanel,
   PTZPanel,
   TouchDesignerPanel,
+  RecorderPanel,
 } from './components/devices';
 
 export default function App() {
@@ -162,6 +163,10 @@ export default function App() {
 
         <CollapsiblePanel title="TouchDesigner" icon="td">
           <TouchDesignerPanel state={deviceStates.touchdesigner} />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="NDI Recorder" icon="record">
+          <RecorderPanel state={deviceStates['ndi-recorder']} />
         </CollapsiblePanel>
       </div>
       <ChatDrawer
