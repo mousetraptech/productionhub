@@ -52,7 +52,7 @@ export default function CueRow({
           onCommandTypeDrop?.(cue.id, cmdType);
           return;
         }
-        // Check for inline OSC (CommandBuilder drag)
+        // Check for inline OSC (legacy drag)
         const jsonData = e.dataTransfer.getData('application/json');
         if (jsonData) {
           try {

@@ -20,21 +20,22 @@ export default function CommandModal({ target, obsScenes, onSubmit, onCancel }: 
   const [vals, setVals] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const firstInputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+  const autoSubmitted = useRef(false);
 
   useEffect(() => {
     setTimeout(() => firstInputRef.current?.focus(), 50);
   }, []);
 
-  if (!def) return null;
-
   // No-field commands (cam home, obs transition) — auto-submit
-  if (def.fields.length === 0) {
-    const payload = def.build({});
-    if (payload) {
-      setTimeout(() => onSubmit(target, payload, def.delay), 0);
+  useEffect(() => {
+    if (def && def.fields.length === 0 && !autoSubmitted.current) {
+      autoSubmitted.current = true;
+      const payload = def.build({});
+      if (payload) onSubmit(target, payload, def.delay);
     }
-    return null;
-  }
+  }, [def, target, onSubmit]);
+
+  if (!def || def.fields.length === 0) return null;
 
   const setField = (key: string, value: string) =>
     setVals(prev => ({ ...prev, [key]: value }));

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ActionCategory } from '../types';
 import DragTile from './DragTile';
 import CommandTile from './CommandTile';
@@ -11,12 +11,21 @@ interface ActionPaletteProps {
 
 export default function ActionPalette({ categories, onNewShow }: ActionPaletteProps) {
   const [expandedCats, setExpandedCats] = useState<string[]>(
-    [...categories.map(c => c.category), ...TILE_CATEGORIES.map(t => `__cmd_${t.category}`)]
+    TILE_CATEGORIES.map(t => `__cmd_${t.category}`)
   );
 
-  if (categories.length > 0 && expandedCats.length <= TILE_CATEGORIES.length) {
-    setExpandedCats([...categories.map(c => c.category), ...TILE_CATEGORIES.map(t => `__cmd_${t.category}`)]);
-  }
+  useEffect(() => {
+    if (categories.length > 0) {
+      setExpandedCats(prev => {
+        const allKeys = [
+          ...categories.map(c => c.category),
+          ...TILE_CATEGORIES.map(t => `__cmd_${t.category}`),
+        ];
+        const missing = allKeys.filter(k => !prev.includes(k));
+        return missing.length > 0 ? [...prev, ...missing] : prev;
+      });
+    }
+  }, [categories]);
 
   const toggleCat = (cat: string) =>
     setExpandedCats(prev =>
