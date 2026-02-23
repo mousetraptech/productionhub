@@ -16,7 +16,7 @@ devices:
     prefix: /avantis
     host: "192.168.10.20"
     port: 51325
-    emulate: true
+    # emulate: true
     # Base MIDI channel (1-16), should match Utils/Shows > Control > MIDI on the desk
     midiBaseChannel: 1
     feedback:
@@ -91,6 +91,15 @@ devices:
     emulate: true
     heartbeat:
       enabled: false
+
+  # NDI Recorder — recording control via Windows agent
+  - type: ndi-recorder
+    prefix: /recorder
+    host: "192.168.10.11"
+    port: 7200
+    heartbeat:
+      enabled: true
+      intervalMs: 5000
 
 # Health check HTTP server (used by watchdog)
 health:
