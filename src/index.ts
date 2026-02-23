@@ -44,6 +44,7 @@ const EMULATOR_DEFAULTS: Record<string, { host: string; port: number }> = {
   visca: { host: '127.0.0.1', port: 5678 },
   touchdesigner: { host: '127.0.0.1', port: 12000 },
   qlab: { host: '127.0.0.1', port: 53100 },
+  'ndi-recorder': { host: '127.0.0.1', port: 7200 },
 };
 
 function printBanner(): void {

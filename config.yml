@@ -97,6 +97,7 @@ devices:
     prefix: /recorder
     host: "192.168.10.11"
     port: 7200
+    emulate: true
     heartbeat:
       enabled: true
       intervalMs: 5000
