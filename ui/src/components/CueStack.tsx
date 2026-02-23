@@ -7,9 +7,10 @@ interface CueStackProps {
   show: ShowState;
   categories: ActionCategory[];
   send: (msg: ClientMessage) => void;
+  onCommandDrop?: (commandType: string, cueId: string | null) => void;
 }
 
-export default function CueStack({ show, categories, send }: CueStackProps) {
+export default function CueStack({ show, categories, send, onCommandDrop }: CueStackProps) {
   const cueListRef = useRef<HTMLDivElement>(null);
   const lookup = buildActionLookup(categories);
   const [dragOver, setDragOver] = useState(false);
@@ -26,6 +27,13 @@ export default function CueStack({ show, categories, send }: CueStackProps) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
+
+    // Check for command type (new CommandTile drag)
+    const cmdType = e.dataTransfer.getData('application/x-command-type');
+    if (cmdType) {
+      onCommandDrop?.(cmdType, null);
+      return;
+    }
 
     // Check for inline OSC (CommandBuilder drag)
     const jsonData = e.dataTransfer.getData('application/json');
@@ -145,6 +153,7 @@ export default function CueStack({ show, categories, send }: CueStackProps) {
             onRenameCue={(cueId, name) => send({ type: 'rename-cue', cueId, name })}
             onMoveCue={(cueId, direction) => send({ type: 'move-cue', cueId, direction })}
             onDrop={(cueId, actionId, osc, delay) => send({ type: 'add-action-to-cue', cueId, actionId, osc, delay })}
+            onCommandTypeDrop={onCommandDrop ? (cueId: string, cmdType: string) => onCommandDrop(cmdType, cueId) : undefined}
           />
         ))}
 
