@@ -65,6 +65,8 @@ export class ModWebSocket {
       this.send(ws, { type: 'state', show: this.cueEngine.getState() });
       this.send(ws, { type: 'actions', categories: this.actionRegistry.getCategoryList() });
       this.send(ws, { type: 'templates', templates: this.templateLoader.getAll() });
+      this.send(ws, { type: 'shows-list', shows: this.persistence.list() });
+      this.send(ws, { type: 'last-show', name: this.persistence.getLastUsed() });
 
       if (this.brainService) {
         this.send(ws, { type: 'chat-mode', mode: this.brainService.getMode() });
@@ -128,6 +130,7 @@ export class ModWebSocket {
         const template = this.templateLoader.getTemplate(msg.templateId);
         if (template) {
           this.cueEngine.loadTemplate(template.name, template.cues);
+          this.persistence.setLastUsed(template.name);
         }
         break;
       }
@@ -170,13 +173,31 @@ export class ModWebSocket {
 
       case 'save-show':
         this.persistence.save(msg.name, this.cueEngine.getState());
+        this.persistence.setLastUsed(msg.name);
+        this.broadcast({ type: 'shows-list', shows: this.persistence.list() });
         break;
 
       case 'load-show': {
         const state = this.persistence.load(msg.name);
-        if (state) this.cueEngine.loadState(state);
+        if (state) {
+          this.cueEngine.loadState(state);
+          this.persistence.setLastUsed(msg.name);
+        }
         break;
       }
+
+      case 'list-shows':
+        this.broadcast({ type: 'shows-list', shows: this.persistence.list() });
+        break;
+
+      case 'delete-show':
+        this.persistence.delete(msg.name);
+        this.broadcast({ type: 'shows-list', shows: this.persistence.list() });
+        break;
+
+      case 'update-action-in-cue':
+        this.cueEngine.updateActionInCue(msg.cueId, msg.actionIndex, { osc: msg.osc, delay: msg.delay });
+        break;
 
       case 'osc':
         if (typeof msg.address === 'string') {

@@ -35,6 +35,7 @@ export interface CmdDef {
   fields: FieldDef[];
   delay?: number;
   build: (vals: Record<string, string>) => InlineOSC | null;
+  parse?: (osc: InlineOSC) => Record<string, string> | null;
 }
 
 export function normFader(raw: string): number {
@@ -64,6 +65,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (isNaN(ch) || ch < 1) return null;
         return { address: `/avantis/ch/${ch}/mix/fader`, args: [val], label: `Fader ${ch} \u2192 ${Math.round(val * 100)}%` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/avantis\/ch\/(\d+)\/mix\/fader$/);
+        if (!m) return null;
+        return { ch: m[1], val: String(Math.round(Number(osc.args[0] ?? 0) * 100)) };
+      },
     },
     {
       type: 'set-dca',
@@ -77,6 +83,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         const val = normFader(v.val);
         if (isNaN(n) || n < 1) return null;
         return { address: `/avantis/dca/${n}/fader`, args: [val], label: `DCA ${n} \u2192 ${Math.round(val * 100)}%` };
+      },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/avantis\/dca\/(\d+)\/fader$/);
+        if (!m) return null;
+        return { n: m[1], val: String(Math.round(Number(osc.args[0] ?? 0) * 100)) };
       },
     },
     {
@@ -94,6 +105,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (isNaN(ch) || ch < 1 || isNaN(dur) || dur <= 0) return null;
         return { address: `/avantis/ch/${ch}/mix/fade`, args: [val, dur], label: `Fade Ch ${ch} \u2192 ${Math.round(val * 100)}% (${dur}s)` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/avantis\/ch\/(\d+)\/mix\/fade$/);
+        if (!m) return null;
+        return { ch: m[1], val: String(Math.round(Number(osc.args[0] ?? 0) * 100)), dur: String(osc.args[1] ?? '') };
+      },
     },
     {
       type: 'fade-dca',
@@ -110,6 +126,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (isNaN(n) || n < 1 || isNaN(dur) || dur <= 0) return null;
         return { address: `/avantis/dca/${n}/fade`, args: [val, dur], label: `Fade DCA ${n} \u2192 ${Math.round(val * 100)}% (${dur}s)` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/avantis\/dca\/(\d+)\/fade$/);
+        if (!m) return null;
+        return { n: m[1], val: String(Math.round(Number(osc.args[0] ?? 0) * 100)), dur: String(osc.args[1] ?? '') };
+      },
     },
     {
       type: 'mute',
@@ -119,6 +140,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         const ch = parseInt(v.ch, 10);
         if (isNaN(ch) || ch < 1) return null;
         return { address: `/avantis/ch/${ch}/mix/mute`, args: [1], label: `Mute Ch ${ch}` };
+      },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/avantis\/ch\/(\d+)\/mix\/mute$/);
+        if (!m || osc.args[0] !== 1) return null;
+        return { ch: m[1] };
       },
     },
     {
@@ -130,6 +156,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (isNaN(ch) || ch < 1) return null;
         return { address: `/avantis/ch/${ch}/mix/mute`, args: [0], label: `Unmute Ch ${ch}` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/avantis\/ch\/(\d+)\/mix\/mute$/);
+        if (!m || osc.args[0] !== 0) return null;
+        return { ch: m[1] };
+      },
     },
     {
       type: 'recall-scene',
@@ -139,6 +170,10 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         const n = parseInt(v.n, 10);
         if (isNaN(n) || n < 0) return null;
         return { address: '/avantis/scene/recall', args: [n], label: `Scene ${n}` };
+      },
+      parse: (osc) => {
+        if (osc.address !== '/avantis/scene/recall') return null;
+        return { n: String(osc.args[0] ?? '') };
       },
     },
     {
@@ -154,6 +189,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (isNaN(n) || n < 1) return null;
         return { address: `/lights/pb/${n}`, args: [val], label: `PB ${n} \u2192 ${Math.round(val * 100)}%` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/lights\/pb\/(\d+)$/);
+        if (!m) return null;
+        return { n: m[1], val: String(Math.round(Number(osc.args[0] ?? 0) * 100)) };
+      },
     },
     {
       type: 'playback-go',
@@ -163,6 +203,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         const n = parseInt(v.n, 10);
         if (isNaN(n) || n < 1) return null;
         return { address: `/lights/pb/${n}/go`, args: [{ type: 'i', value: 1 }], label: `PB ${n} GO` };
+      },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/lights\/pb\/(\d+)\/go$/);
+        if (!m || osc.args.length !== 1) return null;
+        return { n: m[1] };
       },
     },
     {
@@ -178,6 +223,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (isNaN(pb) || pb < 1 || isNaN(cue) || cue < 1) return null;
         return { address: `/lights/pb/${pb}/go`, args: [1, cue], label: `PB ${pb} \u2192 Cue ${cue}` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/lights\/pb\/(\d+)\/go$/);
+        if (!m || osc.args.length !== 2) return null;
+        return { pb: m[1], cue: String(osc.args[1] ?? '') };
+      },
     },
     ...([1, 2, 3] as const).flatMap((cam): CmdDef[] => [
       {
@@ -189,6 +239,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
           if (isNaN(n) || n < 1) return null;
           return { address: `/cam${cam}/preset/recall/${n}`, args: [], label: `C${cam} Preset ${n}` };
         },
+        parse: (osc) => {
+          const m = osc.address.match(new RegExp(`^/cam${cam}/preset/recall/(\\d+)$`));
+          if (!m) return null;
+          return { n: m[1] };
+        },
       },
       {
         type: `cam${cam}-zoom` as CmdType,
@@ -198,12 +253,17 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
           const val = normFader(v.val);
           return { address: `/cam${cam}/zoom/direct`, args: [val], label: `C${cam} Zoom ${Math.round(val * 100)}%` };
         },
+        parse: (osc) => {
+          if (osc.address !== `/cam${cam}/zoom/direct`) return null;
+          return { val: String(Math.round(Number(osc.args[0] ?? 0) * 100)) };
+        },
       },
       {
         type: `cam${cam}-home` as CmdType,
         label: `Cam ${cam} Home`,
         fields: [],
         build: () => ({ address: `/cam${cam}/home`, args: [], label: `C${cam} Home` }),
+        parse: (osc) => osc.address === `/cam${cam}/home` ? {} : null,
       },
     ]),
     {
@@ -214,6 +274,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (!v.name?.trim()) return null;
         return { address: `/obs/scene/${v.name.trim()}`, args: [], label: `OBS \u2192 ${v.name.trim()}` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/obs\/scene\/(?!preview\/)(.+)$/);
+        if (!m) return null;
+        return { name: m[1] };
+      },
     },
     {
       type: 'obs-preview',
@@ -223,6 +288,11 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         if (!v.name?.trim()) return null;
         return { address: `/obs/scene/preview/${v.name.trim()}`, args: [], label: `OBS PVW \u2192 ${v.name.trim()}` };
       },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/obs\/scene\/preview\/(.+)$/);
+        if (!m) return null;
+        return { name: m[1] };
+      },
     },
     {
       type: 'obs-transition',
@@ -230,18 +300,21 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
       fields: [],
       delay: 100,
       build: () => ({ address: '/obs/transition/trigger', args: [], label: 'OBS Transition' }),
+      parse: (osc) => osc.address === '/obs/transition/trigger' ? {} : null,
     },
     {
       type: 'recorder-start',
       label: 'Start Recording',
       fields: [],
       build: () => ({ address: '/recorder/start', args: [], label: 'Start Recording' }),
+      parse: (osc) => osc.address === '/recorder/start' ? {} : null,
     },
     {
       type: 'recorder-stop',
       label: 'Stop Recording',
       fields: [],
       build: () => ({ address: '/recorder/stop', args: [], label: 'Stop Recording' }),
+      parse: (osc) => osc.address === '/recorder/stop' ? {} : null,
     },
     {
       type: 'raw-osc',
@@ -259,8 +332,31 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         });
         return { address: addr, args, label: addr };
       },
+      parse: (osc) => ({
+        addr: osc.address,
+        args: osc.args.map(a => String(a)).join(', '),
+      }),
     },
   ];
+}
+
+/** Detect command type from an InlineOSC, returning the type and parsed field values */
+export function detectCommandType(osc: InlineOSC): { type: string; values: Record<string, string> } | null {
+  const commands = getCommands();
+  for (const cmd of commands) {
+    if (!cmd.parse) continue;
+    // raw-osc is universal fallback — skip it until the end
+    if (cmd.type === 'raw-osc') continue;
+    const values = cmd.parse(osc);
+    if (values) return { type: cmd.type, values };
+  }
+  // Fallback to raw-osc
+  const rawDef = commands.find(c => c.type === 'raw-osc');
+  if (rawDef?.parse) {
+    const values = rawDef.parse(osc);
+    if (values) return { type: 'raw-osc', values };
+  }
+  return null;
 }
 
 export interface TileCategory {

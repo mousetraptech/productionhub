@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProductionHub } from './hooks/useProductionHub';
 import { useDeviceStates } from './hooks/useDeviceStates';
 import { useChat } from './hooks/useChat';
@@ -9,6 +9,7 @@ import GoBar from './components/GoBar';
 import CollapsiblePanel from './components/CollapsiblePanel';
 import ChatDrawer from './components/ChatDrawer';
 import CommandModal, { type CommandModalTarget } from './components/CommandModal';
+import { detectCommandType } from './components/command-defs';
 import type { InlineOSC } from './types';
 import {
   AvantisPanel,
@@ -20,16 +21,45 @@ import {
 } from './components/devices';
 
 export default function App() {
-  const { show, categories, templates, connected, send, setChatHandler } = useProductionHub();
+  const { show, categories, templates, connected, send, setChatHandler, savedShows, lastShow } = useProductionHub();
   const { deviceStates, connected: devicesConnected } = useDeviceStates();
   const [showPicker, setShowPicker] = useState(true);
   const chat = useChat(send);
   const [modalTarget, setModalTarget] = useState<CommandModalTarget | null>(null);
+  const [currentShowName, setCurrentShowName] = useState<string | null>(null);
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
+  const [saveAsName, setSaveAsName] = useState('');
+  const hasAutoLoaded = useRef(false);
 
   // Wire chat message handler
   useEffect(() => {
     setChatHandler(chat.handleServerMessage);
   }, [setChatHandler, chat.handleServerMessage]);
+
+  // Auto-load last show on startup
+  useEffect(() => {
+    if (lastShow && !hasAutoLoaded.current && show.cues.length === 0) {
+      hasAutoLoaded.current = true;
+      send({ type: 'load-show', name: lastShow });
+      setCurrentShowName(lastShow);
+      setShowPicker(false);
+    }
+  }, [lastShow, show.cues.length, send]);
+
+  // Auto-save: debounced 2s after show changes (only when not mid-show)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showRef = useRef(show);
+  showRef.current = show;
+  useEffect(() => {
+    if (!currentShowName) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      if (showRef.current.activeCueIndex === null) {
+        send({ type: 'save-show', name: currentShowName });
+      }
+    }, 2000);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [show.cues, currentShowName, send]);
 
   // Hide picker once a template is loaded (cues appear)
   const pickerVisible = showPicker && show.cues.length === 0;
@@ -37,20 +67,61 @@ export default function App() {
   const selectTemplate = (templateId: string) => {
     send({ type: 'load-template', templateId });
     setShowPicker(false);
+    // Use the template name as the current show name
+    const tmpl = templates.find(t => t.id === templateId);
+    if (tmpl) setCurrentShowName(tmpl.name);
   };
 
   const handleCommandDrop = (commandType: string, cueId: string | null) => {
     setModalTarget({ commandType, cueId });
   };
 
+  const handleEditAction = useCallback((cueId: string, actionIndex: number, osc: InlineOSC) => {
+    const detected = detectCommandType(osc);
+    if (!detected) return;
+    setModalTarget({
+      commandType: detected.type,
+      cueId,
+      editActionIndex: actionIndex,
+      initialValues: detected.values,
+    });
+  }, []);
+
   const handleModalSubmit = (target: CommandModalTarget, osc: InlineOSC, delay?: number) => {
-    const actionId = `inline:${target.commandType}:${Date.now()}`;
-    if (target.cueId) {
-      send({ type: 'add-action-to-cue', cueId: target.cueId, actionId, osc, ...(delay ? { delay } : {}) });
+    if (target.editActionIndex !== undefined && target.cueId) {
+      send({ type: 'update-action-in-cue', cueId: target.cueId, actionIndex: target.editActionIndex, osc, delay });
     } else {
-      send({ type: 'add-cue', cue: { name: osc.label, actions: [{ actionId, osc, ...(delay ? { delay } : {}) }] } });
+      const actionId = `inline:${target.commandType}:${Date.now()}`;
+      if (target.cueId) {
+        send({ type: 'add-action-to-cue', cueId: target.cueId, actionId, osc, ...(delay ? { delay } : {}) });
+      } else {
+        send({ type: 'add-cue', cue: { name: osc.label, actions: [{ actionId, osc, ...(delay ? { delay } : {}) }] } });
+      }
     }
     setModalTarget(null);
+  };
+
+  const handleSaveAs = () => {
+    setSaveAsName(currentShowName ?? show.name ?? '');
+    setSaveAsOpen(true);
+  };
+
+  const handleSaveAsSubmit = () => {
+    const name = saveAsName.trim();
+    if (!name) return;
+    send({ type: 'save-show', name });
+    setCurrentShowName(name);
+    setSaveAsOpen(false);
+  };
+
+  const handleLoadShow = (name: string) => {
+    send({ type: 'load-show', name });
+    setCurrentShowName(name);
+    setShowPicker(false);
+  };
+
+  const handleDeleteShow = (name: string) => {
+    send({ type: 'delete-show', name });
   };
 
   return (
@@ -75,10 +146,13 @@ export default function App() {
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
       `}</style>
 
-      {pickerVisible && templates.length > 0 && (
+      {pickerVisible && (templates.length > 0 || savedShows.length > 0) && (
         <TemplatePicker
           templates={templates}
+          savedShows={savedShows}
           onSelect={selectTemplate}
+          onLoadShow={handleLoadShow}
+          onDeleteShow={handleDeleteShow}
           onDismiss={() => setShowPicker(false)}
         />
       )}
@@ -101,13 +175,15 @@ export default function App() {
         categories={categories}
         onNewShow={() => {
           send({ type: 'reset' });
+          setCurrentShowName(null);
           setShowPicker(true);
         }}
+        onSaveAs={handleSaveAs}
       />
 
       {/* Center: Cue Stack + GO Bar */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <CueStack show={show} categories={categories} send={send} onCommandDrop={handleCommandDrop} />
+        <CueStack show={show} categories={categories} send={send} onCommandDrop={handleCommandDrop} onEditAction={handleEditAction} />
         <GoBar show={show} send={send} />
       </div>
 
@@ -185,6 +261,66 @@ export default function App() {
           onSubmit={handleModalSubmit}
           onCancel={() => setModalTarget(null)}
         />
+      )}
+      {saveAsOpen && (
+        <div
+          onClick={() => setSaveAsOpen(false)}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#0F172A',
+              border: '1px solid #334155',
+              borderRadius: 14,
+              padding: '24px 28px',
+              minWidth: 320,
+              display: 'flex', flexDirection: 'column', gap: 16,
+            }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#E2E8F0' }}>Save Show As</div>
+            <input
+              autoFocus
+              value={saveAsName}
+              onChange={(e) => setSaveAsName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveAsSubmit(); if (e.key === 'Escape') setSaveAsOpen(false); }}
+              placeholder="Show name"
+              style={{
+                width: '100%', background: '#020617',
+                border: '1px solid #334155', borderRadius: 6,
+                color: '#E2E8F0', padding: '8px 10px', fontSize: 13,
+                outline: 'none',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSaveAsOpen(false)}
+                style={{
+                  padding: '8px 18px', borderRadius: 8,
+                  background: 'none', border: '1px solid #334155',
+                  color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAsSubmit}
+                style={{
+                  padding: '8px 18px', borderRadius: 8,
+                  background: '#3B82F6', border: 'none',
+                  color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

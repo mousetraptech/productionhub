@@ -213,6 +213,18 @@ export class CueEngine extends EventEmitter {
     this.emitState();
   }
 
+  /** Update an inline OSC action in a cue */
+  updateActionInCue(cueId: string, actionIndex: number, changes: { osc?: InlineOSC; delay?: number }): void {
+    const cue = this.state.cues.find(c => c.id === cueId);
+    if (!cue) return;
+    if (actionIndex < 0 || actionIndex >= cue.actions.length) return;
+    const action = cue.actions[actionIndex];
+    if (!action.osc) return; // only inline OSC actions are editable
+    if (changes.osc) action.osc = changes.osc;
+    if (changes.delay !== undefined) action.delay = changes.delay;
+    this.emitState();
+  }
+
   /** Remove an action from a cue by index */
   removeActionFromCue(cueId: string, actionIndex: number): void {
     const cue = this.state.cues.find(c => c.id === cueId);

@@ -5,6 +5,8 @@ import { getCommands, type FieldDef } from './command-defs';
 export interface CommandModalTarget {
   commandType: string;
   cueId: string | null;
+  editActionIndex?: number;
+  initialValues?: Record<string, string>;
 }
 
 interface CommandModalProps {
@@ -17,7 +19,8 @@ interface CommandModalProps {
 export default function CommandModal({ target, obsScenes, onSubmit, onCancel }: CommandModalProps) {
   const commands = getCommands(obsScenes);
   const def = commands.find(c => c.type === target.commandType);
-  const [vals, setVals] = useState<Record<string, string>>({});
+  const isEditing = target.editActionIndex !== undefined;
+  const [vals, setVals] = useState<Record<string, string>>(target.initialValues ?? {});
   const [error, setError] = useState('');
   const firstInputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
   const autoSubmitted = useRef(false);
@@ -26,14 +29,14 @@ export default function CommandModal({ target, obsScenes, onSubmit, onCancel }: 
     setTimeout(() => firstInputRef.current?.focus(), 50);
   }, []);
 
-  // No-field commands (cam home, obs transition) — auto-submit
+  // No-field commands (cam home, obs transition) — auto-submit (skip in edit mode)
   useEffect(() => {
-    if (def && def.fields.length === 0 && !autoSubmitted.current) {
+    if (def && def.fields.length === 0 && !autoSubmitted.current && !isEditing) {
       autoSubmitted.current = true;
       const payload = def.build({});
       if (payload) onSubmit(target, payload, def.delay);
     }
-  }, [def, target, onSubmit]);
+  }, [def, target, onSubmit, isEditing]);
 
   if (!def || def.fields.length === 0) return null;
 
@@ -162,7 +165,7 @@ export default function CommandModal({ target, obsScenes, onSubmit, onCancel }: 
               color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
             }}
           >
-            Add
+            {isEditing ? 'Update' : 'Add'}
           </button>
         </div>
       </div>

@@ -88,11 +88,34 @@ export class ShowPersistence {
     return state;
   }
 
+  /** Delete a saved show */
+  delete(name: string): boolean {
+    const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+    const filePath = path.join(this.showsDir, `${safeName}.yml`);
+    if (!fs.existsSync(filePath)) return false;
+    fs.unlinkSync(filePath);
+    console.log(`[ShowPersistence] Deleted show "${name}"`);
+    return true;
+  }
+
   /** List all saved shows */
   list(): string[] {
     this.ensureDir();
     return fs.readdirSync(this.showsDir)
       .filter(f => f.endsWith('.yml'))
       .map(f => f.replace(/\.yml$/, ''));
+  }
+
+  /** Get the last-used show name */
+  getLastUsed(): string | null {
+    const filePath = path.join(this.showsDir, '.last');
+    if (!fs.existsSync(filePath)) return null;
+    return fs.readFileSync(filePath, 'utf-8').trim() || null;
+  }
+
+  /** Set the last-used show name */
+  setLastUsed(name: string): void {
+    this.ensureDir();
+    fs.writeFileSync(path.join(this.showsDir, '.last'), name, 'utf-8');
   }
 }

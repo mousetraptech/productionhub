@@ -8,9 +8,10 @@ interface CueStackProps {
   categories: ActionCategory[];
   send: (msg: ClientMessage) => void;
   onCommandDrop?: (commandType: string, cueId: string | null) => void;
+  onEditAction?: (cueId: string, actionIndex: number, osc: InlineOSC) => void;
 }
 
-export default function CueStack({ show, categories, send, onCommandDrop }: CueStackProps) {
+export default function CueStack({ show, categories, send, onCommandDrop, onEditAction }: CueStackProps) {
   const cueListRef = useRef<HTMLDivElement>(null);
   const lookup = buildActionLookup(categories);
   const [dragOver, setDragOver] = useState(false);
@@ -154,6 +155,7 @@ export default function CueStack({ show, categories, send, onCommandDrop }: CueS
             onMoveCue={(cueId, direction) => send({ type: 'move-cue', cueId, direction })}
             onDrop={(cueId, actionId, osc, delay) => send({ type: 'add-action-to-cue', cueId, actionId, osc, delay })}
             onCommandTypeDrop={onCommandDrop ? (cueId: string, cmdType: string) => onCommandDrop(cmdType, cueId) : undefined}
+            onEditAction={onEditAction}
           />
         ))}
 

@@ -24,9 +24,10 @@ interface ActionChipProps {
   lookup: ReturnType<typeof buildActionLookup>;
   osc?: InlineOSC;
   onRemove: (index: number) => void;
+  onEdit?: (index: number, osc: InlineOSC) => void;
 }
 
-export default function ActionChip({ actionId, index, expanded, lookup, osc, onRemove }: ActionChipProps) {
+export default function ActionChip({ actionId, index, expanded, lookup, osc, onRemove, onEdit }: ActionChipProps) {
   const info = lookup[actionId];
   const [hovering, setHovering] = useState(false);
 
@@ -35,6 +36,7 @@ export default function ActionChip({ actionId, index, expanded, lookup, osc, onR
     const color = INLINE_COLOR;
     return (
       <div
+        onClick={() => onEdit?.(index, osc)}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
         style={{
@@ -47,6 +49,7 @@ export default function ActionChip({ actionId, index, expanded, lookup, osc, onR
           padding: expanded ? '8px 14px' : '5px 10px',
           fontSize: expanded ? 14 : 12.5,
           transition: 'all 0.25s ease',
+          cursor: onEdit ? 'pointer' : 'default',
         }}
       >
         <span style={{ fontSize: expanded ? 18 : 14, lineHeight: 1 }}>{INLINE_ICON}</span>
@@ -65,7 +68,7 @@ export default function ActionChip({ actionId, index, expanded, lookup, osc, onR
           )}
         </div>
         <button
-          onClick={() => onRemove(index)}
+          onClick={(e) => { e.stopPropagation(); onRemove(index); }}
           style={{
             background: 'none',
             border: 'none',

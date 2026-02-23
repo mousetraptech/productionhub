@@ -14,6 +14,8 @@ export function useProductionHub() {
   const [categories, setCategories] = useState<ActionCategory[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [connected, setConnected] = useState(false);
+  const [savedShows, setSavedShows] = useState<string[]>([]);
+  const [lastShow, setLastShow] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -59,6 +61,12 @@ export function useProductionHub() {
             case 'templates':
               setTemplates(msg.templates);
               break;
+            case 'shows-list':
+              setSavedShows(msg.shows);
+              break;
+            case 'last-show':
+              setLastShow(msg.name);
+              break;
             case 'chat-response':
             case 'chat-executed':
             case 'chat-error':
@@ -96,5 +104,5 @@ export function useProductionHub() {
     };
   }, []);
 
-  return { show, categories, templates, connected, send, setChatHandler };
+  return { show, categories, templates, connected, send, setChatHandler, savedShows, lastShow };
 }

@@ -7,9 +7,10 @@ import { TILE_CATEGORIES } from './command-defs';
 interface ActionPaletteProps {
   categories: ActionCategory[];
   onNewShow: () => void;
+  onSaveAs?: () => void;
 }
 
-export default function ActionPalette({ categories, onNewShow }: ActionPaletteProps) {
+export default function ActionPalette({ categories, onNewShow, onSaveAs }: ActionPaletteProps) {
   const [expandedCats, setExpandedCats] = useState<string[]>(
     TILE_CATEGORIES.map(t => `__cmd_${t.category}`)
   );
@@ -135,11 +136,11 @@ export default function ActionPalette({ categories, onNewShow }: ActionPalettePr
           );
         })}
       </div>
-      <div style={{ padding: '12px 14px', borderTop: '1px solid #1E293B' }}>
+      <div style={{ padding: '12px 14px', borderTop: '1px solid #1E293B', display: 'flex', gap: 8 }}>
         <button
           onClick={onNewShow}
           style={{
-            width: '100%', padding: '9px 0',
+            flex: 1, padding: '9px 0',
             background: '#0F172A', border: '1px solid #1E293B',
             borderRadius: 8, color: '#64748B', cursor: 'pointer',
             fontSize: 12.5, fontWeight: 600, transition: 'all 0.15s',
@@ -149,6 +150,21 @@ export default function ActionPalette({ categories, onNewShow }: ActionPalettePr
         >
           New Show
         </button>
+        {onSaveAs && (
+          <button
+            onClick={onSaveAs}
+            style={{
+              flex: 1, padding: '9px 0',
+              background: '#0F172A', border: '1px solid #1E293B',
+              borderRadius: 8, color: '#64748B', cursor: 'pointer',
+              fontSize: 12.5, fontWeight: 600, transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1E293B'; e.currentTarget.style.color = '#94A3B8'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#0F172A'; e.currentTarget.style.color = '#64748B'; }}
+          >
+            Save As
+          </button>
+        )}
       </div>
     </div>
   );

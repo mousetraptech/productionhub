@@ -16,11 +16,12 @@ interface CueRowProps {
   onMoveCue: (cueId: string, direction: -1 | 1) => void;
   onDrop: (cueId: string, actionId: string, osc?: InlineOSC, delay?: number) => void;
   onCommandTypeDrop?: (cueId: string, commandType: string) => void;
+  onEditAction?: (cueId: string, actionIndex: number, osc: InlineOSC) => void;
 }
 
 export default function CueRow({
   cue, index, total, isActive, isFired,
-  lookup, onRemoveAction, onRemoveCue, onRenameCue, onMoveCue, onDrop, onCommandTypeDrop,
+  lookup, onRemoveAction, onRemoveCue, onRenameCue, onMoveCue, onDrop, onCommandTypeDrop, onEditAction,
 }: CueRowProps) {
   const [isOver, setIsOver] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -182,6 +183,7 @@ export default function CueRow({
               lookup={lookup}
               osc={cueAction.osc}
               onRemove={(idx) => onRemoveAction(cue.id, idx)}
+              onEdit={onEditAction ? (idx, o) => onEditAction(cue.id, idx, o) : undefined}
             />
           ))}
         </div>
