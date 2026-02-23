@@ -28,7 +28,7 @@ const prefixSchema = z.string().refine(
 
 // --- Device Type Enum ---
 
-const deviceTypeSchema = z.enum(['avantis', 'chamsys', 'obs', 'visca', 'touchdesigner', 'qlab']);
+const deviceTypeSchema = z.enum(['avantis', 'chamsys', 'obs', 'visca', 'touchdesigner', 'qlab', 'ndi-recorder']);
 
 // --- Reconnect & Heartbeat Configs ---
 
@@ -90,6 +90,10 @@ const qlabDeviceSchema = baseDeviceSchema.extend({
   passcode: z.string().optional().default(''),
 });
 
+const ndiRecorderDeviceSchema = baseDeviceSchema.extend({
+  type: z.literal('ndi-recorder'),
+});
+
 // --- Discriminated Union for Devices ---
 
 const deviceSchema = z.discriminatedUnion('type', [
@@ -99,6 +103,7 @@ const deviceSchema = z.discriminatedUnion('type', [
   viscaDeviceSchema,
   touchdesignerDeviceSchema,
   qlabDeviceSchema,
+  ndiRecorderDeviceSchema,
 ]);
 
 // --- OSC Config ---
