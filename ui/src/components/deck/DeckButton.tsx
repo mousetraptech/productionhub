@@ -15,31 +15,40 @@ interface DeckButtonProps {
 export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceStates, actionCommands }: DeckButtonProps) {
   const [firing, setFiring] = useState(false);
 
+  const buttonState: ButtonState = deviceStates
+    ? getDeckButtonState(button, deviceStates, actionCommands)
+    : { level: null, active: false, live: false };
+
+  const isToggled = !!(button.toggle && buttonState.active);
+
   const handlePress = useCallback(() => {
     if (editing) {
       onClick?.();
       return;
     }
-    onFire(button);
+    const isActive = !!(button.toggle && buttonState.active);
+    const effectiveButton = isActive
+      ? { ...button, actions: button.toggle!.activeActions }
+      : button;
+    onFire(effectiveButton);
     setFiring(true);
     setTimeout(() => setFiring(false), 200);
-  }, [button, editing, onFire, onClick]);
-
-  const buttonState: ButtonState = deviceStates
-    ? getDeckButtonState(button, deviceStates, actionCommands)
-    : { level: null, active: false, live: false };
+  }, [button, buttonState.active, editing, onFire, onClick]);
+  const displayLabel = isToggled ? button.toggle!.activeLabel : button.label;
+  const displayIcon = isToggled ? button.toggle!.activeIcon : button.icon;
+  const displayColor = isToggled ? button.toggle!.activeColor : button.color;
 
   return (
     <div
       onPointerDown={handlePress}
       style={{
         background: firing
-          ? button.color + '80'
-          : button.color + '26',
+          ? displayColor + '80'
+          : displayColor + '26',
         border: `2px solid ${
-          buttonState.active ? '#10B981' :
+          buttonState.active && !button.toggle ? '#10B981' :
           buttonState.live ? '#EF4444' :
-          button.color + (firing ? 'CC' : '55')
+          displayColor + (firing ? 'CC' : '55')
         }`,
         borderRadius: 12,
         width: '100%', height: '100%',
@@ -52,20 +61,20 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
         minHeight: 0,
         transition: 'background 0.2s, border-color 0.2s, transform 0.1s',
         transform: firing ? 'scale(0.95)' : 'scale(1)',
-        boxShadow: firing ? `0 0 20px ${button.color}66` : 'none',
+        boxShadow: firing ? `0 0 20px ${displayColor}66` : 'none',
       }}
     >
       {buttonState.level !== null && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: `${(buttonState.level ?? 0) * 100}%`,
-          background: button.color + '66',
+          background: displayColor + '66',
           borderRadius: '0 0 10px 10px',
           transition: 'height 0.15s ease-out',
           pointerEvents: 'none',
         }} />
       )}
-      <span style={{ fontSize: 24, pointerEvents: 'none' }}>{button.icon}</span>
+      <span style={{ fontSize: 24, pointerEvents: 'none' }}>{displayIcon}</span>
       {buttonState.live && (
         <span style={{
           position: 'absolute', top: 4, left: 6,
@@ -80,7 +89,7 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
         whiteSpace: 'nowrap', maxWidth: '100%',
         pointerEvents: 'none',
       }}>
-        {button.label}
+        {displayLabel}
       </span>
       {button.actions.length > 1 && (
         <span style={{

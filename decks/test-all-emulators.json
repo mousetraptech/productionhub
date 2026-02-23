@@ -1,0 +1,246 @@
+{
+  "name": "test-all-emulators",
+  "grid": [
+    {
+      "row": 0, "col": 0,
+      "button": {
+        "id": "test-house-full", "label": "House Full", "icon": "🏠", "color": "#F59E0B",
+        "actions": [{"actionId": "house-full"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 1,
+      "button": {
+        "id": "test-house-half", "label": "House Half", "icon": "🏠", "color": "#F59E0B",
+        "actions": [{"actionId": "house-half"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 2,
+      "button": {
+        "id": "test-house-out", "label": "House Out", "icon": "🏠", "color": "#F59E0B",
+        "actions": [{"actionId": "house-out"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 3,
+      "button": {
+        "id": "test-stage-full", "label": "Stage Full", "icon": "💡", "color": "#8B5CF6",
+        "actions": [{"actionId": "stage-full"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 4,
+      "button": {
+        "id": "test-stage-black", "label": "Blackout", "icon": "💡", "color": "#8B5CF6",
+        "actions": [{"actionId": "stage-blackout"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 5,
+      "button": {
+        "id": "test-stream-start", "label": "Go Live", "icon": "📡", "color": "#EF4444",
+        "actions": [{"actionId": "stream-start"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 6,
+      "button": {
+        "id": "test-stream-brb", "label": "BRB", "icon": "📡", "color": "#F59E0B",
+        "actions": [{"actionId": "stream-brb"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 0, "col": 7,
+      "button": {
+        "id": "test-stream-stop", "label": "End Stream", "icon": "📡", "color": "#6B7280",
+        "actions": [{"actionId": "stream-stop"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 0,
+      "button": {
+        "id": "test-mains-mute-toggle", "label": "Mute Mains", "icon": "🔇", "color": "#EF4444",
+        "actions": [{"actionId": "audio-mains-mute"}], "mode": "parallel", "seriesGap": 1000,
+        "toggle": {
+          "activeLabel": "Unmute", "activeIcon": "🔊", "activeColor": "#10B981",
+          "activeActions": [{"actionId": "audio-mains-up"}]
+        }
+      }
+    },
+    {
+      "row": 1, "col": 1,
+      "button": {
+        "id": "test-ch1-fader", "label": "CH1 50%", "icon": "🎚️", "color": "#3B82F6",
+        "actions": [{"actionId": "", "osc": {"address": "/avantis/ch/1/mix/fader", "args": [{"type": "f", "value": 0.5}], "label": "CH1 Fader 50%"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 2,
+      "button": {
+        "id": "test-walkin", "label": "Walk-in", "icon": "🎤", "color": "#3B82F6",
+        "actions": [{"actionId": "audio-walkin"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 3,
+      "button": {
+        "id": "test-walkin-fade", "label": "Fade Walk", "icon": "🎤", "color": "#3B82F6",
+        "actions": [{"actionId": "audio-walkin-fade"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 4,
+      "button": {
+        "id": "test-cam1-wide", "label": "Cam1 Wide", "icon": "🎥", "color": "#10B981",
+        "actions": [{"actionId": "cam1-wide"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 5,
+      "button": {
+        "id": "test-cam2-wide", "label": "Cam2 Wide", "icon": "🎥", "color": "#10B981",
+        "actions": [{"actionId": "cam2-wide"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 6,
+      "button": {
+        "id": "test-cam3-wide", "label": "Cam3 Wide", "icon": "🎥", "color": "#10B981",
+        "actions": [{"actionId": "cam3-wide"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1, "col": 7,
+      "button": {
+        "id": "test-cam1-home", "label": "Cam1 Home", "icon": "🎥", "color": "#10B981",
+        "actions": [{"actionId": "cam1-home"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 0,
+      "button": {
+        "id": "test-sfx-go", "label": "SFX Go", "icon": "🔈", "color": "#6366F1",
+        "actions": [{"actionId": "sfx-go"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 1,
+      "button": {
+        "id": "test-sfx-stop", "label": "SFX Stop", "icon": "🔈", "color": "#6366F1",
+        "actions": [{"actionId": "sfx-stop"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 2,
+      "button": {
+        "id": "test-sfx-panic", "label": "SFX Panic", "icon": "🔈", "color": "#EF4444",
+        "actions": [{"actionId": "sfx-panic"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 3,
+      "button": {
+        "id": "test-show-go", "label": "Show Go", "icon": "🎬", "color": "#6366F1",
+        "actions": [{"actionId": "show-go"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 4,
+      "button": {
+        "id": "test-show-stop", "label": "Show Stop", "icon": "🎬", "color": "#6366F1",
+        "actions": [{"actionId": "show-stop"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 5,
+      "button": {
+        "id": "test-show-panic", "label": "Show Panic", "icon": "🎬", "color": "#EF4444",
+        "actions": [{"actionId": "show-panic"}], "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 6,
+      "button": {
+        "id": "test-pb1-go", "label": "PB1 Go", "icon": "💡", "color": "#8B5CF6",
+        "actions": [{"actionId": "", "osc": {"address": "/lights/pb/1/go", "args": [{"type": "i", "value": 1}], "label": "PB1 Go"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 2, "col": 7,
+      "button": {
+        "id": "test-pb2-go", "label": "PB2 Go", "icon": "💡", "color": "#8B5CF6",
+        "actions": [{"actionId": "", "osc": {"address": "/lights/pb/2/go", "args": [{"type": "i", "value": 1}], "label": "PB2 Go"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 0,
+      "button": {
+        "id": "test-scene1", "label": "Scene 1", "icon": "🎛️", "color": "#14B8A6",
+        "actions": [{"actionId": "", "osc": {"address": "/avantis/scene/recall", "args": [{"type": "i", "value": 1}], "label": "Recall Scene 1"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 1,
+      "button": {
+        "id": "test-scene2", "label": "Scene 2", "icon": "🎛️", "color": "#14B8A6",
+        "actions": [{"actionId": "", "osc": {"address": "/avantis/scene/recall", "args": [{"type": "i", "value": 2}], "label": "Recall Scene 2"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 2,
+      "button": {
+        "id": "test-cam1-zoom", "label": "Cam1 Zoom", "icon": "🔍", "color": "#10B981",
+        "actions": [{"actionId": "", "osc": {"address": "/cam1/zoom/direct", "args": [{"type": "f", "value": 0.5}], "label": "Cam1 Zoom 50%"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 3,
+      "button": {
+        "id": "test-obs-scene", "label": "OBS Main", "icon": "📺", "color": "#EC4899",
+        "actions": [{"actionId": "", "osc": {"address": "/obs/scene/Main", "args": [], "label": "OBS Scene Main"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 4,
+      "button": {
+        "id": "test-obs-trans", "label": "OBS Trans", "icon": "📺", "color": "#EC4899",
+        "actions": [{"actionId": "", "osc": {"address": "/obs/transition/trigger", "args": [], "label": "OBS Transition"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 5,
+      "button": {
+        "id": "test-obs-prev", "label": "OBS BRB", "icon": "📺", "color": "#EC4899",
+        "actions": [{"actionId": "", "osc": {"address": "/obs/scene/preview/BRB", "args": [], "label": "OBS Preview BRB"}}],
+        "mode": "parallel", "seriesGap": 1000
+      }
+    },
+    {
+      "row": 3, "col": 6,
+      "button": {
+        "id": "test-rec-toggle", "label": "Record", "icon": "⏺️", "color": "#EF4444",
+        "actions": [{"actionId": "recorder-start"}], "mode": "parallel", "seriesGap": 1000,
+        "toggle": {
+          "activeLabel": "Stop Rec", "activeIcon": "⏹️", "activeColor": "#10B981",
+          "activeActions": [{"actionId": "recorder-stop"}]
+        }
+      }
+    },
+    {
+      "row": 3, "col": 7,
+      "button": {
+        "id": "test-cam2-home", "label": "Cam2 Home", "icon": "🎥", "color": "#10B981",
+        "actions": [{"actionId": "cam2-home"}], "mode": "parallel", "seriesGap": 1000
+      }
+    }
+  ]
+}

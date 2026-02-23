@@ -69,6 +69,12 @@ export interface DeckButton {
   actions: DeckAction[];
   mode: 'parallel' | 'series';
   seriesGap: number;
+  toggle?: {
+    activeLabel: string;
+    activeIcon: string;
+    activeColor: string;
+    activeActions: DeckAction[];
+  };
 }
 
 export interface GridSlot {
