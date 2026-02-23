@@ -291,6 +291,7 @@ export class CueEngine extends EventEmitter {
       obs: '/obs',
       visca: '/cam1',
       touchdesigner: '/td',
+      'ndi-recorder': '/recorder',
     };
     return defaults[device] ?? null;
   }

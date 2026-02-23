@@ -333,6 +333,7 @@ export class ModWebSocket {
       obs: '/obs',
       visca: '/cam1',
       touchdesigner: '/td',
+      'ndi-recorder': '/recorder',
     };
     return defaults[device] ?? null;
   }
