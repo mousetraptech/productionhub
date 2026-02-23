@@ -20,7 +20,8 @@ OSC (UDP 9000) ──> Hub ──> DriverManager ──> Device Drivers
                     │                           ├── chamsys-driver (OSC relay)
                     │                           ├── obs-driver (WebSocket v5)
                     │                           ├── visca-driver (VISCA over IP)
-                    │                           └── touchdesigner-driver (OSC relay)
+                    │                           ├── touchdesigner-driver (OSC relay)
+                    │                           └── ndi-recorder-driver (WebSocket → Windows agent)
                     │
                     ├── CueEngine (show state, cue firing, auto-follow)
                     ├── FadeEngine (timed interpolation at 50Hz)
@@ -51,6 +52,8 @@ OSC (UDP 9000) ──> Hub ──> DriverManager ──> Device Drivers
 | `src/drivers/chamsys-driver.ts` | ChamSys QuickQ: transparent OSC relay over UDP |
 | `src/drivers/obs-driver.ts` | OBS Studio: WebSocket v5 protocol |
 | `src/drivers/visca-driver.ts` | PTZ cameras: VISCA over IP |
+| `src/drivers/ndi-recorder-driver.ts` | NDI recorder: WebSocket client to Windows recording agent |
+| `ndi-record-agent/agent.js` | Windows agent: spawns NDI Record.exe, robocopy archive |
 | `src/cue-engine/engine.ts` | Show state manager — cue list, fire, auto-follow |
 | `src/cue-engine/types.ts` | Cue, CueAction, InlineOSC, ShowState types |
 | `src/server/websocket.ts` | ModWebSocket — UI communication (port 3001) |
@@ -72,6 +75,7 @@ Located in `ui/`. Key components:
 | `GoBar.tsx` | Large GO / PAUSE controls |
 | `devices/AvantisPanel.tsx` | Avantis fader strips, mutes, scene display |
 | `devices/ChamSysPanel.tsx` | ChamSys playback controls |
+| `devices/RecorderPanel.tsx` | NDI recorder state, VU meters, archive progress |
 
 ### Inline OSC Commands (CommandBuilder)
 
@@ -89,6 +93,8 @@ The sidebar CommandBuilder supports these command types:
 - **OBS Scene** — `/obs/scene/{name}` (sets program scene directly)
 - **OBS Preview** — `/obs/scene/preview/{name}` (sets preview scene)
 - **OBS Transition** — `/obs/transition/trigger` (preview → program)
+- **Start Recording** — `/recorder/start` (zero-field, auto-submit)
+- **Stop Recording** — `/recorder/stop` (zero-field, auto-submit)
 - **Raw OSC** — any address + args
 
 Drag a configured command onto the cue stack to create an inline OSC cue action.
@@ -168,6 +174,17 @@ The Brain is an AI-powered reasoning layer that lets the MOD (director) control 
 ### ChamSys Driver Notes
 
 The ChamSys QuickQ 20 does NOT support scenes via OSC. The driver is a transparent OSC relay — no `/scene` address exists. Playback state feedback includes: `/pb/{N}/level`, `/pb/{N}/active`, `/pb/{N}/flash`, `/pb/{N}/cue`, `/master`.
+
+### NDI Recorder Driver Notes
+
+- Two-component architecture: hub driver (WebSocket client) connects to `ndi-record-agent` (WebSocket server on Windows PC, default port 7200)
+- The Windows agent spawns one `NDI Record.exe` per configured NDI source, using `-noautostart` for frame-accurate sync
+- Agent stdin commands: `<start/>` (begin recording), `<exit/>` (stop and close file)
+- Agent stdout feedback: XML with frame count, timecode, VU dB levels — parsed and relayed to hub as JSON
+- After all recorders stop, agent runs robocopy to archive recordings to a network share (exit codes 0-7 = success)
+- OSC commands (after prefix): `/start`, `/stop`, `/status`
+- No emulator support — the agent runs on a real Windows PC with NDI Record.exe installed
+- Agent config lives in `ndi-record-agent/config.json` (sources, paths, port)
 
 ### VISCA Driver Notes
 
