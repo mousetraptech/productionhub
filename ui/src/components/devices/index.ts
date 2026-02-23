@@ -3,3 +3,4 @@ export { default as OBSPanel } from './OBSPanel';
 export { default as ChamSysPanel } from './ChamSysPanel';
 export { default as PTZPanel } from './PTZPanel';
 export { default as TouchDesignerPanel } from './TouchDesignerPanel';
+export { default as RecorderPanel } from './RecorderPanel';
