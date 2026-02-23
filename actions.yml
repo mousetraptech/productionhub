@@ -457,3 +457,24 @@ actions:
     commands:
       - prefix: hub
         address: /panic
+
+  # ─── Recording (NDI) ───
+  recorder-start:
+    label: "Start Recording"
+    category: "Recording"
+    icon: "⏺️"
+    color: "#EF4444"
+    description: "Start NDI recording on all sources"
+    commands:
+      - device: ndi-recorder
+        address: /start
+
+  recorder-stop:
+    label: "Stop Recording"
+    category: "Recording"
+    icon: "⏹️"
+    color: "#EF4444"
+    description: "Stop NDI recording, auto-archive to NAS"
+    commands:
+      - device: ndi-recorder
+        address: /stop

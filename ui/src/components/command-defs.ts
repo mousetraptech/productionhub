@@ -17,6 +17,8 @@ export type CmdType =
   | 'obs-scene'
   | 'obs-preview'
   | 'obs-transition'
+  | 'recorder-start'
+  | 'recorder-stop'
   | 'raw-osc';
 
 export interface FieldDef {
@@ -230,6 +232,18 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
       build: () => ({ address: '/obs/transition/trigger', args: [], label: 'OBS Transition' }),
     },
     {
+      type: 'recorder-start',
+      label: 'Start Recording',
+      fields: [],
+      build: () => ({ address: '/recorder/start', args: [], label: 'Start Recording' }),
+    },
+    {
+      type: 'recorder-stop',
+      label: 'Stop Recording',
+      fields: [],
+      build: () => ({ address: '/recorder/stop', args: [], label: 'Stop Recording' }),
+    },
+    {
       type: 'raw-osc',
       label: 'Raw OSC',
       fields: [
@@ -305,6 +319,15 @@ export const TILE_CATEGORIES: TileCategory[] = [
       { type: 'obs-scene', label: 'OBS Scene' },
       { type: 'obs-preview', label: 'OBS Preview' },
       { type: 'obs-transition', label: 'OBS Transition' },
+    ],
+  },
+  {
+    category: 'Recording',
+    icon: '\u23FA',
+    color: '#EF4444',
+    commands: [
+      { type: 'recorder-start', label: 'Start Recording' },
+      { type: 'recorder-stop', label: 'Stop Recording' },
     ],
   },
   {
