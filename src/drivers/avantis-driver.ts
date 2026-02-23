@@ -67,6 +67,10 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   // Queue for messages sent while disconnected
   private reconnectQueue = new ReconnectQueue<{ address: string; args: any[] }>(64);
 
+  // Strip state for dashboard UI
+  private strips: Map<string, { fader: number; mute: boolean; pan: number }> = new Map();
+  private currentScene: number = 0;
+
   constructor(config: AvantisConfig, hubContext: HubContext, verbose = false) {
     super();
     this.name = 'avantis';
@@ -328,6 +332,11 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     }
 
     this.transport.send(bytes);
+
+    // Optimistically update strip state and broadcast so UI reflects immediately
+    this.getStrip(`${strip.type}/${strip.number}`).mute = value;
+    const prefix = stripToOSCPrefix(strip);
+    this.emitFeedback(`${prefix}/mix/mute`, [{ type: 'i', value: value ? 1 : 0 }]);
   }
 
   private handlePan(strip: StripAddress, value: number): void {
@@ -358,6 +367,7 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   }
 
   private handleScene(sceneNumber: number): void {
+    this.currentScene = sceneNumber;
     const bytes = buildSceneRecall(this.baseMidiChannel, sceneNumber);
     if (this.verbose) {
       console.log(`[Avantis] Scene recall ${sceneNumber}`);
@@ -430,6 +440,23 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     }
   }
 
+  private getStrip(key: string): { fader: number; mute: boolean; pan: number } {
+    let s = this.strips.get(key);
+    if (!s) {
+      s = { fader: 0, mute: false, pan: 0.5 };
+      this.strips.set(key, s);
+    }
+    return s;
+  }
+
+  getState(): Record<string, any> {
+    const strips: Record<string, { fader: number; mute: boolean; pan: number }> = {};
+    for (const [key, val] of this.strips) {
+      strips[key] = { ...val };
+    }
+    return { currentScene: this.currentScene, strips };
+  }
+
   private handleNRPNFeedback(event: MIDINRPNEvent): void {
     const strip = reverseResolveStrip(event.channel, event.paramMSB, this.baseMidiChannel);
     if (!strip) {
@@ -451,6 +478,7 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
 
       // Always update tracked value so fades start from the right place
       this.hubContext.setCurrentValue(fadeKey, floatVal);
+      this.getStrip(`${strip.type}/${strip.number}`).fader = floatVal;
 
       if (this.isSuppressed(key)) return;
 
@@ -462,6 +490,7 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
       const key = `${strip.type}/${strip.number}/pan`;
       const fadeKey = `${this.name}:${key}`;
       this.hubContext.setCurrentValue(fadeKey, floatVal);
+      this.getStrip(`${strip.type}/${strip.number}`).pan = floatVal;
 
       if (this.isSuppressed(key)) return;
 
@@ -482,6 +511,7 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     }
 
     const key = `${strip.type}/${strip.number}/mute`;
+    this.getStrip(`${strip.type}/${strip.number}`).mute = event.velocity >= 0x40;
     if (this.isSuppressed(key)) return;
 
     const prefix = stripToOSCPrefix(strip);

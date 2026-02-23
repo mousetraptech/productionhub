@@ -16,6 +16,7 @@ export interface DeckButton {
     activeIcon: string;
     activeColor: string;
     activeActions: DeckAction[];
+    pulse?: boolean;
   };
 }
 

@@ -21,6 +21,12 @@ export interface ButtonState {
   live: boolean;
 }
 
+// Map OSC address prefix to Avantis driver StripType key
+const oscToStripKey: Record<string, string> = {
+  ch: 'input', mix: 'mix', fxsend: 'fxsend', fxrtn: 'fxreturn',
+  dca: 'dca', grp: 'group', mtx: 'matrix', main: 'main',
+};
+
 export function getDeckButtonState(
   button: DeckButtonType,
   deviceStates: DeviceStates,
@@ -110,7 +116,9 @@ export function getDeckButtonState(
     // Fader: /ch/{N}/mix/fader, /dca/{N}/fader, /grp/{N}/mix/fader, etc.
     const faderMatch = address.match(/\/(ch|dca|grp|mix|mtx|fxsend|fxrtn|main)\/(?:(\d+)\/)?(?:mix\/)?fader$/);
     if (faderMatch) {
-      const stripKey = faderMatch[2] ? `${faderMatch[1]}/${faderMatch[2]}` : faderMatch[1];
+      const oscPrefix = faderMatch[1];
+      const driverKey = oscToStripKey[oscPrefix] ?? oscPrefix;
+      const stripKey = faderMatch[2] ? `${driverKey}/${faderMatch[2]}` : driverKey;
       const strip = deviceStates.avantis.strips[stripKey];
       if (strip) state.level = strip.fader ?? null;
       return state;
@@ -118,7 +126,8 @@ export function getDeckButtonState(
     // Mute: /ch/{N}/mix/mute, /dca/{N}/mute
     const muteMatch = address.match(/\/(ch|dca|grp|mix|mtx)\/(\d+)\/(?:mix\/)?mute$/);
     if (muteMatch) {
-      const stripKey = `${muteMatch[1]}/${muteMatch[2]}`;
+      const driverKey = oscToStripKey[muteMatch[1]] ?? muteMatch[1];
+      const stripKey = `${driverKey}/${muteMatch[2]}`;
       const strip = deviceStates.avantis.strips[stripKey];
       if (strip) state.active = strip.mute === true;
       return state;
@@ -157,9 +166,19 @@ export function getDeckButtonState(
     // Avantis with /avantis/ prefix
     const avMatch = address.match(/\/avantis\/(ch|dca|grp|mix|mtx|fxsend|fxrtn|main)\/(?:(\d+)\/)?(?:mix\/)?fader$/);
     if (avMatch && deviceStates.avantis?.strips) {
-      const stripKey = avMatch[2] ? `${avMatch[1]}/${avMatch[2]}` : avMatch[1];
+      const driverKey = oscToStripKey[avMatch[1]] ?? avMatch[1];
+      const stripKey = avMatch[2] ? `${driverKey}/${avMatch[2]}` : driverKey;
       const strip = deviceStates.avantis.strips[stripKey];
       if (strip) state.level = strip.fader ?? null;
+      return state;
+    }
+    // Avantis mute with /avantis/ prefix
+    const avMuteMatch = address.match(/\/avantis\/(ch|dca|grp|mix|mtx)\/(\d+)\/(?:mix\/)?mute$/);
+    if (avMuteMatch && deviceStates.avantis?.strips) {
+      const driverKey = oscToStripKey[avMuteMatch[1]] ?? avMuteMatch[1];
+      const stripKey = `${driverKey}/${avMuteMatch[2]}`;
+      const strip = deviceStates.avantis.strips[stripKey];
+      if (strip) state.active = strip.mute === true;
       return state;
     }
   }

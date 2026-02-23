@@ -1,12 +1,53 @@
+import { useState, useCallback } from 'react';
 import { useDeck } from '../hooks/useDeck';
 import { useDeviceStates } from '../hooks/useDeviceStates';
 import { DeckToolbar } from '../components/deck/DeckToolbar';
 import { DeckGrid } from '../components/deck/DeckGrid';
 import ActionPalette from '../components/ActionPalette';
+import CommandModal, { type CommandModalTarget } from '../components/CommandModal';
+import type { InlineOSC, DeckButton } from '../types';
+
+/** Auto-generate a toggle for mute commands so the button unmutes when pressed again. */
+function buildAutoToggle(commandType: string, actionId: string, osc: InlineOSC): DeckButton['toggle'] | undefined {
+  if (commandType !== 'mute') return undefined;
+  // Mute OSC: /avantis/{strip}/mix/mute with args [1]
+  // Extract channel label from the osc label (e.g., "Mute Ch 5" → "Ch 5")
+  const chLabel = osc.label.replace(/^Mute\s*/, '');
+  return {
+    activeLabel: `MUTED ${chLabel}`,
+    activeIcon: '🔇',
+    activeColor: '#EF4444',
+    activeActions: [{
+      actionId: actionId.replace(':mute:', ':unmute:'),
+      osc: { address: osc.address, args: [0], label: `Unmute ${chLabel}` },
+    }],
+  };
+}
 
 export function DeckPage() {
   const deck = useDeck();
   const { deviceStates } = useDeviceStates();
+  const [modalTarget, setModalTarget] = useState<CommandModalTarget | null>(null);
+  const [dropSlot, setDropSlot] = useState<{ row: number; col: number } | null>(null);
+
+  const handleCommandDrop = useCallback((row: number, col: number, commandType: string) => {
+    setDropSlot({ row, col });
+    setModalTarget({ commandType, cueId: null });
+  }, []);
+
+  const handleModalSubmit = useCallback((target: CommandModalTarget, osc: InlineOSC) => {
+    if (dropSlot) {
+      const actionId = `inline:${target.commandType}:${Date.now()}`;
+      const toggle = buildAutoToggle(target.commandType, actionId, osc);
+      deck.assignAction(dropSlot.row, dropSlot.col, actionId, osc, {
+        label: toggle ? osc.label.replace(/^Mute/, 'MUTE') : osc.label,
+        icon: '',
+        color: '#64748B',
+      }, toggle);
+    }
+    setModalTarget(null);
+    setDropSlot(null);
+  }, [dropSlot, deck.assignAction]);
 
   return (
     <div style={{
@@ -39,10 +80,19 @@ export function DeckPage() {
             onAssign={deck.assignAction}
             onUpdate={deck.updateButton}
             onRemoveAction={deck.removeAction}
+            onCommandDrop={handleCommandDrop}
             deviceStates={deviceStates}
           />
         </div>
       </div>
+      {modalTarget && (
+        <CommandModal
+          target={modalTarget}
+          obsScenes={deviceStates?.obs?.scenes}
+          onSubmit={handleModalSubmit}
+          onCancel={() => { setModalTarget(null); setDropSlot(null); }}
+        />
+      )}
     </div>
   );
 }

@@ -13,13 +13,14 @@ interface DeckGridProps {
   onAssign: (row: number, col: number, actionId: string, osc?: InlineOSC, meta?: { label: string; icon: string; color: string }) => void;
   onUpdate: (row: number, col: number, updates: Partial<DeckButton>) => void;
   onRemoveAction: (row: number, col: number, actionIndex: number) => void;
+  onCommandDrop?: (row: number, col: number, commandType: string) => void;
   deviceStates?: any;
 }
 
 const ROWS = 4;
 const COLS = 8;
 
-export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, deviceStates }: DeckGridProps) {
+export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onCommandDrop, deviceStates }: DeckGridProps) {
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
 
   // Build actionId → commands lookup for live state matching on registry actions
@@ -45,7 +46,14 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
     (e.currentTarget as HTMLElement).style.borderColor = '';
     if (!editing) return;
 
-    // Try application/json first (inline OSC)
+    // Try command type first (CommandTile drag)
+    const cmdType = e.dataTransfer.getData('application/x-command-type');
+    if (cmdType) {
+      onCommandDrop?.(row, col, cmdType);
+      return;
+    }
+
+    // Try application/json (inline OSC)
     const jsonData = e.dataTransfer.getData('application/json');
     if (jsonData) {
       try {

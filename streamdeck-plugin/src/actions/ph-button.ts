@@ -26,6 +26,8 @@ export class PHButton extends SingletonAction {
   private actionMap = new Map<string, KeyAction>();
   private actionCommands = new Map<string, ActionCommandRef[]>();
   private lastRendered = new Map<string, string>();
+  private pulsePhase = false;
+  private pulseTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     super();
@@ -134,8 +136,45 @@ export class PHButton extends SingletonAction {
   }
 
   private renderAll(): void {
+    let hasPulsing = false;
     for (const [key, action] of this.actionMap) {
       this.renderKey(key, action);
+      if (!hasPulsing) {
+        const [row, col] = key.split(':').map(Number);
+        const button = this.getButton(row, col);
+        if (button?.toggle?.pulse) {
+          const state = this.getButtonState(button);
+          if (state.active) hasPulsing = true;
+        }
+      }
+    }
+    this.managePulseTimer(hasPulsing);
+  }
+
+  private managePulseTimer(needed: boolean): void {
+    if (needed && !this.pulseTimer) {
+      this.pulseTimer = setInterval(() => {
+        this.pulsePhase = !this.pulsePhase;
+        this.renderPulsingButtons();
+      }, 800);
+    } else if (!needed && this.pulseTimer) {
+      clearInterval(this.pulseTimer);
+      this.pulseTimer = null;
+      this.pulsePhase = false;
+    }
+  }
+
+  private renderPulsingButtons(): void {
+    for (const [key, action] of this.actionMap) {
+      const [row, col] = key.split(':').map(Number);
+      const button = this.getButton(row, col);
+      if (!button?.toggle?.pulse) continue;
+      const state = this.getButtonState(button);
+      if (state.active) {
+        const svg = this.toDataUrl(renderButton(button, state, false, this.pulsePhase));
+        this.lastRendered.set(key, svg);
+        action.setImage(svg);
+      }
     }
   }
 

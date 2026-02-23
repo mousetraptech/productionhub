@@ -16,6 +16,7 @@ export function renderButton(
   button: DeckButton | null,
   state: ButtonState,
   firing: boolean,
+  pulsePhase: boolean = false,
 ): string {
   if (!button) return renderEmpty();
 
@@ -24,15 +25,22 @@ export function renderButton(
   const displayIcon = isToggled ? button.toggle!.activeIcon : button.icon;
   const displayLabel = isToggled ? button.toggle!.activeLabel : button.label;
 
+  const shouldPulse = isToggled && !!button.toggle?.pulse && pulsePhase;
   const bg = hexToRgb(displayColor);
   const bgFill = firing
     ? compositeOnBlack(bg.r, bg.g, bg.b, 0.6)
-    : compositeOnBlack(bg.r, bg.g, bg.b, 0.3);
+    : isToggled
+      ? compositeOnBlack(bg.r, bg.g, bg.b, shouldPulse ? 0.35 : 0.55)
+      : state.active
+        ? compositeOnBlack(bg.r, bg.g, bg.b, 0.55)
+        : compositeOnBlack(bg.r, bg.g, bg.b, 0.3);
   const borderColor = state.live
     ? '#EF4444'
-    : state.active && !button.toggle
-      ? '#10B981'
-      : compositeOnBlack(bg.r, bg.g, bg.b, 0.5);
+    : isToggled
+      ? displayColor
+      : state.active
+        ? '#10B981'
+        : compositeOnBlack(bg.r, bg.g, bg.b, 0.5);
   const fillHeight = state.level !== null ? Math.round(state.level * SIZE) : 0;
   const fillColor = compositeOnBlack(bg.r, bg.g, bg.b, 0.7);
 
@@ -48,6 +56,7 @@ export function renderButton(
     font-family="sans-serif" fill="#E2E8F0">${escapeXml(truncate(displayLabel, 12))}</text>
   ${state.live ? `<circle cx="16" cy="16" r="6" fill="#EF4444"/>
   <text x="28" y="20" font-size="10" font-family="sans-serif" fill="#EF4444" font-weight="700">LIVE</text>` : ''}
+  ${isToggled && !state.live ? `<circle cx="16" cy="16" r="5" fill="${displayColor}"/>` : ''}
   ${button.actions.length > 1 ? `<text x="${SIZE - 12}" y="${SIZE - 8}" text-anchor="end" font-size="13"
     font-family="sans-serif" fill="#94A3B8" font-weight="700">${button.actions.length}</text>` : ''}
 </svg>`;

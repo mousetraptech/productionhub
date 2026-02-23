@@ -123,7 +123,7 @@ export function useDeck(options: UseDeckOptions = {}) {
 
   // Grid editing operations (local state, saved explicitly)
 
-  const assignAction = useCallback((row: number, col: number, actionId: string, osc?: InlineOSC, actionMeta?: { label: string; icon: string; color: string }) => {
+  const assignAction = useCallback((row: number, col: number, actionId: string, osc?: InlineOSC, actionMeta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle']) => {
     setGrid(prev => {
       const existing = prev.find(s => s.row === row && s.col === col);
       if (existing) {
@@ -140,6 +140,7 @@ export function useDeck(options: UseDeckOptions = {}) {
         actions: [{ actionId, osc }],
         mode: 'parallel',
         seriesGap: 1000,
+        ...(toggle ? { toggle } : {}),
       };
       return [...prev, { row, col, button }];
     });

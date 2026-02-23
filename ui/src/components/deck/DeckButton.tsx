@@ -39,12 +39,17 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
   const displayColor = isToggled ? button.toggle!.activeColor : button.color;
 
   return (
+    <>
     <div
       onPointerDown={handlePress}
       style={{
         background: firing
           ? displayColor + '80'
-          : displayColor + '26',
+          : isToggled
+            ? displayColor + '40'
+            : buttonState.active
+              ? displayColor + '55'
+              : displayColor + '26',
         border: `2px solid ${
           buttonState.active && !button.toggle ? '#10B981' :
           buttonState.live ? '#EF4444' :
@@ -61,7 +66,11 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
         minHeight: 0,
         transition: 'background 0.2s, border-color 0.2s, transform 0.1s',
         transform: firing ? 'scale(0.95)' : 'scale(1)',
-        boxShadow: firing ? `0 0 20px ${displayColor}66` : 'none',
+        boxShadow: firing
+          ? `0 0 20px ${displayColor}66`
+          : isToggled
+            ? `0 0 12px ${displayColor}44`
+            : 'none',
       }}
     >
       {buttonState.level !== null && (
@@ -124,5 +133,6 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
         </button>
       )}
     </div>
+    </>
   );
 }
