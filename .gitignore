@@ -17,3 +17,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+*.log
+/.playwright-cli
+.claude/settings.local.json
