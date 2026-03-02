@@ -13,6 +13,7 @@ from agent.middleware.auth import AuthMiddleware
 from agent.routes.config_route import router as config_router
 from agent.routes.health import router as health_router
 from agent.routes.processes import router as processes_router
+from agent.routes.prompt import router as prompt_router
 from agent.services.heartbeat import heartbeat_loop
 from agent.services.process import ProcessService
 
@@ -54,6 +55,7 @@ app.add_middleware(AuthMiddleware)
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(processes_router, prefix="/api/v1")
 app.include_router(config_router, prefix="/api/v1")
+app.include_router(prompt_router, prefix="/api/v1")
 
 
 if __name__ == "__main__":
