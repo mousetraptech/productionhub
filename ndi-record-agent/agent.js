@@ -245,7 +245,7 @@ function startArchive() {
   const destDir = path.join(ARCHIVE_PATH, path.basename(sessionDir));
   console.log(`[Agent] Archiving: ${sessionDir} -> ${destDir}`);
 
-  const robo = spawn('robocopy', [sessionDir, destDir, '/E', '/R:3', '/W:5'], {
+  const robo = spawn('robocopy', [sessionDir, destDir, '*.mov', '/R:3', '/W:5'], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -277,6 +277,7 @@ function startArchive() {
     // Robocopy exit codes 0-7 are success
     if (code !== null && code <= 7) {
       console.log(`[Agent] Archive complete (exit ${code}): ${destDir}`);
+      cleanupSidecars(sessionDir);
       broadcast({ type: 'archive-done', path: destDir });
     } else {
       console.error(`[Agent] Archive failed with exit code ${code}`);
@@ -285,6 +286,23 @@ function startArchive() {
     state = 'stopped';
     broadcast({ type: 'state', state: 'stopped' });
   });
+}
+
+// --- Sidecar cleanup ---
+
+function cleanupSidecars(dir) {
+  try {
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+      if (file.endsWith('.ndi') || file.endsWith('.preview')) {
+        const filePath = path.join(dir, file);
+        fs.unlinkSync(filePath);
+        console.log(`[Agent] Cleaned up sidecar: ${file}`);
+      }
+    }
+  } catch (err) {
+    console.error(`[Agent] Sidecar cleanup error: ${err.message}`);
+  }
 }
 
 // --- Graceful shutdown ---

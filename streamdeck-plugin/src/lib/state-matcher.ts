@@ -97,7 +97,11 @@ export function getDeckButtonState(
   if (deviceType === 'ndi-recorder') {
     const recState = (deviceStates as any)['ndi-recorder'];
     if (recState) {
-      state.active = recState.state === 'recording';
+      state.active = recState.state === 'recording' || recState.state === 'archiving';
+      state.live = recState.state === 'recording';
+      if (recState.state === 'archiving' && typeof recState.archiveProgress === 'number') {
+        state.level = recState.archiveProgress;
+      }
     }
     return state;
   }
@@ -150,7 +154,11 @@ export function getDeckButtonState(
     if (address.startsWith('/recorder/')) {
       const recState = (deviceStates as any)['ndi-recorder'];
       if (recState) {
-        state.active = recState.state === 'recording';
+        state.active = recState.state === 'recording' || recState.state === 'archiving';
+        state.live = recState.state === 'recording';
+        if (recState.state === 'archiving' && typeof recState.archiveProgress === 'number') {
+          state.level = recState.archiveProgress;
+        }
       }
       return state;
     }
