@@ -1,0 +1,20 @@
+node_id: dmms-show-control
+hub_url: http://192.168.1.50:9000
+heartbeat_interval_seconds: 10
+
+auth:
+  enabled: false
+  token: ""
+
+managed_processes:
+  - name: obs64
+    display_name: OBS Studio
+    executable: "C:/Program Files/obs-studio/bin/64bit/obs64.exe"
+    start_args: ["--minimize-to-tray"]
+    stop_graceful: true
+
+  - name: touchdesigner
+    display_name: TouchDesigner
+    executable: "C:/Program Files/Derivative/TouchDesigner/bin/TouchDesigner.exe"
+    start_args: []
+    stop_graceful: true
