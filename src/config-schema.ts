@@ -174,6 +174,9 @@ export const hubConfigSchema = z.object({
   checklist: z.array(z.string()).optional(),
   ui: uiConfigSchema.optional(),
   macros: z.array(macroDefSchema).optional(),
+  nodeAgent: z.object({
+    url: z.string().url(),
+  }).optional(),
 }).refine(
   (config) => {
     // Check for duplicate prefixes (case-insensitive)

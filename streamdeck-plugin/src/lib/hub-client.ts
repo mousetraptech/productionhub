@@ -74,6 +74,7 @@ export class HubClient extends EventEmitter {
       actions: button.actions,
       mode: button.mode,
       seriesGap: button.seriesGap,
+      prompt: button.prompt,
     });
   }
 

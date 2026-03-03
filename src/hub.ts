@@ -53,6 +53,7 @@ export interface HubConfig {
   };
   macros?: MacroDef[];
   brain?: BrainConfig;
+  nodeAgent?: { url: string };
 }
 
 export class ProductionHub {
@@ -73,6 +74,7 @@ export class ProductionHub {
   private dashboardWs: DashboardWebSocket;
   private macroEngine: MacroEngine;
   private brainService?: BrainService;
+  private nodeAgentUrl?: string;
 
   // Extracted modules
   private driverManager: DriverManager;
@@ -99,6 +101,8 @@ export class ProductionHub {
     if (config.checklist && config.checklist.length > 0) {
       this.checklist = new PreshowChecklist(config.checklist);
     }
+
+    this.nodeAgentUrl = config.nodeAgent?.url;
 
     this.oscServer = new AvantisOSCServer({
       localAddress: config.osc.listenAddress,
@@ -293,6 +297,7 @@ export class ProductionHub {
         (address, args) => this.routeOSC(address, args),
         this.brainService,
         deckPersistence,
+        this.nodeAgentUrl,
       );
       this.modWebSocket.start();
     }

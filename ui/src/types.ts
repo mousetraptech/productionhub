@@ -76,6 +76,7 @@ export interface DeckButton {
     activeActions: DeckAction[];
     pulse?: boolean;
   };
+  prompt?: { message: string; default?: string };
 }
 
 export interface GridSlot {
@@ -98,6 +99,7 @@ export type ServerMessage =
   | { type: 'deck-state'; name: string; grid: GridSlot[] }
   | { type: 'deck-saved'; name: string }
   | { type: 'deck-fired'; buttonId: string }
+  | { type: 'deck-fire-cancelled'; buttonId: string }
   | { type: 'shows-list'; shows: string[] }
   | { type: 'last-show'; name: string | null };
 
@@ -125,7 +127,7 @@ export type ClientMessage =
   | { type: 'deck-load'; name: string }
   | { type: 'deck-save'; name: string; grid: GridSlot[] }
   | { type: 'deck-delete'; name: string }
-  | { type: 'deck-fire'; buttonId: string; actions: DeckAction[]; mode: 'parallel' | 'series'; seriesGap: number }
+  | { type: 'deck-fire'; buttonId: string; actions: DeckAction[]; mode: 'parallel' | 'series'; seriesGap: number; prompt?: { message: string; default?: string } }
   | { type: 'list-shows' }
   | { type: 'delete-show'; name: string }
   | { type: 'update-action-in-cue'; cueId: string; actionIndex: number; osc?: InlineOSC; delay?: number };

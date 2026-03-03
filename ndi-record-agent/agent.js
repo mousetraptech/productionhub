@@ -90,7 +90,7 @@ function broadcast(msg) {
 function handleCommand(msg, ws) {
   switch (msg.type) {
     case 'start':
-      startRecording(ws);
+      startRecording(ws, msg.sessionName);
       break;
     case 'stop':
       stopRecording(ws);
@@ -106,16 +106,17 @@ function handleCommand(msg, ws) {
 
 // --- Recording ---
 
-function startRecording(ws) {
+function startRecording(ws, sessionName) {
   if (state !== 'stopped') {
     send(ws, { type: 'error', message: `Cannot start: currently ${state}` });
     return;
   }
 
-  // Create timestamped session directory
+  // Use provided session name or fall back to auto-generated timestamp
   const now = new Date();
   const stamp = now.toISOString().slice(0, 16).replace(/[T:]/g, '_').replace(/-/g, '-');
-  sessionDir = path.join(RECORDING_PATH, stamp);
+  const dirName = sessionName || stamp;
+  sessionDir = path.join(RECORDING_PATH, dirName);
 
   try {
     fs.mkdirSync(sessionDir, { recursive: true });

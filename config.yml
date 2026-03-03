@@ -93,14 +93,20 @@ devices:
       enabled: false
 
   # NDI Recorder — recording control via Windows agent
+  # dmms-video-recorder
   - type: ndi-recorder
     prefix: /recorder
-    host: "192.168.10.11"
+    host: "192.168.10.13"   # Windows PC IP
     port: 7200
-    emulate: true
-    heartbeat:
-      enabled: true
-      intervalMs: 5000
+
+  # - type: ndi-recorder
+  #   prefix: /recorder
+  #   host: "192.168.10.11"
+  #   port: 7200
+  #   emulate: true
+  #   heartbeat:
+  #     enabled: true
+  #     intervalMs: 5000
 
 # Health check HTTP server (used by watchdog)
 health:
@@ -115,6 +121,10 @@ ui:
 logging:
   # Set to true for detailed message logging
   verbose: false
+
+# Node Agent — native OS dialogs (runs on Mac)
+nodeAgent:
+  url: http://localhost:9400
 
 # Booth Brain — AI assistant for MOD natural language control
 brain:

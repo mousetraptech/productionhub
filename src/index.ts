@@ -418,6 +418,7 @@ async function main(): Promise<void> {
     ui: config.ui,
     macros: config.macros,
     brain: config.brain,
+    nodeAgent: config.nodeAgent,
   });
 
   // Create and register drivers from config

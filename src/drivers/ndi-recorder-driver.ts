@@ -149,15 +149,20 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
     return this.connected;
   }
 
-  handleOSC(address: string, _args: any[]): void {
+  handleOSC(address: string, args: any[]): void {
     const cmd = address.replace(/^\//, '').toLowerCase();
 
     switch (cmd) {
-      case 'start':
+      case 'start': {
         this.recorderState.state = 'recording';
         this.emitFeedback('/state', [{ type: 's', value: 'recording' }]);
-        this.sendToAgent({ type: 'start' });
+        const startMsg: Record<string, any> = { type: 'start' };
+        if (typeof args[0] === 'string') {
+          startMsg.sessionName = args[0];
+        }
+        this.sendToAgent(startMsg);
         break;
+      }
       case 'stop':
         this.recorderState.state = 'stopped';
         this.emitFeedback('/state', [{ type: 's', value: 'stopped' }]);

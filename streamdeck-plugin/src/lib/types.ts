@@ -18,6 +18,7 @@ export interface DeckButton {
     activeActions: DeckAction[];
     pulse?: boolean;
   };
+  prompt?: { message: string; default?: string };
 }
 
 export interface GridSlot {

@@ -118,6 +118,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       actions: button.actions,
       mode: button.mode,
       seriesGap: button.seriesGap,
+      prompt: button.prompt,
     });
   }, [send]);
 

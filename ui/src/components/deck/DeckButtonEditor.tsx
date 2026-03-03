@@ -97,6 +97,42 @@ export function DeckButtonEditor({
           </>
         )}
 
+        {/* Prompt before fire */}
+        <label style={labelStyle}>Prompt before fire</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={!!button.prompt}
+            onChange={(e) => {
+              if (e.target.checked) {
+                onUpdate(row, col, { prompt: { message: 'Session name:' } });
+              } else {
+                onUpdate(row, col, { prompt: undefined });
+              }
+            }}
+            style={{ accentColor: '#3B82F6' }}
+          />
+          <span style={{ color: '#CBD5E1', fontSize: 13 }}>Ask for input before firing</span>
+        </div>
+        {button.prompt && (
+          <>
+            <label style={labelStyle}>Prompt message</label>
+            <input
+              type="text"
+              value={button.prompt.message}
+              onChange={(e) => onUpdate(row, col, { prompt: { ...button.prompt!, message: e.target.value } })}
+              style={inputStyle}
+            />
+            <label style={labelStyle}>Default value</label>
+            <input
+              type="text"
+              value={button.prompt.default ?? ''}
+              onChange={(e) => onUpdate(row, col, { prompt: { ...button.prompt!, default: e.target.value || undefined } })}
+              style={inputStyle}
+            />
+          </>
+        )}
+
         {/* Action stack */}
         <label style={labelStyle}>Actions ({button.actions.length})</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

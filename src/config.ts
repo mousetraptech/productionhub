@@ -99,6 +99,9 @@ export interface Config {
     mode: 'confirm' | 'trusted';
     manualPath?: string;
   };
+  nodeAgent?: {
+    url: string;
+  };
 }
 
 // --- Defaults ---
@@ -206,6 +209,9 @@ function loadHubConfig(parsed: any): Config {
       model: parsed.brain.model ?? 'claude-sonnet-4-5-20250929',
       mode: parsed.brain.mode ?? 'confirm',
       manualPath: parsed.brain.manualPath,
+    } : undefined,
+    nodeAgent: validated.nodeAgent ? {
+      url: validated.nodeAgent.url,
     } : undefined,
   };
 

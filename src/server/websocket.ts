@@ -33,6 +33,7 @@ export class ModWebSocket {
   private routeOSC: RouteOSCFn;
   private brainService?: BrainService;
   private deckPersistence: DeckPersistence;
+  private nodeAgentUrl?: string;
 
   constructor(
     config: ModWebSocketConfig,
@@ -43,6 +44,7 @@ export class ModWebSocket {
     routeOSC: RouteOSCFn,
     brainService?: BrainService,
     deckPersistence?: DeckPersistence,
+    nodeAgentUrl?: string,
   ) {
     this.config = config;
     this.cueEngine = cueEngine;
@@ -52,6 +54,7 @@ export class ModWebSocket {
     this.routeOSC = routeOSC;
     this.brainService = brainService;
     this.deckPersistence = deckPersistence ?? new DeckPersistence();
+    this.nodeAgentUrl = nodeAgentUrl;
   }
 
   /** Start the WebSocket server */
@@ -278,33 +281,90 @@ export class ModWebSocket {
         break;
 
       case 'deck-fire': {
-        const fireActions = msg.actions ?? [];
-        const fireMode = msg.mode ?? 'parallel';
-        const gap = msg.seriesGap ?? 1000;
-
-        fireDeckButton(fireActions, fireMode, gap, (actionId, osc) => {
-          if (osc) {
-            this.routeOSC(osc.address, osc.args);
-          } else {
-            const action = this.actionRegistry.getAction(actionId);
-            if (action) {
-              for (const cmd of action.commands) {
-                const prefix = cmd.prefix ? `/${cmd.prefix}` : this.resolveDevicePrefix(cmd.device);
-                if (prefix) this.routeOSC(`${prefix}${cmd.address}`, cmd.args ?? []);
-              }
-            }
-          }
-        }).catch(err => {
-          console.error(`[ModWS] deck-fire error: ${err.message}`);
-        });
-
-        this.broadcast({ type: 'deck-fired', buttonId: msg.buttonId });
+        this.handleDeckFire(msg);
         break;
       }
 
       default:
         console.warn(`[ModWS] Unknown message type: ${msg.type}`);
     }
+  }
+
+  /** Handle deck-fire with optional prompt */
+  private async handleDeckFire(msg: any): Promise<void> {
+    const fireActions = msg.actions ?? [];
+    const fireMode = msg.mode ?? 'parallel';
+    const gap = msg.seriesGap ?? 1000;
+
+    let sessionName: string | undefined;
+
+    // If the button has a prompt config and we have a node-agent URL, ask the user first
+    if (msg.prompt && this.nodeAgentUrl) {
+      try {
+        const res = await fetch(`${this.nodeAgentUrl}/api/v1/prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'text_input',
+            title: 'Recording',
+            message: msg.prompt.message,
+            default: msg.prompt.default ?? '',
+          }),
+        });
+        if (!res.ok) {
+          console.warn(`[ModWS] Node-agent prompt failed: ${res.status}`);
+          this.broadcast({ type: 'deck-fire-cancelled', buttonId: msg.buttonId });
+          return;
+        }
+        const body = await res.json() as { cancelled?: boolean; result?: string };
+        if (body.cancelled) {
+          this.broadcast({ type: 'deck-fire-cancelled', buttonId: msg.buttonId });
+          return;
+        }
+        // Format as YYYYMMDD <result>
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        sessionName = `${yyyy}${mm}${dd} ${body.result}`;
+        console.log(`[ModWS] Prompt result → sessionName: ${sessionName}`);
+      } catch (err: any) {
+        console.error(`[ModWS] Node-agent prompt error: ${err.message}`);
+        this.broadcast({ type: 'deck-fire-cancelled', buttonId: msg.buttonId });
+        return;
+      }
+    }
+
+    try {
+      await fireDeckButton(fireActions, fireMode, gap, (actionId, osc) => {
+        if (osc) {
+          const args = [...osc.args];
+          // Append session name to /start commands on the recorder
+          if (sessionName && osc.address.endsWith('/start')) {
+            args.push(sessionName);
+          }
+          this.routeOSC(osc.address, args);
+        } else {
+          const action = this.actionRegistry.getAction(actionId);
+          if (action) {
+            for (const cmd of action.commands) {
+              const prefix = cmd.prefix ? `/${cmd.prefix}` : this.resolveDevicePrefix(cmd.device);
+              if (prefix) {
+                const args = [...(cmd.args ?? [])];
+                if (sessionName && cmd.address === '/start') {
+                  args.push(sessionName);
+                }
+                this.routeOSC(`${prefix}${cmd.address}`, args);
+              }
+            }
+          }
+        }
+      });
+    } catch (err: any) {
+      console.error(`[ModWS] deck-fire error: ${err.message}`);
+    }
+
+    this.broadcast({ type: 'deck-fired', buttonId: msg.buttonId });
   }
 
   /** Send a message to a single client */
