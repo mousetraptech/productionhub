@@ -35,6 +35,7 @@ export interface RecorderDriverState {
   state: 'stopped' | 'recording' | 'archiving';
   sources: RecorderSource[];
   archiveProgress: number;
+  sessionName: string | null;
 }
 
 let WebSocket: any;
@@ -54,6 +55,7 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
     state: 'stopped',
     sources: [],
     archiveProgress: 0,
+    sessionName: null,
   };
 
   constructor(config: NDIRecorderConfig, _hubContext: HubContext, verbose = false) {
@@ -154,17 +156,18 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
 
     switch (cmd) {
       case 'start': {
+        const name = typeof args[0] === 'string' ? args[0] : null;
         this.recorderState.state = 'recording';
+        this.recorderState.sessionName = name;
         this.emitFeedback('/state', [{ type: 's', value: 'recording' }]);
         const startMsg: Record<string, any> = { type: 'start' };
-        if (typeof args[0] === 'string') {
-          startMsg.sessionName = args[0];
-        }
+        if (name) startMsg.sessionName = name;
         this.sendToAgent(startMsg);
         break;
       }
       case 'stop':
         this.recorderState.state = 'stopped';
+        this.recorderState.sessionName = null;
         this.emitFeedback('/state', [{ type: 's', value: 'stopped' }]);
         this.sendToAgent({ type: 'stop' });
         break;
@@ -217,6 +220,7 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
       case 'archive-done':
         this.recorderState.archiveProgress = 1;
         this.recorderState.state = 'stopped';
+        this.recorderState.sessionName = null;
         this.emitFeedback('/archive/done', []);
         break;
 

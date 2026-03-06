@@ -70,6 +70,7 @@ export interface RecorderState {
   state: 'stopped' | 'recording' | 'archiving';
   sources: RecorderSource[];
   archiveProgress: number;
+  sessionName: string | null;
 }
 
 export interface QLabCue {

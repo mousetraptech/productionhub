@@ -141,6 +141,7 @@ export function RecorderPage() {
   const currentState = recorderState?.state ?? 'stopped';
   const sources = recorderState?.sources ?? [];
   const archiveProgress = recorderState?.archiveProgress ?? 0;
+  const activeSessionName = recorderState?.sessionName;
 
   const [sessionName, setSessionName] = useState('');
 
@@ -182,13 +183,13 @@ export function RecorderPage() {
       }}>
         <StateBadge state={currentState} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {currentState !== 'stopped' && (
+          {currentState !== 'stopped' && activeSessionName && (
             <span style={{
               fontSize: 14,
               color: '#94A3B8',
               fontFamily: 'monospace',
             }}>
-              {sessionName.trim() || todayString()}
+              {activeSessionName}
             </span>
           )}
           <div style={{
@@ -287,7 +288,7 @@ export function RecorderPage() {
               borderRadius: 8,
               color: '#94A3B8',
             }}>
-              {sessionName.trim() || todayString()}
+              {activeSessionName || sessionName.trim() || todayString()}
             </span>
             <button
               onClick={handleStop}
