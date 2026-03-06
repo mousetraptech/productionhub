@@ -79,7 +79,7 @@ devices:
     prefix: /sfx
     host: 192.168.10.11
     port: 53053
-    emulate: true
+    # emulate: true
     heartbeat:
       enabled: false
 
@@ -88,7 +88,7 @@ devices:
     prefix: /show
     host: 192.168.10.11
     port: 53000
-    emulate: true
+    # emulate: true
     heartbeat:
       enabled: false
 

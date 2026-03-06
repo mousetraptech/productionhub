@@ -393,6 +393,7 @@
         ],
         "mode": "parallel",
         "seriesGap": 1000,
+        "prompt": { "message": "Recording name:", "default": "" },
         "toggle": {
           "activeLabel": "Stop Rec",
           "activeIcon": "⏹️",
@@ -486,6 +487,97 @@
             }
           ]
         }
+      }
+    },
+    {
+      "row": 2,
+      "col": 4,
+      "button": {
+        "id": "btn-1772340295762-p9q3",
+        "label": "MUTE Ch 50",
+        "icon": "",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "inline:mute:1772340295761",
+            "osc": {
+              "address": "/avantis/ch/50/mix/mute",
+              "args": [
+                1
+              ],
+              "label": "Mute Ch 50"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000,
+        "toggle": {
+          "activeLabel": "MUTED Ch 50",
+          "activeIcon": "🔇",
+          "activeColor": "#EF4444",
+          "activeActions": [
+            {
+              "actionId": "inline:unmute:1772340295761",
+              "osc": {
+                "address": "/avantis/ch/50/mix/mute",
+                "args": [
+                  0
+                ],
+                "label": "Unmute Ch 50"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "row": 0,
+      "col": 6,
+      "button": {
+        "id": "btn-1772827149144-66n1",
+        "label": "SFX Cue draylen_logos",
+        "icon": "",
+        "color": "#64748B",
+        "actions": [
+          {
+            "actionId": "sfx-panic"
+          },
+          {
+            "actionId": "inline:sfx-go-cue:1772827203228",
+            "osc": {
+              "address": "/sfx/go/draylen_logos",
+              "args": [],
+              "label": "SFX Cue draylen_logos"
+            }
+          }
+        ],
+        "mode": "series",
+        "seriesGap": 1000
+      }
+    },
+    {
+      "row": 1,
+      "col": 6,
+      "button": {
+        "id": "btn-1772827236166-rw81",
+        "label": "SFX Panic",
+        "icon": "🔈",
+        "color": "#6366F1",
+        "actions": [
+          {
+            "actionId": "sfx-panic"
+          },
+          {
+            "actionId": "inline:sfx-go-cue:1772827248345",
+            "osc": {
+              "address": "/sfx/go/midday_logos",
+              "args": [],
+              "label": "SFX Cue midday_logos"
+            }
+          }
+        ],
+        "mode": "parallel",
+        "seriesGap": 1000
       }
     }
   ]
