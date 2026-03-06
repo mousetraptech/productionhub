@@ -72,6 +72,21 @@ export interface RecorderState {
   archiveProgress: number;
 }
 
+export interface QLabCue {
+  uniqueID: string;
+  number: string;
+  name: string;
+  type: string;
+}
+
+export interface QLabState {
+  connected: boolean;
+  playhead: string;
+  runningCues: string[];
+  runningCount: number;
+  cues: QLabCue[];
+}
+
 export interface DeviceStates {
   avantis: AvantisState | null;
   chamsys: ChamSysState | null;
@@ -79,6 +94,7 @@ export interface DeviceStates {
   visca: VISCAState | null;
   touchdesigner: TouchDesignerState | null;
   'ndi-recorder': RecorderState | null;
+  qlab: Record<string, QLabState>;
 }
 
 export function useDeviceStates() {
@@ -89,6 +105,7 @@ export function useDeviceStates() {
     visca: null,
     touchdesigner: null,
     'ndi-recorder': null,
+    qlab: {},
   });
   const [connected, setConnected] = useState(false);
 
@@ -112,12 +129,22 @@ export function useDeviceStates() {
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'device-state') {
-            const deviceType = msg.deviceType as keyof DeviceStates;
-            if (deviceType in deviceStates) {
+            const deviceType = msg.deviceType;
+            if (deviceType === 'qlab') {
+              // QLab instances keyed by prefix (e.g. "/sfx", "/show")
+              const prefix = msg.prefix as string;
               setDeviceStates(prev => ({
                 ...prev,
-                [deviceType]: msg.state,
+                qlab: { ...prev.qlab, [prefix]: msg.state as QLabState },
               }));
+            } else {
+              const key = deviceType as keyof Omit<DeviceStates, 'qlab'>;
+              if (key in deviceStates) {
+                setDeviceStates(prev => ({
+                  ...prev,
+                  [key]: msg.state,
+                }));
+              }
             }
           }
         } catch {

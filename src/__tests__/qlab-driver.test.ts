@@ -267,8 +267,8 @@ describe('QLabDriver', () => {
         const received: string[] = [];
         receiver.on('message', (msg) => {
           const parsed = osc.readMessage(msg, { metadata: true });
-          // Skip handshake messages (/connect, /updates)
-          if (parsed.address === '/connect' || parsed.address === '/updates') return;
+          // Skip handshake and init messages
+          if (parsed.address === '/connect' || parsed.address === '/updates' || parsed.address === '/cueLists') return;
           received.push(parsed.address);
           if (received.length === 2) {
             assert.deepEqual(received, ['/go', '/cue/5/start']);

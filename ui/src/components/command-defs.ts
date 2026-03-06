@@ -19,6 +19,8 @@ export type CmdType =
   | 'obs-transition'
   | 'recorder-start'
   | 'recorder-stop'
+  | 'sfx-go-cue'
+  | 'show-go-cue'
   | 'raw-osc';
 
 export interface FieldDef {
@@ -317,6 +319,36 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
       parse: (osc) => osc.address === '/recorder/stop' ? {} : null,
     },
     {
+      type: 'sfx-go-cue',
+      label: 'SFX Go Cue',
+      fields: [{ key: 'cue', placeholder: 'Cue #', type: 'text', width: 100 }],
+      build: (v) => {
+        const cue = v.cue?.trim();
+        if (!cue) return null;
+        return { address: `/sfx/go/${cue}`, args: [], label: `SFX Cue ${cue}` };
+      },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/sfx\/go\/(.+)$/);
+        if (!m) return null;
+        return { cue: m[1] };
+      },
+    },
+    {
+      type: 'show-go-cue',
+      label: 'Show Go Cue',
+      fields: [{ key: 'cue', placeholder: 'Cue #', type: 'text', width: 100 }],
+      build: (v) => {
+        const cue = v.cue?.trim();
+        if (!cue) return null;
+        return { address: `/show/go/${cue}`, args: [], label: `Show Cue ${cue}` };
+      },
+      parse: (osc) => {
+        const m = osc.address.match(/^\/show\/go\/(.+)$/);
+        if (!m) return null;
+        return { cue: m[1] };
+      },
+    },
+    {
       type: 'raw-osc',
       label: 'Raw OSC',
       fields: [
@@ -424,6 +456,15 @@ export const TILE_CATEGORIES: TileCategory[] = [
     commands: [
       { type: 'recorder-start', label: 'Start Recording' },
       { type: 'recorder-stop', label: 'Stop Recording' },
+    ],
+  },
+  {
+    category: 'QLab',
+    icon: '\uD83C\uDFAC',
+    color: '#6366F1',
+    commands: [
+      { type: 'sfx-go-cue', label: 'SFX Go Cue' },
+      { type: 'show-go-cue', label: 'Show Go Cue' },
     ],
   },
   {

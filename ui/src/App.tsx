@@ -18,6 +18,7 @@ import {
   PTZPanel,
   TouchDesignerPanel,
   RecorderPanel,
+  QLabPanel,
 } from './components/devices';
 
 export default function App() {
@@ -231,6 +232,22 @@ export default function App() {
 
         <CollapsiblePanel title="ChamSys" icon="lights">
           <ChamSysPanel state={deviceStates.chamsys} />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="SFX (QLab)" icon="qlab">
+          <QLabPanel
+            prefix="/sfx"
+            state={deviceStates.qlab['/sfx']}
+            onFireCue={(prefix, cueNumber) => send({ type: 'osc', address: `${prefix}/go/${cueNumber}`, args: [] })}
+          />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title="Show (QLab)" icon="qlab">
+          <QLabPanel
+            prefix="/show"
+            state={deviceStates.qlab['/show']}
+            onFireCue={(prefix, cueNumber) => send({ type: 'osc', address: `${prefix}/go/${cueNumber}`, args: [] })}
+          />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="PTZ Camera" icon="camera">

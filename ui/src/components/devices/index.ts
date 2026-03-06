@@ -4,3 +4,4 @@ export { default as ChamSysPanel } from './ChamSysPanel';
 export { default as PTZPanel } from './PTZPanel';
 export { default as TouchDesignerPanel } from './TouchDesignerPanel';
 export { default as RecorderPanel } from './RecorderPanel';
+export { default as QLabPanel } from './QLabPanel';

@@ -30,6 +30,13 @@ import * as osc from 'osc';
 import { DeviceConfig, DeviceDriver, HubContext, FeedbackEvent } from './device-driver';
 import { ReconnectQueue } from './reconnect-queue';
 
+export interface QLabCue {
+  uniqueID: string;
+  number: string;
+  name: string;
+  type: string;
+}
+
 export interface QLabConfig extends DeviceConfig {
   type: 'qlab';
   passcode?: string;
@@ -50,6 +57,7 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
   // State
   private playhead = '';
   private runningCues: string[] = [];
+  private cues: QLabCue[] = [];
 
   constructor(config: QLabConfig, _hubContext: HubContext, verbose = false) {
     super();
@@ -76,6 +84,9 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
 
       this.connected = true;
       this.emit('connected');
+
+      // Fetch cue lists from workspace
+      this.sendOsc('/cueLists', []);
 
       // Replay any messages queued during disconnect
       const queued = this.queue.flush();
@@ -143,6 +154,7 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
       playhead: this.playhead,
       runningCues: this.runningCues,
       runningCount: this.runningCues.length,
+      cues: this.cues,
     };
   }
 
@@ -179,6 +191,28 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
           this.emitFeedback('/running', [{ type: 'i', value: cueNames.length }]);
           this.emitFeedback('/runningCues', [{ type: 's', value: cueNames.join(', ') }]);
         }
+      } else if (originalAddress === '/cueLists') {
+        const cueLists = Array.isArray(data) ? data : [];
+        const flat: QLabCue[] = [];
+        const walk = (cues: any[]) => {
+          for (const c of cues) {
+            if (c.number || c.name) {
+              flat.push({
+                uniqueID: c.uniqueID ?? '',
+                number: c.number ?? '',
+                name: c.name ?? '',
+                type: c.type ?? '',
+              });
+            }
+            if (Array.isArray(c.cues)) walk(c.cues);
+          }
+        };
+        for (const list of cueLists) {
+          if (Array.isArray(list.cues)) walk(list.cues);
+        }
+        this.cues = flat;
+        this.log(`Loaded ${flat.length} cues from workspace`);
+        this.emitFeedback('/cues', [{ type: 's', value: JSON.stringify(flat) }]);
       }
     } catch {
       // Not JSON — ignore
