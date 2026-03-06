@@ -96,7 +96,7 @@ export class PHButton extends SingletonAction {
     const state = this.getButtonState(button);
     const isToggled = !!(button.toggle && state.active);
     const effectiveButton = isToggled
-      ? { ...button, actions: button.toggle!.activeActions }
+      ? { ...button, actions: button.toggle!.activeActions, prompt: undefined }
       : button;
     this.hub.fire(effectiveButton);
 
