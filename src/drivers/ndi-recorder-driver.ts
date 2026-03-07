@@ -18,10 +18,13 @@
  */
 
 import { EventEmitter } from 'events';
+import { spawn } from 'child_process';
 import { DeviceDriver, DeviceConfig, HubContext, FeedbackEvent, OscArg } from './device-driver';
 
 export interface NDIRecorderConfig extends DeviceConfig {
   type: 'ndi-recorder';
+  recordingPath?: string;
+  archivePath?: string;
 }
 
 export interface RecorderSource {
@@ -50,6 +53,8 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
   private connected: boolean = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private verbose: boolean;
+  private recordingPath: string | null;
+  private archivePath: string | null;
 
   private recorderState: RecorderDriverState = {
     state: 'stopped',
@@ -65,6 +70,8 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
     this.host = config.host;
     this.port = config.port;
     this.verbose = verbose;
+    this.recordingPath = config.recordingPath ?? null;
+    this.archivePath = config.archivePath ?? null;
   }
 
   connect(): void {
@@ -189,10 +196,15 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
 
   private handleAgentMessage(msg: any): void {
     switch (msg.type) {
-      case 'state':
+      case 'state': {
+        const wasRecording = this.recorderState.state === 'recording';
         this.recorderState.state = msg.state;
         this.emitFeedback('/state', [{ type: 's', value: msg.state }]);
+        if (wasRecording && msg.state === 'stopped') {
+          this.startArchive();
+        }
         break;
+      }
 
       case 'source-update': {
         const existing = this.recorderState.sources.find(s => s.id === msg.id);
@@ -241,6 +253,56 @@ export class NDIRecorderDriver extends EventEmitter implements DeviceDriver {
         this.emitFeedback('/state', [{ type: 's', value: this.recorderState.state }]);
         break;
     }
+  }
+
+  private startArchive(): void {
+    const sessionName = this.recorderState.sessionName;
+    if (!this.recordingPath || !this.archivePath || !sessionName) {
+      if (this.verbose) console.log('[NDI-Rec] Archive skipped: no paths or session name configured');
+      this.recorderState.sessionName = null;
+      this.emitFeedback('/state', [{ type: 's', value: 'stopped' }]);
+      return;
+    }
+
+    const src = `${this.recordingPath}/${sessionName}/`;
+    const dest = `${this.archivePath}/${sessionName}/`;
+
+    console.log(`[NDI-Rec] Archiving: ${src} -> ${dest}`);
+    this.recorderState.state = 'archiving';
+    this.recorderState.archiveProgress = 0;
+    this.emitFeedback('/state', [{ type: 's', value: 'archiving' }]);
+
+    const rsync = spawn('rsync', ['-a', '--info=progress2', '--no-inc-recursive', src, dest]);
+
+    rsync.stdout.on('data', (data: Buffer) => {
+      const text = data.toString();
+      // rsync --info=progress2 outputs lines like: 1,234,567  45%  12.34MB/s  0:00:10
+      const match = text.match(/(\d+)%/);
+      if (match) {
+        const progress = parseInt(match[1], 10) / 100;
+        this.recorderState.archiveProgress = progress;
+        this.emitFeedback('/archive/progress', [{ type: 'f', value: progress }]);
+      }
+    });
+
+    rsync.stderr.on('data', (data: Buffer) => {
+      console.error(`[NDI-Rec] rsync: ${data.toString().trim()}`);
+    });
+
+    rsync.on('exit', (code) => {
+      if (code === 0) {
+        console.log(`[NDI-Rec] Archive complete: ${dest}`);
+        this.recorderState.archiveProgress = 1;
+        this.emitFeedback('/archive/progress', [{ type: 'f', value: 1 }]);
+        this.emitFeedback('/archive/done', []);
+      } else {
+        console.error(`[NDI-Rec] Archive failed: rsync exit code ${code}`);
+        this.emit('error', new Error(`rsync failed with exit code ${code}`));
+      }
+      this.recorderState.state = 'stopped';
+      this.recorderState.sessionName = null;
+      this.emitFeedback('/state', [{ type: 's', value: 'stopped' }]);
+    });
   }
 
   private sendToAgent(msg: Record<string, any>): void {

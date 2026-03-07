@@ -32,7 +32,6 @@ const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 const PORT = config.port || 7200;
 const NDI_RECORD_PATH = config.ndiRecordPath;
 const RECORDING_PATH = config.recordingPath;
-const ARCHIVE_PATH = config.archivePath;
 const SOURCES = config.sources || [];
 
 // State
@@ -202,7 +201,8 @@ function stopRecording(ws) {
 function checkAllStopped() {
   if (recorders.size === 0 && state === 'recording') {
     console.log('[Agent] All recorders stopped');
-    startArchive();
+    state = 'stopped';
+    broadcast({ type: 'state', state: 'stopped' });
   }
 }
 
@@ -228,81 +228,6 @@ function parseRecorderXml(sourceId, tag, attrs, recorder) {
   } else if (tag === 'record_stopped') {
     const frames = parseInt(attrMap.no_frames, 10) || 0;
     console.log(`[Agent] ${sourceId} stopped after ${frames} frames`);
-  }
-}
-
-// --- Archive (robocopy) ---
-
-function startArchive() {
-  if (!ARCHIVE_PATH || !sessionDir) {
-    state = 'stopped';
-    broadcast({ type: 'state', state: 'stopped' });
-    return;
-  }
-
-  state = 'archiving';
-  broadcast({ type: 'state', state: 'archiving' });
-
-  const destDir = path.join(ARCHIVE_PATH, path.basename(sessionDir));
-  console.log(`[Agent] Archiving: ${sessionDir} -> ${destDir}`);
-
-  const robo = spawn('robocopy', [sessionDir, destDir, '*.mov', '/R:3', '/W:5'], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  let totalFiles = 0;
-  let copiedFiles = 0;
-
-  robo.stdout.on('data', (chunk) => {
-    const text = chunk.toString();
-
-    // Parse robocopy output for file count
-    const filesMatch = text.match(/Files\s*:\s*(\d+)/);
-    if (filesMatch) totalFiles = parseInt(filesMatch[1], 10);
-
-    // Count "New File" or "Newer" lines
-    const newFileLines = (text.match(/(New File|Newer|Modified)/g) || []).length;
-    copiedFiles += newFileLines;
-
-    if (totalFiles > 0) {
-      const progress = Math.min(copiedFiles / totalFiles, 1);
-      broadcast({ type: 'archive-progress', progress });
-    }
-  });
-
-  robo.stderr.on('data', (chunk) => {
-    console.error(`[Archive] ${chunk.toString().trim()}`);
-  });
-
-  robo.on('exit', (code) => {
-    // Robocopy exit codes 0-7 are success
-    if (code !== null && code <= 7) {
-      console.log(`[Agent] Archive complete (exit ${code}): ${destDir}`);
-      cleanupSidecars(sessionDir);
-      broadcast({ type: 'archive-done', path: destDir });
-    } else {
-      console.error(`[Agent] Archive failed with exit code ${code}`);
-      broadcast({ type: 'error', message: `Robocopy failed with exit code ${code}` });
-    }
-    state = 'stopped';
-    broadcast({ type: 'state', state: 'stopped' });
-  });
-}
-
-// --- Sidecar cleanup ---
-
-function cleanupSidecars(dir) {
-  try {
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-      if (file.endsWith('.ndi') || file.endsWith('.preview')) {
-        const filePath = path.join(dir, file);
-        fs.unlinkSync(filePath);
-        console.log(`[Agent] Cleaned up sidecar: ${file}`);
-      }
-    }
-  } catch (err) {
-    console.error(`[Agent] Sidecar cleanup error: ${err.message}`);
   }
 }
 

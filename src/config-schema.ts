@@ -92,6 +92,8 @@ const qlabDeviceSchema = baseDeviceSchema.extend({
 
 const ndiRecorderDeviceSchema = baseDeviceSchema.extend({
   type: z.literal('ndi-recorder'),
+  recordingPath: z.string().optional(),
+  archivePath: z.string().optional(),
 });
 
 // --- Discriminated Union for Devices ---
