@@ -26,6 +26,9 @@ import { DriverManager, HubHttpServer, CommandRouter, StatusReporter, StatusSnap
 import { BrainService } from './brain/brain-service';
 import { BrainConfig } from './brain/types';
 import { DeckPersistence } from './deck/persistence';
+import { ShowContextService, DeviceSnapshot } from './show-context';
+import { MIDICaptureService } from './midi-capture';
+import { AvantisDriver } from './drivers/avantis-driver';
 import { getLogger } from './logger';
 
 const log = getLogger('Hub');
@@ -54,6 +57,7 @@ export interface HubConfig {
   macros?: MacroDef[];
   brain?: BrainConfig;
   nodeAgent?: { url: string };
+  mongodb?: { url: string; dbName?: string };
 }
 
 export class ProductionHub {
@@ -75,6 +79,10 @@ export class ProductionHub {
   private macroEngine: MacroEngine;
   private brainService?: BrainService;
   private nodeAgentUrl?: string;
+  private showContext?: ShowContextService;
+  private midiCapture?: MIDICaptureService;
+  private mongoConfig?: { url: string; dbName?: string };
+  private deviceConfigs: DeviceConfig[] = [];
 
   // Extracted modules
   private driverManager: DriverManager;
@@ -103,6 +111,7 @@ export class ProductionHub {
     }
 
     this.nodeAgentUrl = config.nodeAgent?.url;
+    this.mongoConfig = config.mongodb;
 
     this.oscServer = new AvantisOSCServer({
       localAddress: config.osc.listenAddress,
@@ -204,6 +213,14 @@ export class ProductionHub {
       );
     }
 
+    // Show Context (MongoDB-backed session tracking)
+    if (config.mongodb) {
+      this.showContext = new ShowContextService(
+        { mongoUrl: config.mongodb.url, dbName: config.mongodb.dbName },
+        () => this.captureDeviceSnapshot(),
+      );
+    }
+
     // Command router for /hub/* commands
     this.commandRouter = new CommandRouter({
       cueSequencer: this.cueSequencer,
@@ -239,10 +256,11 @@ export class ProductionHub {
   /** Register a device driver with the hub */
   addDriver(driver: DeviceDriver, config?: DeviceConfig): void {
     this.driverManager.addDriver(driver, config);
+    if (config) this.deviceConfigs.push(config);
   }
 
   /** Start the hub: OSC server, fade engine, and all drivers */
-  start(): void {
+  async start(): Promise<void> {
     log.info('Starting Production Hub...');
     log.info({ address: this.oscServer['options'].localAddress, port: this.oscServer['options'].localPort }, 'OSC server');
     log.info({ drivers: this.driverManager.getDriverNames() }, 'Registered drivers');
@@ -272,6 +290,38 @@ export class ProductionHub {
       }
     });
 
+    // Connect show context (MongoDB)
+    if (this.showContext) {
+      try {
+        await this.showContext.connect();
+      } catch (err: any) {
+        log.warn({ err: err.message }, 'Show context unavailable (MongoDB not reachable)');
+        this.showContext = undefined;
+      }
+    }
+
+    // MIDI Capture Service — flight recorder for all Avantis MIDI events
+    if (this.mongoConfig) {
+      const avantisDriver = this.driverManager.getDriver('avantis');
+      if (avantisDriver && avantisDriver instanceof AvantisDriver) {
+        const avantisConfig = this.deviceConfigs.find(c => c.type === 'avantis');
+        const baseMidiChannel = ((avantisConfig as any)?.midiBaseChannel ?? 1) - 1;
+        this.midiCapture = new MIDICaptureService(
+          { mongoUrl: this.mongoConfig.url, dbName: this.mongoConfig.dbName },
+          avantisDriver.getMidiParser(),
+          this.showContext ?? null,
+          baseMidiChannel,
+        );
+        try {
+          await this.midiCapture.connect();
+          this.midiCapture.start();
+        } catch (err: any) {
+          log.warn({ err: err.message }, 'MIDI capture unavailable');
+          this.midiCapture = undefined;
+        }
+      }
+    }
+
     // Start everything
     this.oscServer.start();
     this.fadeEngine.start();
@@ -298,13 +348,14 @@ export class ProductionHub {
         this.brainService,
         deckPersistence,
         this.nodeAgentUrl,
+        this.showContext,
       );
       this.modWebSocket.start();
     }
   }
 
   /** Stop everything */
-  stop(): void {
+  async stop(): Promise<void> {
     log.info('Stopping...');
     this.fadeEngine.stop();
     this.oscServer.stop();
@@ -318,6 +369,13 @@ export class ProductionHub {
     if (this.modWebSocket) {
       this.modWebSocket.stop();
       this.modWebSocket = undefined;
+    }
+    if (this.midiCapture) {
+      this.midiCapture.stop();
+      await this.midiCapture.disconnect();
+    }
+    if (this.showContext) {
+      await this.showContext.disconnect();
     }
   }
 
@@ -489,5 +547,46 @@ export class ProductionHub {
   /** Build a status snapshot for the health endpoint */
   getStatus(): StatusSnapshot {
     return this.statusReporter.getStatus();
+  }
+
+  /** Get the show context service (for testing/API) */
+  getShowContext(): ShowContextService | undefined {
+    return this.showContext;
+  }
+
+  /** Capture a device reachability snapshot for show context */
+  private async captureDeviceSnapshot(): Promise<DeviceSnapshot> {
+    const driverStats = this.driverManager.getDriverStats();
+
+    const findDevice = (type: string) => {
+      for (const [prefix, driver] of this.driverManager.getDrivers()) {
+        if (driver.name === type) {
+          return { driver, stats: driverStats.get(prefix) };
+        }
+      }
+      return undefined;
+    };
+
+    const avantis = findDevice('avantis');
+    const chamsys = findDevice('chamsys');
+    const obs = findDevice('obs');
+    // Any VISCA camera counts
+    const visca = findDevice('visca');
+
+    return {
+      avantis: {
+        reachable: avantis?.driver.isConnected() ?? false,
+        ip: avantis?.stats?.host ?? '192.168.10.20',
+      },
+      chamsys: {
+        reachable: chamsys?.driver.isConnected() ?? false,
+      },
+      obs: {
+        reachable: obs?.driver.isConnected() ?? false,
+      },
+      ptz_cameras: {
+        reachable: visca?.driver.isConnected() ?? false,
+      },
+    };
   }
 }

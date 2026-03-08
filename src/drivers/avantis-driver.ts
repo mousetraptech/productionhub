@@ -118,6 +118,11 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     return this.transport.isConnected();
   }
 
+  /** Expose the MIDI parser for external consumers (e.g. MIDICaptureService). */
+  getMidiParser(): MIDIStreamParser {
+    return this.midiParser;
+  }
+
   /**
    * Replay queued messages after reconnection.
    */

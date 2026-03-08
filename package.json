@@ -24,6 +24,8 @@
     "test:cues": "ts-node --files src/__tests__/cue-sequencer.test.ts",
     "test:dashboard": "ts-node --files src/__tests__/dashboard-ws.test.ts",
     "test:macros": "ts-node --files src/__tests__/macros.test.ts",
+    "test:show-context": "ts-node --files src/__tests__/show-context.test.ts",
+    "test:midi-capture": "ts-node --files src/__tests__/midi-capture.test.ts",
     "generate": "python3 generator/generate.py generator/templates/standard_recital.yaml",
     "dev:all": "run-p dev dev:ui",
     "dev:ui": "cd ui && npm run dev",
@@ -50,6 +52,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.77.0",
     "easymidi": "^3.1.0",
+    "mongodb": "^7.1.0",
     "osc": "^2.4.5",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",

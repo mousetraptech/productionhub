@@ -102,6 +102,10 @@ export interface Config {
   nodeAgent?: {
     url: string;
   };
+  mongodb?: {
+    url: string;
+    dbName?: string;
+  };
 }
 
 // --- Defaults ---
@@ -212,6 +216,10 @@ function loadHubConfig(parsed: any): Config {
     } : undefined,
     nodeAgent: validated.nodeAgent ? {
       url: validated.nodeAgent.url,
+    } : undefined,
+    mongodb: validated.mongodb ? {
+      url: validated.mongodb.url,
+      dbName: validated.mongodb.dbName,
     } : undefined,
   };
 

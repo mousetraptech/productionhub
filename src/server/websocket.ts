@@ -16,6 +16,7 @@ import { Cue } from '../cue-engine/types';
 import { BrainService } from '../brain/brain-service';
 import { DeckPersistence } from '../deck/persistence';
 import { fireDeckButton } from '../deck/fire';
+import { ShowContextService } from '../show-context';
 
 export type RouteOSCFn = (address: string, args: any[]) => void;
 
@@ -34,6 +35,7 @@ export class ModWebSocket {
   private brainService?: BrainService;
   private deckPersistence: DeckPersistence;
   private nodeAgentUrl?: string;
+  private showContext?: ShowContextService;
 
   constructor(
     config: ModWebSocketConfig,
@@ -45,6 +47,7 @@ export class ModWebSocket {
     brainService?: BrainService,
     deckPersistence?: DeckPersistence,
     nodeAgentUrl?: string,
+    showContext?: ShowContextService,
   ) {
     this.config = config;
     this.cueEngine = cueEngine;
@@ -55,6 +58,7 @@ export class ModWebSocket {
     this.brainService = brainService;
     this.deckPersistence = deckPersistence ?? new DeckPersistence();
     this.nodeAgentUrl = nodeAgentUrl;
+    this.showContext = showContext;
   }
 
   /** Start the WebSocket server */
@@ -73,6 +77,13 @@ export class ModWebSocket {
 
       if (this.brainService) {
         this.send(ws, { type: 'chat-mode', mode: this.brainService.getMode() });
+      }
+
+      // Send show context status
+      if (this.showContext) {
+        this.showContext.getStatus().then(status => {
+          this.send(ws, { type: 'show-context', ...status });
+        }).catch(() => {});
       }
 
       ws.on('message', (data: Buffer) => {
@@ -285,6 +296,27 @@ export class ModWebSocket {
         break;
       }
 
+      // --- Show Context ---
+
+      case 'show-start': {
+        this.handleShowStart(msg);
+        break;
+      }
+
+      case 'show-end': {
+        this.handleShowEnd(msg);
+        break;
+      }
+
+      case 'show-status': {
+        if (this.showContext) {
+          this.showContext.getStatus().then(status => {
+            this.broadcast({ type: 'show-context', ...status });
+          }).catch(() => {});
+        }
+        break;
+      }
+
       default:
         console.warn(`[ModWS] Unknown message type: ${msg.type}`);
     }
@@ -382,6 +414,103 @@ export class ModWebSocket {
       if (client.readyState === WebSocket.OPEN) {
         client.send(payload);
       }
+    }
+  }
+
+  /** Handle show-start with prompt for show name */
+  private async handleShowStart(msg: any): Promise<void> {
+    if (!this.showContext) {
+      console.warn('[ModWS] Show context not available (no MongoDB configured)');
+      return;
+    }
+
+    let showName = msg.name;
+
+    // If no name provided and we have node-agent, prompt for it
+    if (!showName && this.nodeAgentUrl) {
+      try {
+        const res = await fetch(`${this.nodeAgentUrl}/api/v1/prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'text_input',
+            title: 'Start Show',
+            message: 'Show name?',
+            default: '',
+          }),
+        });
+        if (!res.ok) {
+          console.warn(`[ModWS] Node-agent prompt failed: ${res.status}`);
+          return;
+        }
+        const body = await res.json() as { cancelled?: boolean; result?: string };
+        if (body.cancelled || !body.result?.trim()) {
+          this.broadcast({ type: 'show-start-cancelled' });
+          return;
+        }
+        showName = body.result.trim();
+      } catch (err: any) {
+        console.error(`[ModWS] Show name prompt error: ${err.message}`);
+        return;
+      }
+    }
+
+    if (!showName) {
+      showName = `Show ${new Date().toLocaleTimeString()}`;
+    }
+
+    try {
+      const show = await this.showContext.startShow(showName);
+      const status = await this.showContext.getStatus();
+      this.broadcast({ type: 'show-context', ...status });
+      console.log(`[ModWS] Show started: ${show.name} (${show.show_id})`);
+    } catch (err: any) {
+      console.error(`[ModWS] Failed to start show: ${err.message}`);
+    }
+  }
+
+  /** Handle show-end with confirmation prompt */
+  private async handleShowEnd(msg: any): Promise<void> {
+    if (!this.showContext) return;
+
+    const active = await this.showContext.getActiveShow();
+    if (!active) {
+      console.warn('[ModWS] No active show to end');
+      return;
+    }
+
+    // Confirm before closing (spec requires confirm-before-close)
+    if (!msg.confirmed && this.nodeAgentUrl) {
+      try {
+        const res = await fetch(`${this.nodeAgentUrl}/api/v1/prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'text_input',
+            title: 'End Show',
+            message: `End "${active.name}"? Type YES to confirm.`,
+            default: '',
+          }),
+        });
+        if (!res.ok) return;
+        const body = await res.json() as { cancelled?: boolean; result?: string };
+        if (body.cancelled || body.result?.toUpperCase() !== 'YES') {
+          this.broadcast({ type: 'show-end-cancelled' });
+          return;
+        }
+      } catch (err: any) {
+        console.error(`[ModWS] Show end confirm error: ${err.message}`);
+        return;
+      }
+    }
+
+    try {
+      await this.showContext.endShow();
+      const status = await this.showContext.getStatus();
+      this.broadcast({ type: 'show-context', ...status });
+      console.log(`[ModWS] Show ended: ${active.name}`);
+    } catch (err: any) {
+      console.error(`[ModWS] Failed to end show: ${err.message}`);
     }
   }
 

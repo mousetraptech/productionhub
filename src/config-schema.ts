@@ -179,6 +179,10 @@ export const hubConfigSchema = z.object({
   nodeAgent: z.object({
     url: z.string().url(),
   }).optional(),
+  mongodb: z.object({
+    url: z.string().min(1),
+    dbName: z.string().optional(),
+  }).optional(),
 }).refine(
   (config) => {
     // Check for duplicate prefixes (case-insensitive)

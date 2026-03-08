@@ -419,6 +419,7 @@ async function main(): Promise<void> {
     macros: config.macros,
     brain: config.brain,
     nodeAgent: config.nodeAgent,
+    mongodb: config.mongodb,
   });
 
   // Create and register drivers from config
@@ -443,7 +444,7 @@ async function main(): Promise<void> {
     process.exit(0);
   });
 
-  hub.start();
+  await hub.start();
 
   // --check: run systems check and exit
   if (overrides['runCheck']) {
