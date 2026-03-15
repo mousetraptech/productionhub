@@ -21,6 +21,7 @@ import { CueSequencer } from '../cue-sequencer';
 import { MacroEngine } from '../macros';
 import { DashboardWebSocket } from '../server/dashboard-ws';
 import { DeviceDriver } from '../drivers/device-driver';
+import { ShowContextService } from '../show-context';
 import { getLogger } from '../logger';
 
 const log = getLogger('HttpServer');
@@ -51,9 +52,10 @@ export interface HttpServerDeps {
   getChecklist: () => PreshowChecklist | undefined;
   getDrivers: () => Map<string, DeviceDriver>;
   runSystemsCheck: () => Promise<SystemsCheckReport>;
-  routeOSC: (address: string, args: any[]) => void;
+  routeOSC: (address: string, args: any[], source?: 'osc' | 'http') => void;
   getDevices: () => Array<{ type: string; prefix: string }>;
   dashboardWs: DashboardWebSocket;
+  getShowContext?: () => ShowContextService | undefined;
 }
 
 export class HubHttpServer {
@@ -307,6 +309,113 @@ export class HubHttpServer {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
+      return;
+    }
+
+    // OSC send endpoint (for dashboard buttons)
+    if (method === 'POST' && url === '/osc') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const { address, args } = JSON.parse(body);
+          this.deps.routeOSC(address, args ?? [], 'http');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ sent: address }));
+        } catch (err: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+      return;
+    }
+
+    // Show context API
+    if (method === 'GET' && url === '/api/show/status') {
+      const showContext = this.deps.getShowContext?.();
+      if (!showContext) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ active: false, unavailable: true }));
+        return;
+      }
+      showContext.getStatus().then(status => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ active: !!status.show, ...status }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      });
+      return;
+    }
+
+    if (method === 'POST' && url === '/api/show/start') {
+      const showContext = this.deps.getShowContext?.();
+      if (!showContext) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Show context not available' }));
+        return;
+      }
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk; });
+      req.on('end', () => {
+        const { name } = JSON.parse(body || '{}');
+        if (!name || !name.trim()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Show name is required' }));
+          return;
+        }
+        const showName = name.trim();
+        showContext.startShow(showName).then(show => {
+          log.info({ show_id: show.show_id, name: show.name }, 'Show started from dashboard');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(show));
+        }).catch(err => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
+      });
+      return;
+    }
+
+    // Recorder state API
+    if (method === 'GET' && url === '/api/device/recorder') {
+      const driver = Array.from(this.deps.getDrivers().values())
+        .find(d => d.name.includes('ndi-recorder') || d.name.includes('recorder'));
+      if (driver && typeof (driver as any).getState === 'function') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify((driver as any).getState()));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ state: 'stopped', sources: [], archiveProgress: 0, sessionName: null }));
+      }
+      return;
+    }
+
+    // Video switch state API
+    if (method === 'GET' && url === '/api/device/video') {
+      const driver = Array.from(this.deps.getDrivers().values())
+        .find(d => (d as any).getState && d.name.includes('video'));
+      if (driver && typeof (driver as any).getState === 'function') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify((driver as any).getState()));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ currentInput: 0, label: '', inputs: {} }));
+      }
+      return;
+    }
+
+    // IR commands list API
+    if (method === 'GET' && url === '/api/device/ir') {
+      const driver = Array.from(this.deps.getDrivers().values())
+        .find(d => d.name.includes('broadlink'));
+      if (driver && typeof (driver as any).getCommandNames === 'function') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ commands: (driver as any).getCommandNames() }));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ commands: [] }));
+      }
       return;
     }
 

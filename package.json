@@ -51,8 +51,10 @@
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.77.0",
+    "dotenv": "^17.3.1",
     "easymidi": "^3.1.0",
     "mongodb": "^7.1.0",
+    "node-broadlink": "^2.4.1",
     "osc": "^2.4.5",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",

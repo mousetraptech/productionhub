@@ -145,9 +145,32 @@ export function RecorderPage() {
 
   const [sessionName, setSessionName] = useState('');
 
-  const handleStart = () => {
-    const name = sessionName.trim() || todayString();
-    send({ type: 'osc', address: '/recorder/start', args: [name] });
+  const handleStart = async () => {
+    const entered = sessionName.trim();
+    if (!entered) {
+      window.alert('Please enter a show name.');
+      return;
+    }
+    const fullName = `${todayString()} ${entered}`;
+
+    // Ensure a show is active
+    try {
+      const res = await fetch('/api/show/status');
+      if (res.ok) {
+        const status = await res.json();
+        if (!status.active) {
+          await fetch('/api/show/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: fullName }),
+          });
+        }
+      }
+    } catch {
+      // Show context unavailable — continue
+    }
+
+    send({ type: 'osc', address: '/recorder/start', args: [fullName] });
   };
 
   const handleStop = () => {
@@ -243,7 +266,7 @@ export function RecorderPage() {
               type="text"
               value={sessionName}
               onChange={(e) => setSessionName(e.target.value)}
-              placeholder={todayString()}
+              placeholder="Show name (required)"
               style={{
                 flex: 1,
                 maxWidth: 400,

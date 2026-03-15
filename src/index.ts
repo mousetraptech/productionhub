@@ -21,10 +21,11 @@
  *   avantis-osc --validate cues.txt  # Validate OSC addresses against config
  */
 
+import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn, ChildProcess } from 'child_process';
-import { loadConfig } from './config';
+import { loadConfig, loadDevicesFromDb } from './config';
 import { ProductionHub } from './hub';
 import { AvantisDriver } from './drivers/avantis-driver';
 import { ChamSysDriver } from './drivers/chamsys-driver';
@@ -33,6 +34,8 @@ import { VISCADriver } from './drivers/visca-driver';
 import { TouchDesignerDriver } from './drivers/touchdesigner-driver';
 import { QLabDriver } from './drivers/qlab-driver';
 import { NDIRecorderDriver } from './drivers/ndi-recorder-driver';
+import { BroadlinkDriver } from './drivers/broadlink-driver';
+import { VideoSwitchDriver } from './drivers/video-switch-driver';
 import { DeviceConfig, DeviceDriver, HubContext } from './drivers/device-driver';
 import { SystemsCheck } from './systems-check';
 
@@ -298,6 +301,10 @@ function createDriver(deviceConfig: DeviceConfig, hubContext: HubContext, verbos
       return new QLabDriver(deviceConfig as any, hubContext, verbose);
     case 'ndi-recorder':
       return new NDIRecorderDriver(deviceConfig as any, hubContext, verbose);
+    case 'broadlink':
+      return new BroadlinkDriver(deviceConfig as any, hubContext, verbose);
+    case 'video-switch':
+      return new VideoSwitchDriver(deviceConfig as any, hubContext, verbose);
     default:
       throw new Error(`Unknown device type: ${deviceConfig.type}`);
   }
@@ -387,6 +394,26 @@ async function main(): Promise<void> {
 
   const config = loadConfig(configPath);
 
+  // Load devices from MongoDB if MONGODB_URL is set, otherwise fall back to config.yml
+  const mongoUrl = process.env.MONGODB_URL;
+  const mongoDb = process.env.MONGODB_DB ?? 'productionhub';
+  if (mongoUrl) {
+    try {
+      config.devices = await loadDevicesFromDb(mongoUrl, mongoDb);
+      // Ensure mongodb config is set for show-context and other services
+      if (!config.mongodb) {
+        config.mongodb = { url: mongoUrl, dbName: mongoDb };
+      }
+    } catch (err: any) {
+      console.error(`[Config] Failed to load devices from MongoDB: ${err.message}`);
+      if (config.devices.length === 0) {
+        console.error('[Config] No devices available. Exiting.');
+        process.exit(1);
+      }
+      console.warn('[Config] Falling back to config.yml devices');
+    }
+  }
+
   // --validate: offline cue validation, no device connections needed
   if (overrides['validateFile']) {
     validateCues(overrides['validateFile'], config);
@@ -424,7 +451,16 @@ async function main(): Promise<void> {
 
   // Create and register drivers from config
   for (const deviceConf of config.devices) {
+    // Pass MongoDB config to Broadlink driver for IR code persistence
+    if (deviceConf.type === 'broadlink' && config.mongodb) {
+      (deviceConf as any).mongoUrl = config.mongodb.url;
+      (deviceConf as any).mongoDbName = config.mongodb.dbName;
+    }
     const driver = createDriver(deviceConf, hub.hubContext, verbose);
+    // Video switch needs OSC routing to send IR commands through the Broadlink
+    if (driver instanceof VideoSwitchDriver) {
+      driver.setRouter((address, args) => hub.routeOSC(address, args));
+    }
     hub.addDriver(driver, deviceConf);
     const mode = deviceConf.emulate ? `-> emulator @ ${deviceConf.host}:${deviceConf.port}` : `-> ${deviceConf.host}:${deviceConf.port}`;
     console.log(`[Main] Registered ${deviceConf.type} on ${deviceConf.prefix} ${mode}`);

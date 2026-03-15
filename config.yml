@@ -16,7 +16,7 @@ devices:
     prefix: /avantis
     host: "192.168.10.20"
     port: 51325
-    # emulate: true
+    emulate: true
     # Base MIDI channel (1-16), should match Utils/Shows > Control > MIDI on the desk
     midiBaseChannel: 1
     feedback:
@@ -79,7 +79,7 @@ devices:
     prefix: /sfx
     host: 192.168.10.11
     port: 53053
-    # emulate: true
+    emulate: true
     heartbeat:
       enabled: false
 
@@ -88,7 +88,7 @@ devices:
     prefix: /show
     host: 192.168.10.11
     port: 53000
-    # emulate: true
+    emulate: true
     heartbeat:
       enabled: false
 
@@ -98,9 +98,27 @@ devices:
     prefix: /recorder
     host: "192.168.10.13"   # Windows PC IP
     port: 7200
+    emulate: true
     recordingPath: "/Volumes/record"
     archivePath: "/Volumes/Flex 1U4"
 
+  - type: broadlink
+    prefix: /ir
+    host: "192.168.10.168"
+    port: 80
+    emulate: true
+
+  # HDMI Switch (3-input, IR-controlled via Broadlink)
+  - type: video-switch
+    prefix: /video
+    host: "0.0.0.0"
+    port: 1
+    irPrefix: /ir
+    inputs:
+      1: { label: "Guest Laptop", ir: "hdmi_1" }
+      2: { label: "Empty", ir: "hdmi_2" }
+      3: { label: "Wireless HDMI", ir: "hdmi_3" }
+      
   # - type: ndi-recorder
   #   prefix: /recorder
   #   host: "192.168.10.11"
@@ -128,10 +146,8 @@ logging:
 nodeAgent:
   url: http://localhost:9400
 
-# MongoDB — show context session tracking
-mongodb:
-  url: "mongodb://127.0.0.1:27017"
-  dbName: "productionhub"
+# MongoDB — now configured via .env (MONGODB_URL, MONGODB_DB)
+# Devices are loaded from MongoDB at startup. Use scripts/seed-devices.ts to populate.
 
 # Booth Brain — AI assistant for MOD natural language control
 brain:

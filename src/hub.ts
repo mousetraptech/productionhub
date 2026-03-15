@@ -28,6 +28,7 @@ import { BrainConfig } from './brain/types';
 import { DeckPersistence } from './deck/persistence';
 import { ShowContextService, DeviceSnapshot } from './show-context';
 import { MIDICaptureService } from './midi-capture';
+import { OSCCaptureService } from './osc-capture';
 import { AvantisDriver } from './drivers/avantis-driver';
 import { getLogger } from './logger';
 
@@ -81,6 +82,7 @@ export class ProductionHub {
   private nodeAgentUrl?: string;
   private showContext?: ShowContextService;
   private midiCapture?: MIDICaptureService;
+  private oscCapture?: OSCCaptureService;
   private mongoConfig?: { url: string; dbName?: string };
   private deviceConfigs: DeviceConfig[] = [];
 
@@ -250,6 +252,7 @@ export class ProductionHub {
       routeOSC: (address, args) => this.routeOSC(address, args),
       getDevices: () => Array.from(this.driverManager.getDrivers().values()).map(d => ({ type: d.name, prefix: d.prefix })),
       dashboardWs: this.dashboardWs,
+      getShowContext: () => this.showContext,
     });
   }
 
@@ -319,6 +322,20 @@ export class ProductionHub {
           log.warn({ err: err.message }, 'MIDI capture unavailable');
           this.midiCapture = undefined;
         }
+      }
+    }
+
+    // OSC Capture Service — flight recorder for all OSC messages
+    if (this.mongoConfig) {
+      this.oscCapture = new OSCCaptureService(
+        { mongoUrl: this.mongoConfig.url, dbName: this.mongoConfig.dbName },
+        () => this.showContext ? this.showContext.getCurrentShowId() : Promise.resolve(null),
+      );
+      try {
+        await this.oscCapture.connect();
+      } catch (err: any) {
+        log.warn({ err: err.message }, 'OSC capture unavailable');
+        this.oscCapture = undefined;
       }
     }
 
@@ -420,11 +437,14 @@ export class ProductionHub {
   /**
    * Route an incoming OSC address+args to the correct driver.
    */
-  routeOSC(address: string, args: any[]): void {
+  routeOSC(address: string, args: any[], source?: 'osc' | 'http'): void {
     const addr = address.toLowerCase();
 
     // Dashboard OSC monitor
     this.dashboardWs.broadcastOscMessage(address, args, 'in');
+
+    // Log to MongoDB
+    this.oscCapture?.capture(address, args);
 
     // Global fade stop
     if (addr === '/fade/stop') {
@@ -460,6 +480,12 @@ export class ProductionHub {
       return;
     }
 
+    // Recorder start: ensure a show is active first (node-agent prompt for Stream Deck only)
+    if (this.isRecorderStart(addr) && source !== 'http') {
+      this.ensureShowThenRecord(address, args);
+      return;
+    }
+
     // Driver routing (pass original address to preserve case for scene names, etc.)
     if (this.driverManager.routeToDriver(address, args)) {
       return;
@@ -471,6 +497,67 @@ export class ProductionHub {
     }
 
     log.warn({ address }, 'No driver matched');
+  }
+
+  /** Check if this OSC address is a recorder start command */
+  private isRecorderStart(addr: string): boolean {
+    // Match any recorder prefix + /start (e.g. /recorder/start)
+    for (const [prefix] of this.driverManager.getDrivers()) {
+      const config = this.deviceConfigs.find(c => c.prefix.toLowerCase() === prefix);
+      if (config?.type === 'ndi-recorder' && addr === `${prefix}/start`) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** YYYYMMDD prefix for show names */
+  private todayPrefix(): string {
+    const d = new Date();
+    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  /** Ensure a show is active before starting recording */
+  private async ensureShowThenRecord(address: string, args: any[]): Promise<void> {
+    if (this.showContext) {
+      const status = await this.showContext.getStatus();
+      if (!status.show) {
+        // No active show — prompt for a name via node-agent or auto-name
+        let enteredName: string | null = null;
+
+        if (this.nodeAgentUrl) {
+          try {
+            const res = await fetch(`${this.nodeAgentUrl}/api/v1/prompt`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'text_input',
+                title: 'Start Show',
+                message: 'No show is active. Enter a show name to start recording:',
+                default: '',
+              }),
+            });
+            if (res.ok) {
+              const body = await res.json() as { cancelled?: boolean; result?: string };
+              if (body.cancelled || !body.result?.trim()) {
+                log.info('Recording cancelled — no show name provided');
+                return;
+              }
+              enteredName = body.result.trim();
+            }
+          } catch (err: any) {
+            log.warn({ err: err.message }, 'Node-agent prompt failed, auto-naming show');
+          }
+        }
+
+        const showName = `${this.todayPrefix()} ${enteredName || 'Show ' + new Date().toLocaleTimeString()}`;
+        const show = await this.showContext.startShow(showName);
+        log.info({ show_id: show.show_id, name: show.name }, 'Auto-started show for recording');
+      }
+    }
+
+    // Now route the recorder start to the driver
+    this.driverManager.routeToDriver(address, args);
   }
 
   /** Run a full systems check */

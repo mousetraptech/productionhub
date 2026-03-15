@@ -28,7 +28,7 @@ const prefixSchema = z.string().refine(
 
 // --- Device Type Enum ---
 
-const deviceTypeSchema = z.enum(['avantis', 'chamsys', 'obs', 'visca', 'touchdesigner', 'qlab', 'ndi-recorder']);
+const deviceTypeSchema = z.enum(['avantis', 'chamsys', 'obs', 'visca', 'touchdesigner', 'qlab', 'ndi-recorder', 'broadlink', 'video-switch']);
 
 // --- Reconnect & Heartbeat Configs ---
 
@@ -96,6 +96,22 @@ const ndiRecorderDeviceSchema = baseDeviceSchema.extend({
   archivePath: z.string().optional(),
 });
 
+const videoSwitchInputSchema = z.object({
+  label: z.string(),
+  ir: z.string(),
+});
+
+const videoSwitchDeviceSchema = baseDeviceSchema.extend({
+  type: z.literal('video-switch'),
+  irPrefix: z.string(),
+  inputs: z.record(z.string(), videoSwitchInputSchema),
+});
+
+const broadlinkDeviceSchema = baseDeviceSchema.extend({
+  type: z.literal('broadlink'),
+  commands: z.record(z.string(), z.string()).optional(),
+});
+
 // --- Discriminated Union for Devices ---
 
 const deviceSchema = z.discriminatedUnion('type', [
@@ -106,6 +122,8 @@ const deviceSchema = z.discriminatedUnion('type', [
   touchdesignerDeviceSchema,
   qlabDeviceSchema,
   ndiRecorderDeviceSchema,
+  broadlinkDeviceSchema,
+  videoSwitchDeviceSchema,
 ]);
 
 // --- OSC Config ---

@@ -421,6 +421,164 @@ export function getDashboardHTML(): string {
     padding: 8px 0;
   }
 
+  /* Video Switch */
+  .video-inputs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .video-input-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-2);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 120px;
+    text-align: center;
+  }
+  .video-input-btn:hover { border-color: rgba(88,166,255,0.4); background: rgba(88,166,255,0.05); }
+  .video-input-btn.active {
+    border-color: rgba(0,229,160,0.5);
+    background: rgba(0,229,160,0.08);
+    color: var(--green);
+    font-weight: 700;
+    box-shadow: 0 0 8px rgba(0,229,160,0.15);
+  }
+  .video-input-num {
+    font-size: 10px;
+    color: var(--text-dimmer);
+    margin-bottom: 2px;
+  }
+
+  /* IR Commands */
+  .ir-grid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ir-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-2);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ir-btn:hover { border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.05); color: var(--purple); }
+  .ir-btn.sent { border-color: rgba(0,229,160,0.4); color: var(--green); }
+  .ir-status {
+    font-size: 10px;
+    color: var(--text-dimmer);
+    margin-top: 8px;
+  }
+
+  /* Recorder */
+  .rec-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .rec-btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid;
+  }
+  .rec-btn.start {
+    background: rgba(239,68,68,0.08);
+    color: var(--red);
+    border-color: rgba(239,68,68,0.25);
+  }
+  .rec-btn.start:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); }
+  .rec-btn.stop {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-dim);
+    border-color: var(--border-2);
+  }
+  .rec-btn.stop:hover { background: rgba(255,255,255,0.08); }
+  .rec-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .rec-state-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .rec-state-badge.stopped {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-dimmer);
+  }
+  .rec-state-badge.recording {
+    background: rgba(239,68,68,0.12);
+    color: var(--red);
+    border: 1px solid rgba(239,68,68,0.3);
+    animation: rec-pulse 1.5s ease-in-out infinite;
+  }
+  .rec-state-badge.archiving {
+    background: rgba(255,194,58,0.12);
+    color: var(--yellow);
+    border: 1px solid rgba(255,194,58,0.3);
+  }
+  @keyframes rec-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .rec-sources {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .rec-source {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .rec-source-name { width: 160px; color: var(--text); flex-shrink: 0; }
+  .rec-source-frames { width: 80px; color: var(--text-dim); text-align: right; }
+  .rec-vu-bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+    max-width: 200px;
+  }
+  .rec-vu-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    transition: width 0.1s;
+  }
+  .rec-archive-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.05);
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .rec-archive-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--yellow);
+    transition: width 0.3s;
+  }
+
   /* OSC Monitor */
   .osc-monitor {
     max-height: 200px;
@@ -550,6 +708,29 @@ export function getDashboardHTML(): string {
   <div class="cue-list-items" id="cueListItems">
     <div class="cue-empty">No cue list loaded</div>
   </div>
+</div>
+
+<div class="card" id="recorderCard" style="display:none">
+  <div class="card-title">Recorder <span class="rec-state-badge stopped" id="recStateBadge">--</span></div>
+  <div class="rec-controls">
+    <button class="rec-btn start" id="recStartBtn" onclick="recStart()">Record</button>
+    <button class="rec-btn stop" id="recStopBtn" onclick="recStop()" disabled>Stop</button>
+  </div>
+  <div class="rec-sources" id="recSources"></div>
+  <div class="rec-archive-bar" id="recArchiveBar" style="display:none">
+    <div class="rec-archive-fill" id="recArchiveFill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="card" id="videoSwitchCard" style="display:none">
+  <div class="card-title">Video Switch <span style="font-size:10px;color:var(--text-dimmer);letter-spacing:0;text-transform:none" id="videoCurrentLabel"></span></div>
+  <div class="video-inputs" id="videoInputs"></div>
+</div>
+
+<div class="card" id="irCard" style="display:none">
+  <div class="card-title">IR Commands</div>
+  <div class="ir-grid" id="irGrid"></div>
+  <div class="ir-status" id="irStatus"></div>
 </div>
 
 <div class="card">
@@ -987,6 +1168,17 @@ function handleWsMessage(msg) {
       fetchHealth();
       break;
 
+    case 'device-state':
+      if (msg.deviceType === 'video-switch' && msg.state) {
+        videoState = msg.state;
+        renderVideoSwitch();
+      }
+      if (msg.deviceType === 'ndi-recorder' && msg.state) {
+        recState = msg.state;
+        renderRecorder();
+      }
+      break;
+
     case 'cue-event':
       if (msg.state) {
         cueState = msg.state;
@@ -999,10 +1191,195 @@ function handleWsMessage(msg) {
   }
 }
 
+// --- Recorder ---
+
+var recState = { state: 'stopped', sources: [], archiveProgress: 0, sessionName: null };
+
+function renderRecorder() {
+  var card = document.getElementById('recorderCard');
+  card.style.display = '';
+
+  var badge = document.getElementById('recStateBadge');
+  badge.textContent = recState.state.toUpperCase();
+  badge.className = 'rec-state-badge ' + recState.state;
+
+  var startBtn = document.getElementById('recStartBtn');
+  var stopBtn = document.getElementById('recStopBtn');
+  var isRecording = recState.state === 'recording';
+  var isArchiving = recState.state === 'archiving';
+  startBtn.disabled = isRecording || isArchiving;
+  stopBtn.disabled = !isRecording;
+
+  var sourcesEl = document.getElementById('recSources');
+  if (recState.sources && recState.sources.length > 0) {
+    sourcesEl.innerHTML = recState.sources.map(function(s) {
+      var vuPct = Math.max(0, Math.min(100, ((s.vuDb + 60) / 60) * 100));
+      var vuColor = vuPct > 90 ? 'var(--red)' : vuPct > 70 ? 'var(--yellow)' : 'var(--green)';
+      return '<div class="rec-source">' +
+        '<span class="rec-source-name">' + escapeHtml(s.name) + '</span>' +
+        '<span class="rec-source-frames">' + (s.frames || 0) + ' f</span>' +
+        '<div class="rec-vu-bar"><div class="rec-vu-fill" style="width:' + vuPct + '%;background:' + vuColor + '"></div></div>' +
+      '</div>';
+    }).join('');
+  } else {
+    sourcesEl.innerHTML = '';
+  }
+
+  var archiveBar = document.getElementById('recArchiveBar');
+  var archiveFill = document.getElementById('recArchiveFill');
+  if (isArchiving) {
+    archiveBar.style.display = '';
+    archiveFill.style.width = Math.round(recState.archiveProgress * 100) + '%';
+  } else {
+    archiveBar.style.display = 'none';
+  }
+}
+
+function todayPrefix() {
+  var d = new Date();
+  return d.getFullYear().toString() +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0');
+}
+
+async function recStart() {
+  // Check if there's an active show — if not, prompt for a name and start one
+  try {
+    var showRes = await fetch('/api/show/status');
+    if (showRes.ok) {
+      var showStatus = await showRes.json();
+      if (!showStatus.active) {
+        var enteredName = prompt('No show is active. Enter a show name to start:');
+        if (!enteredName || !enteredName.trim()) return;
+        var showName = todayPrefix() + ' ' + enteredName.trim();
+        await fetch('/api/show/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: showName })
+        });
+      }
+    }
+  } catch(e) {
+    // Show context unavailable — continue with recording anyway
+  }
+
+  await fetch('/osc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address: '/recorder/start', args: [] })
+  });
+}
+
+async function recStop() {
+  await fetch('/osc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address: '/recorder/stop', args: [] })
+  });
+}
+
+async function fetchRecorderState() {
+  try {
+    var res = await fetch('/api/device/recorder');
+    if (res.ok) {
+      recState = await res.json();
+      renderRecorder();
+    }
+  } catch(e) {}
+}
+
+// --- Video Switch ---
+
+var videoState = { currentInput: 0, label: '', inputs: {} };
+
+function renderVideoSwitch() {
+  var card = document.getElementById('videoSwitchCard');
+  var keys = Object.keys(videoState.inputs);
+  if (keys.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  var label = document.getElementById('videoCurrentLabel');
+  label.textContent = videoState.currentInput > 0
+    ? 'Input ' + videoState.currentInput + ' — ' + videoState.label
+    : 'No input selected';
+
+  var container = document.getElementById('videoInputs');
+  container.innerHTML = keys.map(function(n) {
+    var active = parseInt(n) === videoState.currentInput ? ' active' : '';
+    var inputLabel = videoState.inputs[n] || 'Input ' + n;
+    return '<button class="video-input-btn' + active + '" onclick="selectVideoInput(' + n + ')">' +
+      '<div class="video-input-num">HDMI ' + n + '</div>' +
+      escapeHtml(inputLabel) +
+    '</button>';
+  }).join('');
+}
+
+async function selectVideoInput(n) {
+  await fetch('/osc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address: '/video/input/' + n, args: [] })
+  });
+}
+
+async function fetchVideoState() {
+  try {
+    var res = await fetch('/api/device/video');
+    if (res.ok) {
+      videoState = await res.json();
+      renderVideoSwitch();
+    }
+  } catch(e) {}
+}
+
+// --- IR Commands ---
+
+var irCommands = [];
+
+function renderIrGrid() {
+  var card = document.getElementById('irCard');
+  if (irCommands.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  var grid = document.getElementById('irGrid');
+  grid.innerHTML = irCommands.map(function(name) {
+    return '<button class="ir-btn" id="ir-' + name + '" onclick="sendIr(\\'' + name + '\\')">' + escapeHtml(name) + '</button>';
+  }).join('');
+}
+
+async function sendIr(name) {
+  var btn = document.getElementById('ir-' + name);
+  var status = document.getElementById('irStatus');
+
+  await fetch('/osc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address: '/ir/send/' + name, args: [] })
+  });
+
+  btn.classList.add('sent');
+  status.textContent = 'Sent: ' + name;
+  setTimeout(function() { btn.classList.remove('sent'); }, 1500);
+}
+
+async function fetchIrCommands() {
+  try {
+    var res = await fetch('/api/device/ir');
+    if (res.ok) {
+      var data = await res.json();
+      irCommands = data.commands || [];
+      renderIrGrid();
+    }
+  } catch(e) {}
+}
+
 // Start polling and WebSocket
 fetchHealth();
 fetchChecklist();
 fetchCues();
+fetchRecorderState();
+fetchVideoState();
+fetchIrCommands();
 pollTimer = setInterval(function() {
   fetchHealth();
   fetchCues();

@@ -393,7 +393,10 @@
         ],
         "mode": "parallel",
         "seriesGap": 1000,
-        "prompt": { "message": "Recording name:", "default": "" },
+        "prompt": {
+          "message": "Recording name:",
+          "default": ""
+        },
         "toggle": {
           "activeLabel": "Stop Rec",
           "activeIcon": "⏹️",

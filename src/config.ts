@@ -9,9 +9,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from 'yaml';
 import { ZodError } from 'zod';
+import { MongoClient } from 'mongodb';
 import { DeviceConfig } from './drivers/device-driver';
 import { ProbeTarget } from './systems-check';
-import { validateHubConfig, validateLegacyConfig, formatZodError } from './config-schema';
+import { validateHubConfig, validateLegacyConfig, formatZodError, hubConfigSchema } from './config-schema';
 
 // --- Legacy Config (backward compat with single-Avantis setups) ---
 
@@ -225,6 +226,51 @@ function loadHubConfig(parsed: any): Config {
 
   console.log(`[Config] Hub mode: ${devices.length} device(s) configured`);
   return config;
+}
+
+/**
+ * Load devices from MongoDB.
+ * Opens a temporary connection, reads all docs from the `devices` collection,
+ * validates each against Zod schemas, and returns them as DeviceConfig[].
+ */
+export async function loadDevicesFromDb(mongoUrl: string, dbName: string): Promise<DeviceConfig[]> {
+  const client = new MongoClient(mongoUrl);
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const docs = await db.collection('devices').find().toArray();
+
+    if (docs.length === 0) {
+      throw new Error('[Config] No devices found in MongoDB. Run: npx ts-node scripts/seed-devices.ts');
+    }
+
+    // Validate each device doc against the Zod device schemas
+    const deviceSchemas = hubConfigSchema.shape.devices;
+    const devices: DeviceConfig[] = [];
+
+    for (const doc of docs) {
+      // Strip MongoDB _id before validation
+      const { _id, ...deviceData } = doc;
+      try {
+        const validated = deviceSchemas.element.parse(deviceData);
+        let prefix = validated.prefix;
+        if (!prefix.startsWith('/')) prefix = '/' + prefix;
+        prefix = prefix.replace(/\/$/, '');
+        devices.push({ ...validated, prefix } as DeviceConfig);
+      } catch (err) {
+        if (err instanceof ZodError) {
+          console.warn(`[Config] Skipping invalid device ${doc.prefix}: ${formatZodError(err)}`);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    console.log(`[Config] Loaded ${devices.length} device(s) from MongoDB`);
+    return devices;
+  } finally {
+    await client.close();
+  }
 }
 
 /** Load legacy single-Avantis format and convert to hub format */

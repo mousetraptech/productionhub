@@ -458,6 +458,48 @@ actions:
       - prefix: hub
         address: /panic
 
+  # ─── Projector (Broadlink IR) ───
+  projector-on:
+    label: "Projector On"
+    category: "Projector"
+    icon: "📽️"
+    color: "#7C3AED"
+    description: "Turn on the Optoma projector"
+    commands:
+      - device: broadlink
+        address: /send/optoma_power
+
+  projector-off:
+    label: "Projector Off"
+    category: "Projector"
+    icon: "📽️"
+    color: "#7C3AED"
+    description: "Turn off the Optoma projector"
+    commands:
+      - device: broadlink
+        address: /send/optoma_power_off
+
+  # ─── Video Switch ───
+  video-guest-laptop:
+    label: "Guest Laptop"
+    category: "Video"
+    icon: "🖥️"
+    color: "#2563EB"
+    description: "Switch video to guest laptop (HDMI 1)"
+    commands:
+      - device: video-switch
+        address: /input/1
+
+  video-wireless:
+    label: "Wireless HDMI"
+    category: "Video"
+    icon: "📡"
+    color: "#2563EB"
+    description: "Switch video to wireless HDMI (HDMI 3)"
+    commands:
+      - device: video-switch
+        address: /input/3
+
   # ─── Recording (NDI) ───
   recorder-start:
     label: "Start Recording"
