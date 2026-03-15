@@ -26,6 +26,12 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
       onClick?.();
       return;
     }
+    if (button.imperative) {
+      onFire(button);
+      setFiring(true);
+      setTimeout(() => setFiring(false), 200);
+      return;
+    }
     const isActive = !!(button.toggle && buttonState.active);
     const effectiveButton = isActive
       ? { ...button, actions: button.toggle!.activeActions }

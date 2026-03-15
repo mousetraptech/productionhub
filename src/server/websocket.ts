@@ -459,6 +459,13 @@ export class ModWebSocket {
       showName = `Show ${new Date().toLocaleTimeString()}`;
     }
 
+    // Apply YYYYMMDD prefix
+    const d = new Date();
+    const datePrefix = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    if (!showName.match(/^\d{8}\s/)) {
+      showName = `${datePrefix} ${showName}`;
+    }
+
     try {
       const show = await this.showContext.startShow(showName);
       const status = await this.showContext.getStatus();
@@ -488,7 +495,7 @@ export class ModWebSocket {
           body: JSON.stringify({
             type: 'text_input',
             title: 'End Show',
-            message: `End "${active.name}"? Type YES to confirm.`,
+            message: `End "${active.displayName}"? Type YES to confirm.`,
             default: '',
           }),
         });

@@ -17,9 +17,10 @@ export interface DeviceSnapshot {
 
 export interface ShowDocument {
   show_id: string;
-  name: string;
-  date: string;           // ISO date (YYYY-MM-DD)
-  started_at: string;     // ISO datetime
+  name: string;             // canonical: "YYYYMMDD Show Name"
+  displayName: string;      // user-entered: "Show Name"
+  date: string;             // ISO date (YYYY-MM-DD)
+  started_at: string;       // ISO datetime
   ended_at: string | null;
   closed_properly: boolean;
   state: ShowContextState;

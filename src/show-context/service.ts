@@ -23,6 +23,7 @@ export class ShowContextService {
   private client: MongoClient;
   private db: Db | null = null;
   private shows: Collection<ShowDocument> | null = null;
+  private showContext: Collection | null = null;
   private dbName: string;
   private snapshotFn: DeviceSnapshotFn;
 
@@ -36,6 +37,7 @@ export class ShowContextService {
     await this.client.connect();
     this.db = this.client.db(this.dbName);
     this.shows = this.db.collection<ShowDocument>('shows');
+    this.showContext = this.db.collection('show_context');
 
     // Detect orphaned active shows on startup
     await this.closeOrphanedShows();
@@ -47,6 +49,12 @@ export class ShowContextService {
     await this.client.close();
     this.db = null;
     this.shows = null;
+  }
+
+  /** Extract display name from canonical "YYYYMMDD Show Name" format */
+  private extractDisplayName(canonicalName: string): string {
+    const match = canonicalName.match(/^\d{8}\s+(.+)$/);
+    return match ? match[1] : canonicalName;
   }
 
   /** Start a new show. Auto-closes any active show first. */
@@ -62,10 +70,12 @@ export class ShowContextService {
 
     const snapshot = await this.snapshotFn();
     const now = new Date();
+    const displayName = this.extractDisplayName(name);
 
     const doc: ShowDocument = {
       show_id: randomUUID(),
       name,
+      displayName,
       date: now.toISOString().split('T')[0],
       started_at: now.toISOString(),
       ended_at: null,
@@ -77,7 +87,15 @@ export class ShowContextService {
     };
 
     await this.shows!.insertOne(doc);
-    log.info({ show_id: doc.show_id, name }, 'Show started');
+
+    // Update singleton for fast boot reads
+    await this.showContext!.updateOne(
+      { _id: 'current' as any },
+      { $set: { showId: doc.show_id, canonicalName: name, displayName, startedAt: now } },
+      { upsert: true },
+    );
+
+    log.info({ show_id: doc.show_id, name, displayName }, 'Show started');
     return doc;
   }
 
@@ -92,6 +110,13 @@ export class ShowContextService {
     }
 
     await this.closeShow(active.show_id, true);
+
+    // Clear singleton
+    await this.showContext!.updateOne(
+      { _id: 'current' as any },
+      { $set: { showId: null, canonicalName: null, displayName: null, startedAt: null } },
+      { upsert: true },
+    );
 
     const updated = await this.shows!.findOne({ show_id: active.show_id });
     log.info({ show_id: active.show_id, name: active.name }, 'Show ended');
@@ -154,6 +179,19 @@ export class ShowContextService {
   async getCurrentShowId(): Promise<string | null> {
     const active = await this.getActiveShow();
     return active?.show_id ?? null;
+  }
+
+  /** Fast boot read — get current show context from singleton doc. */
+  async getCurrentShowContext(): Promise<{ showId: string; canonicalName: string; displayName: string; startedAt: Date } | null> {
+    if (!this.showContext) return null;
+    const doc = await this.showContext.findOne({ _id: 'current' as any });
+    if (!doc || !doc.showId) return null;
+    return {
+      showId: doc.showId,
+      canonicalName: doc.canonicalName,
+      displayName: doc.displayName,
+      startedAt: doc.startedAt,
+    };
   }
 
   private ensureConnected(): void {

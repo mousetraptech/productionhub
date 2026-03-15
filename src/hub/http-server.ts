@@ -377,6 +377,26 @@ export class HubHttpServer {
       return;
     }
 
+    if (method === 'POST' && url === '/api/show/end') {
+      const showContext = this.deps.getShowContext?.();
+      if (!showContext) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Show context not available' }));
+        return;
+      }
+      showContext.endShow().then(show => {
+        if (show) {
+          log.info({ show_id: show.show_id, name: show.name }, 'Show ended from API');
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ended: !!show, show }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      });
+      return;
+    }
+
     // Recorder state API
     if (method === 'GET' && url === '/api/device/recorder') {
       const driver = Array.from(this.deps.getDrivers().values())

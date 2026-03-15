@@ -33,7 +33,7 @@ export function getDeckButtonState(
   actionCommands?: Map<string, ActionCommandRef[]>,
 ): ButtonState {
   const state: ButtonState = { level: null, active: false, live: false };
-  if (!button.actions.length) return state;
+  if (!button.actions.length || button.imperative) return state;
 
   const firstAction = button.actions[0];
 

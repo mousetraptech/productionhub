@@ -3,7 +3,7 @@
  *
  * Models an IR-controlled HDMI switch with N inputs and 1 output.
  * Delegates physical control to the Broadlink driver via OSC routing.
- * Tracks selected input state locally (no feedback from the switch).
+ * Tracks selected input state locally and persists to MongoDB (ui_state).
  *
  * OSC addresses (prefix stripped):
  *   /input/{n}              Select input N
@@ -11,11 +11,12 @@
  *
  * Config maps input numbers to Broadlink IR command names:
  *   inputs:
- *     1: { label: "Mac Mini", ir: "hdmi_sw_1" }
- *     2: { label: "Apple TV", ir: "hdmi_sw_2" }
+ *     1: { label: "Guest Laptop", ir: "hdmi_1" }
+ *     3: { label: "Wireless HDMI", ir: "hdmi_3" }
  */
 
 import { EventEmitter } from 'events';
+import { MongoClient, Collection } from 'mongodb';
 import { DeviceDriver, DeviceConfig, HubContext, FeedbackEvent, OscArg } from './device-driver';
 import { getLogger } from '../logger';
 
@@ -32,6 +33,15 @@ export interface VideoSwitchConfig extends DeviceConfig {
   /** Broadlink driver prefix (e.g. "/ir") for routing IR commands */
   irPrefix: string;
   inputs: Record<string, VideoSwitchInput>;
+  /** MongoDB connection URL (injected by index.ts) */
+  mongoUrl?: string;
+  /** MongoDB database name */
+  mongoDbName?: string;
+}
+
+interface UiStateDoc {
+  key: string;
+  value: string | null;
 }
 
 export class VideoSwitchDriver extends EventEmitter implements DeviceDriver {
@@ -43,12 +53,18 @@ export class VideoSwitchDriver extends EventEmitter implements DeviceDriver {
   private routeOSC: ((address: string, args: any[]) => void) | null = null;
   private currentInput: number = 0;
   private connected: boolean = false;
+  private mongoUrl: string | null;
+  private mongoDbName: string;
+  private uiState: Collection<UiStateDoc> | null = null;
+  private mongoClient: MongoClient | null = null;
 
   constructor(config: VideoSwitchConfig, _hubContext: HubContext, _verbose = false) {
     super();
     this.name = config.name ?? 'video-switch';
     this.prefix = config.prefix;
     this.irPrefix = config.irPrefix;
+    this.mongoUrl = config.mongoUrl ?? null;
+    this.mongoDbName = config.mongoDbName ?? 'productionhub';
     this.inputs = new Map();
     for (const [key, val] of Object.entries(config.inputs ?? {})) {
       this.inputs.set(parseInt(key, 10), val);
@@ -60,14 +76,50 @@ export class VideoSwitchDriver extends EventEmitter implements DeviceDriver {
     this.routeOSC = routeOSC;
   }
 
-  connect(): void {
+  async connect(): Promise<void> {
+    // Connect to MongoDB and restore last state
+    if (this.mongoUrl) {
+      try {
+        this.mongoClient = new MongoClient(this.mongoUrl);
+        await this.mongoClient.connect();
+        this.uiState = this.mongoClient.db(this.mongoDbName).collection<UiStateDoc>('ui_state');
+        await this.uiState.createIndex({ key: 1 }, { unique: true });
+
+        // Restore persisted input
+        const doc = await this.uiState.findOne({ key: 'videoInput' });
+        if (doc?.value) {
+          // Find input number by label match
+          for (const [n, input] of this.inputs) {
+            if (input.label.toLowerCase().replace(/\s+/g, '_') === doc.value || String(n) === doc.value) {
+              this.currentInput = n;
+              log.info({ input: n, label: input.label }, 'Restored video input from DB');
+              break;
+            }
+          }
+        }
+      } catch (err: any) {
+        log.warn({ err: err.message }, 'MongoDB unavailable — video switch state will not persist');
+        this.uiState = null;
+      }
+    }
+
     this.connected = true;
     this.emit('connected');
     log.info({ inputs: this.inputs.size }, 'Video switch ready');
+
+    // Emit initial state so dashboard picks it up
+    if (this.currentInput > 0) {
+      this.emitState();
+    }
   }
 
   disconnect(): void {
     this.connected = false;
+    if (this.mongoClient) {
+      this.mongoClient.close().catch(() => {});
+      this.mongoClient = null;
+      this.uiState = null;
+    }
   }
 
   isConnected(): boolean {
@@ -98,7 +150,7 @@ export class VideoSwitchDriver extends EventEmitter implements DeviceDriver {
     // No-op
   }
 
-  private selectInput(n: number): void {
+  private async selectInput(n: number): Promise<void> {
     const input = this.inputs.get(n);
     if (!input) {
       log.warn({ input: n, available: Array.from(this.inputs.keys()) }, 'Invalid input');
@@ -116,6 +168,17 @@ export class VideoSwitchDriver extends EventEmitter implements DeviceDriver {
 
     this.currentInput = n;
     log.info({ input: n, label: input.label }, 'Input selected');
+
+    // Persist to MongoDB
+    if (this.uiState) {
+      const stateValue = String(n);
+      this.uiState.updateOne(
+        { key: 'videoInput' },
+        { $set: { key: 'videoInput', value: stateValue } },
+        { upsert: true },
+      ).catch(err => log.warn({ err: err.message }, 'Failed to persist video input state'));
+    }
+
     this.emitState();
   }
 

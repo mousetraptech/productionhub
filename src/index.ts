@@ -451,8 +451,8 @@ async function main(): Promise<void> {
 
   // Create and register drivers from config
   for (const deviceConf of config.devices) {
-    // Pass MongoDB config to Broadlink driver for IR code persistence
-    if (deviceConf.type === 'broadlink' && config.mongodb) {
+    // Pass MongoDB config to drivers that need persistence
+    if ((deviceConf.type === 'broadlink' || deviceConf.type === 'video-switch') && config.mongodb) {
       (deviceConf as any).mongoUrl = config.mongodb.url;
       (deviceConf as any).mongoDbName = config.mongodb.dbName;
     }

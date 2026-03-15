@@ -25,6 +25,7 @@ export interface DeckButton {
     pulse?: boolean;
   };
   prompt?: { message: string; default?: string };
+  imperative?: boolean;
 }
 
 export interface GridSlot {
