@@ -415,36 +415,36 @@
       "col": 4,
       "button": {
         "id": "btn-1771866247205-3b1g",
-        "label": "MUTE Ch 1",
+        "label": "MUTE RF1",
         "icon": "",
         "color": "#64748B",
         "actions": [
           {
             "actionId": "inline:mute:1771866247204",
             "osc": {
-              "address": "/avantis/ch/1/mix/mute",
+              "address": "/avantis/ch/55/mix/mute",
               "args": [
                 1
               ],
-              "label": "Mute Ch 1"
+              "label": "Mute Ch 55"
             }
           }
         ],
         "mode": "parallel",
         "seriesGap": 1000,
         "toggle": {
-          "activeLabel": "MUTED Ch 1",
+          "activeLabel": "MUTED RF1",
           "activeIcon": "🔇",
           "activeColor": "#EF4444",
           "activeActions": [
             {
               "actionId": "inline:unmute:1771866247204",
               "osc": {
-                "address": "/avantis/ch/1/mix/mute",
+                "address": "/avantis/ch/55/mix/mute",
                 "args": [
                   0
                 ],
-                "label": "Unmute Ch 1"
+                "label": "Unmute Ch 55"
               }
             }
           ]
@@ -456,36 +456,36 @@
       "col": 4,
       "button": {
         "id": "btn-1771868250222-vmda",
-        "label": "MUTE Ch 2",
+        "label": "MUTE RF2",
         "icon": "",
         "color": "#64748B",
         "actions": [
           {
             "actionId": "inline:mute:1771868250222",
             "osc": {
-              "address": "/avantis/ch/2/mix/mute",
+              "address": "/avantis/ch/56/mix/mute",
               "args": [
                 1
               ],
-              "label": "Mute Ch 2"
+              "label": "Mute Ch 56"
             }
           }
         ],
         "mode": "parallel",
         "seriesGap": 1000,
         "toggle": {
-          "activeLabel": "MUTED Ch 2",
+          "activeLabel": "MUTED RF2",
           "activeIcon": "🔇",
           "activeColor": "#EF4444",
           "activeActions": [
             {
               "actionId": "inline:unmute:1771868250222",
               "osc": {
-                "address": "/avantis/ch/2/mix/mute",
+                "address": "/avantis/ch/56/mix/mute",
                 "args": [
                   0
                 ],
-                "label": "Unmute Ch 2"
+                "label": "Unmute Ch 56"
               }
             }
           ]

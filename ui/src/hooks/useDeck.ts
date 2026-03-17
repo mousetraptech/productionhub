@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { DeckButton, DeckAction, GridSlot, ActionCategory, InlineOSC } from '../types';
+import { DeckButton, GridSlot, ActionCategory, InlineOSC } from '../types';
 
 interface UseDeckOptions {
   initialProfile?: string;
@@ -168,6 +168,29 @@ export function useDeck(options: UseDeckOptions = {}) {
     }));
   }, []);
 
+  const swapButtons = useCallback((fromRow: number, fromCol: number, toRow: number, toCol: number) => {
+    setGrid(prev => {
+      const fromSlot = prev.find(s => s.row === fromRow && s.col === fromCol);
+      const toSlot = prev.find(s => s.row === toRow && s.col === toCol);
+
+      let next = prev.filter(s =>
+        !(s.row === fromRow && s.col === fromCol) &&
+        !(s.row === toRow && s.col === toCol)
+      );
+
+      // Move from → to position
+      if (fromSlot) {
+        next = [...next, { row: toRow, col: toCol, button: fromSlot.button }];
+      }
+      // Move to → from position (swap)
+      if (toSlot) {
+        next = [...next, { row: fromRow, col: fromCol, button: toSlot.button }];
+      }
+
+      return next;
+    });
+  }, []);
+
   const toggleEdit = useCallback(() => setEditing(e => !e), []);
 
   return {
@@ -185,6 +208,7 @@ export function useDeck(options: UseDeckOptions = {}) {
     removeButton,
     updateButton,
     removeAction,
+    swapButtons,
     toggleEdit,
   };
 }

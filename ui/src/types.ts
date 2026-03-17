@@ -66,6 +66,7 @@ export interface DeckButton {
   label: string;
   icon: string;
   color: string;
+  buttonType?: 'show' | 'cue' | 'rec' | 'stream' | 'audio' | 'wall' | 'cam' | 'lx' | 'panic';
   actions: DeckAction[];
   mode: 'parallel' | 'series';
   seriesGap: number;

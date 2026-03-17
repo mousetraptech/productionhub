@@ -10,12 +10,10 @@ import type { InlineOSC, DeckButton } from '../types';
 /** Auto-generate a toggle for mute commands so the button unmutes when pressed again. */
 function buildAutoToggle(commandType: string, actionId: string, osc: InlineOSC): DeckButton['toggle'] | undefined {
   if (commandType !== 'mute') return undefined;
-  // Mute OSC: /avantis/{strip}/mix/mute with args [1]
-  // Extract channel label from the osc label (e.g., "Mute Ch 5" → "Ch 5")
   const chLabel = osc.label.replace(/^Mute\s*/, '');
   return {
     activeLabel: `MUTED ${chLabel}`,
-    activeIcon: '🔇',
+    activeIcon: '',
     activeColor: '#EF4444',
     activeActions: [{
       actionId: actionId.replace(':mute:', ':unmute:'),
@@ -52,13 +50,14 @@ export function DeckPage() {
   return (
     <div style={{
       height: '100vh', display: 'flex', flexDirection: 'column',
-      background: '#0F172A', color: '#E2E8F0',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      background: '#0a0a0a', color: '#e8e8e8',
+      fontFamily: "'IBM Plex Sans', sans-serif",
     }}>
       <DeckToolbar
         profiles={deck.profiles}
         currentProfile={deck.currentProfile}
         editing={deck.editing}
+        connected={deck.connected}
         onLoadProfile={deck.loadProfile}
         onSaveProfile={deck.saveProfile}
         onDeleteProfile={deck.deleteProfile}
@@ -66,7 +65,10 @@ export function DeckPage() {
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {deck.editing && (
-          <div style={{ width: 270, borderRight: '1px solid #334155', overflowY: 'auto' }}>
+          <div style={{
+            width: 270, borderRight: '1px solid #2a2a2a',
+            overflowY: 'auto', background: '#111',
+          }}>
             <ActionPalette categories={deck.categories} onNewShow={() => {}} />
           </div>
         )}
@@ -80,6 +82,7 @@ export function DeckPage() {
             onAssign={deck.assignAction}
             onUpdate={deck.updateButton}
             onRemoveAction={deck.removeAction}
+            onSwap={deck.swapButtons}
             onCommandDrop={handleCommandDrop}
             deviceStates={deviceStates}
           />

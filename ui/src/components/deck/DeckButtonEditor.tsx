@@ -1,4 +1,5 @@
 import { DeckButton } from '../../types';
+import { BUTTON_TYPES, ButtonType } from './buttonTypes';
 
 interface DeckButtonEditorProps {
   button: DeckButton;
@@ -9,6 +10,21 @@ interface DeckButtonEditorProps {
   onClose: () => void;
 }
 
+const FONT_MONO = "'IBM Plex Mono', monospace";
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontFamily: FONT_MONO, fontSize: 10,
+  color: '#888', letterSpacing: '0.1em', textTransform: 'uppercase',
+  marginBottom: 4, marginTop: 14,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', background: '#1c1c1c', color: '#e8e8e8',
+  border: '1px solid #333', borderRadius: 2,
+  fontFamily: FONT_MONO, fontSize: 12, padding: '7px 10px',
+  boxSizing: 'border-box', outline: 'none',
+};
+
 export function DeckButtonEditor({
   button, row, col, onUpdate, onRemoveAction, onClose,
 }: DeckButtonEditorProps) {
@@ -17,7 +33,7 @@ export function DeckButtonEditor({
       onClick={onClose}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.6)', display: 'flex',
+        background: 'rgba(0,0,0,0.85)', display: 'flex',
         alignItems: 'center', justifyContent: 'center',
         zIndex: 1000,
       }}
@@ -25,20 +41,21 @@ export function DeckButtonEditor({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#1E293B', borderRadius: 12, padding: 20,
-          minWidth: 320, maxWidth: 400, border: '1px solid #334155',
+          background: '#141414', borderRadius: 4, padding: 24,
+          minWidth: 360, maxWidth: 400, border: '1px solid #333',
+          maxHeight: '90vh', overflowY: 'auto',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, color: '#E2E8F0', fontSize: 16 }}>Edit Button</h3>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: '#94A3B8',
-            cursor: 'pointer', fontSize: 18,
-          }}>x</button>
-        </div>
+        <h3 style={{
+          margin: '0 0 16px', fontFamily: FONT_MONO, fontSize: 11,
+          fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase',
+          color: '#c8a96e',
+        }}>
+          Edit Button
+        </h3>
 
         {/* Label */}
-        <label style={labelStyle}>Label</label>
+        <label style={labelStyle}>Label (use \n for line break)</label>
         <input
           type="text"
           value={button.label}
@@ -52,33 +69,46 @@ export function DeckButtonEditor({
           type="text"
           value={button.icon}
           onChange={(e) => onUpdate(row, col, { icon: e.target.value })}
-          style={{ ...inputStyle, width: 60 }}
+          style={{ ...inputStyle, width: 80 }}
         />
 
-        {/* Color */}
-        <label style={labelStyle}>Color</label>
-        <input
-          type="color"
-          value={button.color}
-          onChange={(e) => onUpdate(row, col, { color: e.target.value })}
-          style={{ ...inputStyle, width: 60, height: 32, padding: 2 }}
-        />
+        {/* Button Type */}
+        <label style={labelStyle}>Type</label>
+        <select
+          value={button.buttonType ?? ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '') {
+              onUpdate(row, col, { buttonType: undefined });
+            } else {
+              onUpdate(row, col, { buttonType: val as ButtonType });
+            }
+          }}
+          style={{ ...inputStyle }}
+        >
+          <option value="">Auto-detect</option>
+          {(Object.keys(BUTTON_TYPES) as ButtonType[]).map(t => (
+            <option key={t} value={t}>{BUTTON_TYPES[t].label}</option>
+          ))}
+        </select>
 
         {/* Mode */}
         <label style={labelStyle}>Execution Mode</label>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
           {(['parallel', 'series'] as const).map(m => (
             <button
               key={m}
               onClick={() => onUpdate(row, col, { mode: m })}
               style={{
-                background: button.mode === m ? '#3B82F6' : '#0F172A',
-                color: '#E2E8F0', border: '1px solid #475569',
-                borderRadius: 6, padding: '6px 14px', cursor: 'pointer',
-                fontSize: 13, fontWeight: button.mode === m ? 700 : 400,
+                fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                background: button.mode === m ? '#1c1c1c' : 'transparent',
+                color: button.mode === m ? '#e8e8e8' : '#555',
+                border: `1px solid ${button.mode === m ? '#c8a96e' : '#333'}`,
+                borderRadius: 2, padding: '5px 12px', cursor: 'pointer',
               }}
             >
-              {m === 'parallel' ? 'Parallel' : 'Series'}
+              {m}
             </button>
           ))}
         </div>
@@ -99,7 +129,7 @@ export function DeckButtonEditor({
 
         {/* Prompt before fire */}
         <label style={labelStyle}>Prompt before fire</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <input
             type="checkbox"
             checked={!!button.prompt}
@@ -110,9 +140,11 @@ export function DeckButtonEditor({
                 onUpdate(row, col, { prompt: undefined });
               }
             }}
-            style={{ accentColor: '#3B82F6' }}
+            style={{ accentColor: '#c8a96e' }}
           />
-          <span style={{ color: '#CBD5E1', fontSize: 13 }}>Ask for input before firing</span>
+          <span style={{ fontFamily: FONT_MONO, color: '#888', fontSize: 10 }}>
+            Ask for input before firing
+          </span>
         </div>
         {button.prompt && (
           <>
@@ -139,16 +171,20 @@ export function DeckButtonEditor({
           {button.actions.map((action, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              background: '#0F172A', borderRadius: 6, padding: '6px 8px',
+              background: '#1c1c1c', borderRadius: 2, padding: '6px 8px',
+              border: '1px solid #2a2a2a',
             }}>
-              <span style={{ flex: 1, fontSize: 12, color: '#CBD5E1', fontFamily: 'monospace' }}>
+              <span style={{
+                flex: 1, fontSize: 10, color: '#888', fontFamily: FONT_MONO,
+              }}>
                 {action.osc ? action.osc.label : action.actionId}
               </span>
               <button
                 onClick={() => onRemoveAction(row, col, i)}
                 style={{
-                  background: 'none', border: 'none', color: '#EF4444',
-                  cursor: 'pointer', fontSize: 14, padding: '0 4px',
+                  background: 'none', border: 'none', color: '#f08080',
+                  cursor: 'pointer', fontSize: 12, padding: '0 4px',
+                  fontFamily: FONT_MONO,
                 }}
               >x</button>
             </div>
@@ -156,7 +192,8 @@ export function DeckButtonEditor({
         </div>
 
         <div style={{
-          marginTop: 12, fontSize: 11, color: '#475569', textAlign: 'center',
+          marginTop: 14, fontFamily: FONT_MONO, fontSize: 9,
+          color: '#555', textAlign: 'center', letterSpacing: '0.05em',
         }}>
           Close editor and drag actions onto the button to add more
         </div>
@@ -164,15 +201,3 @@ export function DeckButtonEditor({
     </div>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: 'block', color: '#94A3B8', fontSize: 11,
-  marginBottom: 4, marginTop: 12, textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-};
-
-const inputStyle: React.CSSProperties = {
-  background: '#0F172A', color: '#E2E8F0', border: '1px solid #475569',
-  borderRadius: 6, padding: '6px 8px', fontSize: 14, width: '100%',
-  boxSizing: 'border-box',
-};

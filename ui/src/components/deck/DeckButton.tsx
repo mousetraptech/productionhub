@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { DeckButton as DeckButtonType } from '../../types';
 import { getDeckButtonState, ButtonState, ActionCommandRef } from './useDeckButtonState';
+import { getButtonColors, BUTTON_TYPES } from './buttonTypes';
 
 interface DeckButtonProps {
   button: DeckButtonType;
@@ -12,6 +13,8 @@ interface DeckButtonProps {
   actionCommands?: Map<string, ActionCommandRef[]>;
 }
 
+const FONT_MONO = "'IBM Plex Mono', monospace";
+
 export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceStates, actionCommands }: DeckButtonProps) {
   const [firing, setFiring] = useState(false);
 
@@ -20,6 +23,13 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
     : { level: null, active: false, live: false };
 
   const isToggled = !!(button.toggle && buttonState.active);
+
+  // Derive colors from type system
+  const firstOsc = button.actions[0]?.osc?.address ?? '';
+  const colors = getButtonColors(button.buttonType, button.label, firstOsc, button.color);
+  const toggleColors = isToggled && button.toggle?.activeColor
+    ? { bg: button.toggle.activeColor + '30', border: button.toggle.activeColor, text: '#e8e8e8' }
+    : null;
 
   const handlePress = useCallback(() => {
     if (editing) {
@@ -40,105 +50,122 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
     setFiring(true);
     setTimeout(() => setFiring(false), 200);
   }, [button, buttonState.active, editing, onFire, onClick]);
+
   const displayLabel = isToggled ? button.toggle!.activeLabel : button.label;
   const displayIcon = isToggled ? button.toggle!.activeIcon : button.icon;
-  const displayColor = isToggled ? button.toggle!.activeColor : button.color;
+
+  const c = toggleColors ?? colors;
+  const isMuted = isToggled; // for mute-type toggles, active = muted
+
+  // Multi-line label support
+  const labelLines = displayLabel.split('\n');
+
+  // State-driven visual effects
+  const stateActive = buttonState.active && !button.toggle; // non-toggle active (e.g. show/rec glow)
+  const glowColor = stateActive ? c.text : 'transparent';
 
   return (
-    <>
     <div
       onPointerDown={handlePress}
       style={{
-        background: firing
-          ? displayColor + '80'
-          : isToggled
-            ? displayColor + '40'
-            : buttonState.active
-              ? displayColor + '55'
-              : displayColor + '26',
-        border: `2px solid ${
-          buttonState.active && !button.toggle ? '#10B981' :
-          buttonState.live ? '#EF4444' :
-          displayColor + (firing ? 'CC' : '55')
-        }`,
-        borderRadius: 12,
-        width: '100%', height: '100%',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
+        position: 'relative',
+        background: c.bg,
+        border: `1px solid ${firing ? c.text : c.border}`,
+        borderRadius: 3,
+        width: '100%',
+        height: '100%',
+        minHeight: 62,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         cursor: editing ? 'default' : 'pointer',
         userSelect: 'none',
         touchAction: 'manipulation',
-        position: 'relative',
-        minHeight: 0,
-        transition: 'background 0.2s, border-color 0.2s, transform 0.1s',
-        transform: firing ? 'scale(0.95)' : 'scale(1)',
-        boxShadow: firing
-          ? `0 0 20px ${displayColor}66`
-          : isToggled
-            ? `0 0 12px ${displayColor}44`
+        fontFamily: FONT_MONO,
+        fontSize: 10,
+        fontWeight: 500,
+        letterSpacing: '0.05em',
+        color: c.text,
+        padding: '8px 6px',
+        textAlign: 'center',
+        lineHeight: 1.3,
+        transition: 'transform 0.1s, opacity 0.1s, box-shadow 0.15s, filter 0.15s',
+        transform: firing ? 'scale(0.92)' : 'scale(1)',
+        filter: firing ? 'brightness(1.4)' : isMuted ? 'saturate(0.3)' : 'none',
+        opacity: isMuted ? 0.4 : 1,
+        boxShadow: stateActive
+          ? `0 0 12px 2px ${glowColor}`
+          : firing
+            ? `0 0 12px ${c.border}`
             : 'none',
       }}
     >
+      {/* Fader level bar */}
       {buttonState.level !== null && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: `${(buttonState.level ?? 0) * 100}%`,
-          background: displayColor + '66',
-          borderRadius: '0 0 10px 10px',
+          background: c.text + '22',
+          borderRadius: '0 0 2px 2px',
           transition: 'height 0.15s ease-out',
           pointerEvents: 'none',
         }} />
       )}
-      <span style={{ fontSize: 24, pointerEvents: 'none' }}>{displayIcon}</span>
-      {buttonState.live && (
-        <span style={{
-          position: 'absolute', top: 4, left: 6,
-          fontSize: 8, color: '#EF4444', fontWeight: 700,
-          pointerEvents: 'none',
-        }}>LIVE</span>
+
+      {/* Icon */}
+      {displayIcon && (
+        <span style={{ fontSize: 18, pointerEvents: 'none', marginBottom: 2 }}>{displayIcon}</span>
       )}
-      <span style={{
-        fontSize: 11, color: '#E2E8F0', marginTop: 4,
-        textAlign: 'center', padding: '0 4px',
-        overflow: 'hidden', textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap', maxWidth: '100%',
-        pointerEvents: 'none',
-      }}>
-        {displayLabel}
-      </span>
-      {button.actions.length > 1 && (
+
+      {/* Multi-line label */}
+      {labelLines.map((line, i) => (
+        <span key={i} style={{ pointerEvents: 'none' }}>{line}</span>
+      ))}
+
+      {/* Type badge */}
+      {button.buttonType && BUTTON_TYPES[button.buttonType] && (
         <span style={{
-          position: 'absolute', top: 4, right: 6,
-          fontSize: 9, color: '#94A3B8', fontWeight: 700,
+          position: 'absolute', top: 3, right: 4,
+          fontSize: 8, opacity: 0.5, pointerEvents: 'none',
+          letterSpacing: 0,
+        }}>
+          {BUTTON_TYPES[button.buttonType].label.slice(0, 3).toUpperCase()}
+        </span>
+      )}
+
+      {/* Multi-action count */}
+      {button.actions.length > 1 && !button.buttonType && (
+        <span style={{
+          position: 'absolute', top: 3, right: 4,
+          fontSize: 8, color: c.text, opacity: 0.5, fontWeight: 700,
           pointerEvents: 'none',
         }}>
           {button.actions.length}
         </span>
       )}
+
+      {/* Series mode */}
       {button.mode === 'series' && (
         <span style={{
-          position: 'absolute', bottom: 4, right: 6,
-          fontSize: 8, color: '#94A3B8',
-          pointerEvents: 'none',
-        }}>
-          SER
-        </span>
+          position: 'absolute', bottom: 3, right: 4,
+          fontSize: 8, opacity: 0.5, pointerEvents: 'none',
+        }}>SER</span>
       )}
+
+      {/* Edit mode remove button */}
       {editing && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           style={{
             position: 'absolute', top: -6, right: -6,
-            background: '#EF4444', color: '#FFF', border: 'none',
-            borderRadius: '50%', width: 20, height: 20,
-            fontSize: 12, cursor: 'pointer', lineHeight: '20px',
-            padding: 0,
+            background: '#a02020', color: '#FFF', border: 'none',
+            borderRadius: '50%', width: 18, height: 18,
+            fontSize: 11, cursor: 'pointer', lineHeight: '18px',
+            padding: 0, fontFamily: FONT_MONO,
           }}
-        >
-          x
-        </button>
+        >x</button>
       )}
     </div>
-    </>
   );
 }
