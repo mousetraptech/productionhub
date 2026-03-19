@@ -43,6 +43,7 @@ export class HubClient extends EventEmitter {
   grid: GridSlot[] = [];
   categories: ActionCategory[] = [];
   deviceStates: Record<string, any> = {};
+  showActive = false;
 
   constructor(config: HubClientConfig) {
     super();
@@ -127,8 +128,12 @@ export class HubClient extends EventEmitter {
             log(`Fired confirmed: ${msg.buttonId}`);
             this.emit('fired', msg.buttonId);
             break;
+          case 'show-context':
+            this.showActive = msg.state === 'active';
+            log(`Show active: ${this.showActive}`);
+            this.emit('show-context');
+            break;
           default:
-            log(`Unknown message type: ${msg.type}`);
             break;
         }
       } catch (err) {

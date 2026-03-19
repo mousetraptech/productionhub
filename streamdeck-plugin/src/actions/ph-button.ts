@@ -51,6 +51,7 @@ export class PHButton extends SingletonAction {
       this.renderAll();
     });
     this.hub.on('device-state', () => this.renderAll());
+    this.hub.on('show-context', () => this.renderAll());
     this.hub.on('connected', () => {
       log('Hub connected, rendering all keys');
       this.renderAll();
@@ -121,6 +122,7 @@ export class PHButton extends SingletonAction {
       button,
       this.hub.deviceStates as any,
       this.actionCommands,
+      { showActive: this.hub.showActive },
     );
   }
 
