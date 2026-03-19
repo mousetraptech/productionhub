@@ -507,15 +507,14 @@ export class ModWebSocket {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: 'text_input',
+            type: 'confirm',
             title: 'End Show',
-            message: `End "${active.displayName}"? Type YES to confirm.`,
-            default: '',
+            message: `End "${active.displayName}"?`,
           }),
         });
         if (!res.ok) return;
         const body = await res.json() as { cancelled?: boolean; result?: string };
-        if (body.cancelled || body.result?.toUpperCase() !== 'YES') {
+        if (body.cancelled || body.result !== 'Yes') {
           this.broadcast({ type: 'show-end-cancelled' });
           return;
         }
