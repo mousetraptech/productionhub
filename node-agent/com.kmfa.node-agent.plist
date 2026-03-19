@@ -8,7 +8,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
+        <string>/opt/kmfa/productionhub/node-agent/.venv/bin/python3</string>
         <string>-m</string>
         <string>agent.main</string>
     </array>
