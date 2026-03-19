@@ -31,11 +31,18 @@ export function getDeckButtonState(
   button: DeckButtonType,
   deviceStates: DeviceStates,
   actionCommands?: Map<string, ActionCommandRef[]>,
+  extra?: { showActive?: boolean },
 ): ButtonState {
   const state: ButtonState = { level: null, active: false, live: false };
   if (!button.actions.length || button.imperative) return state;
 
   const firstAction = button.actions[0];
+
+  // Show lifecycle toggle — active when a show is running
+  if (firstAction.actionId === 'show-toggle') {
+    state.active = extra?.showActive ?? false;
+    return state;
+  }
 
   // Resolve address and device type: inline OSC or registry action lookup
   let address = firstAction.osc?.address ?? '';

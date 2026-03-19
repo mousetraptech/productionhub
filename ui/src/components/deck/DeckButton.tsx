@@ -11,15 +11,16 @@ interface DeckButtonProps {
   onClick?: () => void;
   deviceStates?: any;
   actionCommands?: Map<string, ActionCommandRef[]>;
+  showActive?: boolean;
 }
 
 const FONT_MONO = "'IBM Plex Mono', monospace";
 
-export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceStates, actionCommands }: DeckButtonProps) {
+export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceStates, actionCommands, showActive }: DeckButtonProps) {
   const [firing, setFiring] = useState(false);
 
   const buttonState: ButtonState = deviceStates
-    ? getDeckButtonState(button, deviceStates, actionCommands)
+    ? getDeckButtonState(button, deviceStates, actionCommands, { showActive })
     : { level: null, active: false, live: false };
 
   const isToggled = !!(button.toggle && buttonState.active);

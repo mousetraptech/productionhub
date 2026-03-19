@@ -328,6 +328,20 @@ export class ModWebSocket {
     const fireMode = msg.mode ?? 'parallel';
     const gap = msg.seriesGap ?? 1000;
 
+    // Intercept show-toggle — route to start or end based on current state
+    for (const action of fireActions) {
+      if (action.actionId === 'show-toggle' && this.showContext) {
+        const active = await this.showContext.getActiveShow();
+        if (active) {
+          this.handleShowEnd({});
+        } else {
+          this.handleShowStart({});
+        }
+        this.broadcast({ type: 'deck-fired', buttonId: msg.buttonId });
+        return;
+      }
+    }
+
     let sessionName: string | undefined;
 
     // If the button has a prompt config and we have a node-agent URL, ask the user first

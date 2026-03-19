@@ -11,12 +11,13 @@ interface DeckGridProps {
   categories: ActionCategory[];
   onFire: (button: DeckButton) => void;
   onRemove: (row: number, col: number) => void;
-  onAssign: (row: number, col: number, actionId: string, osc?: InlineOSC, meta?: { label: string; icon: string; color: string }) => void;
+  onAssign: (row: number, col: number, actionId: string, osc?: InlineOSC, meta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle']) => void;
   onUpdate: (row: number, col: number, updates: Partial<DeckButton>) => void;
   onRemoveAction: (row: number, col: number, actionIndex: number) => void;
   onSwap?: (fromRow: number, fromCol: number, toRow: number, toCol: number) => void;
   onCommandDrop?: (row: number, col: number, commandType: string) => void;
   deviceStates?: any;
+  showActive?: boolean;
 }
 
 const ROWS = 4;
@@ -24,7 +25,7 @@ const COLS = 8;
 const FONT_MONO = "'IBM Plex Mono', monospace";
 const FONT_SANS = "'IBM Plex Sans', sans-serif";
 
-export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates }: DeckGridProps) {
+export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates, showActive }: DeckGridProps) {
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const dragSrcRef = useRef<{ row: number; col: number } | null>(null);
@@ -120,7 +121,17 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
           break;
         }
       }
-      onAssign(row, col, actionId, undefined, meta);
+      // Auto-configure show-toggle as a toggle button
+      const toggle = actionId === 'show-toggle'
+        ? {
+            activeLabel: 'End Show',
+            activeIcon: '🔴',
+            activeColor: '#DC2626',
+            activeActions: [{ actionId: 'show-toggle' }],
+            pulse: true,
+          }
+        : undefined;
+      onAssign(row, col, actionId, undefined, meta, toggle);
     }
   };
 
@@ -222,6 +233,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                         onClick={() => editing && setEditingSlot({ row: ri, col: ci })}
                         deviceStates={deviceStates}
                         actionCommands={actionCommands}
+                        showActive={showActive}
                       />
                     </div>
                   );

@@ -417,6 +417,15 @@ actions:
         prefix: show
         address: /panic
 
+  # ─── Show Lifecycle ───
+  show-toggle:
+    label: "Start Show"
+    category: "Show Lifecycle"
+    icon: "🎬"
+    color: "#6b4fa0"
+    description: "Start/end show — toggles based on active show state"
+    commands: []
+
   # ─── Production Hub (Cue Sequencer) ───
   ph-go:
     label: "Cue GO"

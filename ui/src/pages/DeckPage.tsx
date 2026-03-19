@@ -85,6 +85,7 @@ export function DeckPage() {
             onSwap={deck.swapButtons}
             onCommandDrop={handleCommandDrop}
             deviceStates={deviceStates}
+            showActive={deck.showActive}
           />
         </div>
       </div>

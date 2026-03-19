@@ -20,6 +20,7 @@ export function useDeck(options: UseDeckOptions = {}) {
   const [grid, setGrid] = useState<GridSlot[]>([]);
   const [editing, setEditing] = useState(false);
   const [categories, setCategories] = useState<ActionCategory[]>([]);
+  const [showActive, setShowActive] = useState(false);
 
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -56,6 +57,9 @@ export function useDeck(options: UseDeckOptions = {}) {
             break;
           case 'actions':
             setCategories(msg.categories);
+            break;
+          case 'show-context':
+            setShowActive(msg.state === 'active');
             break;
         }
       };
@@ -200,6 +204,7 @@ export function useDeck(options: UseDeckOptions = {}) {
     grid,
     editing,
     categories,
+    showActive,
     loadProfile,
     saveProfile,
     deleteProfile,
