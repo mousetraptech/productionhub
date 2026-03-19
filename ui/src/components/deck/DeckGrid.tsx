@@ -70,7 +70,8 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
 
   const handleDragOver = (e: React.DragEvent, row: number, col: number) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    // Internal swap uses 'move'; palette/command drags use 'copy'
+    e.dataTransfer.dropEffect = dragSrcRef.current ? 'move' : 'copy';
     setDragOverCell(`${row}-${col}`);
   };
 
