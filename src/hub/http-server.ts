@@ -63,6 +63,7 @@ export class HubHttpServer {
   private deps: HttpServerDeps;
   private uiDir: string;
   private uiAvailable: boolean;
+  private nodeHeartbeats = new Map<string, any>();
 
   constructor(deps: HttpServerDeps) {
     this.deps = deps;
@@ -436,6 +437,37 @@ export class HubHttpServer {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ commands: [] }));
       }
+      return;
+    }
+
+    // Node agent heartbeat
+    if (method === 'POST' && url?.match(/^\/api\/v1\/nodes\/[^/]+\/heartbeat$/)) {
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const nodeId = url!.split('/')[4];
+          this.nodeHeartbeats.set(nodeId, { ...payload, receivedAt: Date.now() });
+          log.debug({ nodeId, healthy: payload.healthy }, 'Node heartbeat received');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (err: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+      return;
+    }
+
+    // Node status API
+    if (method === 'GET' && url === '/api/v1/nodes') {
+      const nodes: Record<string, any> = {};
+      for (const [id, hb] of this.nodeHeartbeats) {
+        nodes[id] = hb;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(nodes, null, 2));
       return;
     }
 
