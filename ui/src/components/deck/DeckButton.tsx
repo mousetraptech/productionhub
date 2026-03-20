@@ -67,7 +67,8 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
 
   return (
     <div
-      onPointerDown={handlePress}
+      onPointerDown={editing ? undefined : handlePress}
+      onClick={editing ? handlePress : undefined}
       style={{
         position: 'relative',
         background: c.bg,
