@@ -107,7 +107,7 @@ export class HubClient extends EventEmitter {
               : profiles[0] ?? null;
             if (target) {
               log(`Loading profile: ${target}`);
-              this.sendMod({ type: 'deck-load', name: target });
+              this.sendMod({ type: 'deck-load', name: target, broadcast: false });
             } else {
               log('No profiles found');
             }

@@ -277,8 +277,14 @@ export class ModWebSocket {
 
       case 'deck-load': {
         const profile = this.deckPersistence.load(msg.name);
-        if (profile && sender) {
-          this.send(sender, { type: 'deck-state', name: msg.name, grid: profile.grid });
+        if (profile) {
+          if (msg.broadcast === false && sender) {
+            // Sender-only load (e.g. plugin initial connect)
+            this.send(sender, { type: 'deck-state', name: msg.name, grid: profile.grid });
+          } else {
+            // Broadcast so all clients mirror the switch
+            this.broadcast({ type: 'deck-state', name: msg.name, grid: profile.grid });
+          }
         }
         break;
       }
@@ -286,6 +292,8 @@ export class ModWebSocket {
       case 'deck-save':
         this.deckPersistence.save(msg.name, { name: msg.name, grid: msg.grid });
         this.broadcast({ type: 'deck-saved', name: msg.name });
+        // Broadcast updated state so Stream Deck mirrors the saved profile
+        this.broadcast({ type: 'deck-state', name: msg.name, grid: msg.grid });
         break;
 
       case 'deck-delete':
