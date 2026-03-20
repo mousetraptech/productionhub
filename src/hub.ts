@@ -480,9 +480,9 @@ export class ProductionHub {
       return;
     }
 
-    // Recorder start: ensure a show is active first (node-agent prompt for Stream Deck only)
-    if (this.isRecorderStart(addr) && source !== 'http') {
-      this.ensureShowThenRecord(address, args);
+    // Recorder start: set session name from active show or auto-generate
+    if (this.isRecorderStart(addr)) {
+      this.setRecorderSessionAndStart(address, args);
       return;
     }
 
@@ -517,47 +517,20 @@ export class ProductionHub {
     return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  /** Ensure a show is active before starting recording */
-  private async ensureShowThenRecord(address: string, args: any[]): Promise<void> {
+  /** Set recorder session name from active show or auto-generate, then start */
+  private async setRecorderSessionAndStart(address: string, args: any[]): Promise<void> {
+    let sessionName = `${this.todayPrefix()} Manual Recording`;
+
     if (this.showContext) {
-      const status = await this.showContext.getStatus();
-      if (!status.show) {
-        // No active show — prompt for a name via node-agent or auto-name
-        let enteredName: string | null = null;
-
-        if (this.nodeAgentUrl) {
-          try {
-            const res = await fetch(`${this.nodeAgentUrl}/api/v1/prompt`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'text_input',
-                title: 'Start Show',
-                message: 'No show is active. Enter a show name to start recording:',
-                default: '',
-              }),
-            });
-            if (res.ok) {
-              const body = await res.json() as { cancelled?: boolean; result?: string };
-              if (body.cancelled || !body.result?.trim()) {
-                log.info('Recording cancelled — no show name provided');
-                return;
-              }
-              enteredName = body.result.trim();
-            }
-          } catch (err: any) {
-            log.warn({ err: err.message }, 'Node-agent prompt failed, auto-naming show');
-          }
-        }
-
-        const showName = `${this.todayPrefix()} ${enteredName || 'Show ' + new Date().toLocaleTimeString()}`;
-        const show = await this.showContext.startShow(showName);
-        log.info({ show_id: show.show_id, name: show.name }, 'Auto-started show for recording');
+      const active = await this.showContext.getActiveShow();
+      if (active) {
+        sessionName = active.name;
       }
     }
 
-    // Now route the recorder start to the driver
-    this.driverManager.routeToDriver(address, args);
+    // Pass session name as first arg to /start
+    this.driverManager.routeToDriver(address, [sessionName]);
+    log.info({ sessionName }, 'Recorder started');
   }
 
   /** Run a full systems check */

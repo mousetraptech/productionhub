@@ -1243,26 +1243,6 @@ function todayPrefix() {
 }
 
 async function recStart() {
-  // Check if there's an active show — if not, prompt for a name and start one
-  try {
-    var showRes = await fetch('/api/show/status');
-    if (showRes.ok) {
-      var showStatus = await showRes.json();
-      if (!showStatus.active) {
-        var enteredName = prompt('No show is active. Enter a show name to start:');
-        if (!enteredName || !enteredName.trim()) return;
-        var showName = todayPrefix() + ' ' + enteredName.trim();
-        await fetch('/api/show/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: showName })
-        });
-      }
-    }
-  } catch(e) {
-    // Show context unavailable — continue with recording anyway
-  }
-
   await fetch('/osc', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
