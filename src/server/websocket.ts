@@ -89,7 +89,7 @@ export class ModWebSocket {
       ws.on('message', (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
-          this.handleMessage(msg);
+          this.handleMessage(msg, ws);
         } catch (err: any) {
           console.error(`[ModWS] Invalid message: ${err.message}`);
         }
@@ -130,7 +130,7 @@ export class ModWebSocket {
   }
 
   /** Handle an incoming message from a client */
-  private handleMessage(msg: any): void {
+  private handleMessage(msg: any, sender?: WebSocket): void {
     switch (msg.type) {
       case 'get-actions':
         this.broadcast({ type: 'actions', categories: this.actionRegistry.getCategoryList() });
@@ -270,13 +270,15 @@ export class ModWebSocket {
       }
 
       case 'deck-list':
-        this.broadcast({ type: 'deck-profiles', profiles: this.deckPersistence.list() });
+        if (sender) {
+          this.send(sender, { type: 'deck-profiles', profiles: this.deckPersistence.list() });
+        }
         break;
 
       case 'deck-load': {
         const profile = this.deckPersistence.load(msg.name);
-        if (profile) {
-          this.broadcast({ type: 'deck-state', name: msg.name, grid: profile.grid });
+        if (profile && sender) {
+          this.send(sender, { type: 'deck-state', name: msg.name, grid: profile.grid });
         }
         break;
       }
