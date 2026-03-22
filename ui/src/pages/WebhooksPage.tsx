@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useWebhooks, Webhook } from '../hooks/useWebhooks';
 import ActionPalette from '../components/ActionPalette';
 import CommandModal, { type CommandModalTarget } from '../components/CommandModal';
+import ContextMenu, { MenuItem } from '../components/ContextMenu';
 import type { InlineOSC, DeckAction } from '../types';
 
 const FONT_MONO = "'IBM Plex Mono', monospace";
@@ -17,6 +18,7 @@ export function WebhooksPage() {
   const [modalTarget, setModalTarget] = useState<CommandModalTarget | null>(null);
   const [dropWebhook, setDropWebhook] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; webhook: string; actionIdx?: number } | null>(null);
 
   const updateWebhook = useCallback((name: string, updates: Partial<Webhook>) => {
     setWebhooks(prev => prev.map(w => w.name === name ? { ...w, ...updates } : w));
@@ -127,6 +129,78 @@ export function WebhooksPage() {
     return action.actionId;
   }, [categories]);
 
+  const handleWebhookContext = useCallback((e: React.MouseEvent, webhook: string) => {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY, webhook });
+  }, []);
+
+  const handleActionContext = useCallback((e: React.MouseEvent, webhook: string, actionIdx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ x: e.clientX, y: e.clientY, webhook, actionIdx });
+  }, []);
+
+  const getCtxMenuItems = useCallback((): MenuItem[] => {
+    if (!ctxMenu) return [];
+    const { webhook, actionIdx } = ctxMenu;
+    const wh = webhooks.find(w => w.name === webhook);
+    if (!wh) return [];
+
+    // Action-level context menu
+    if (actionIdx !== undefined) {
+      const action = wh.actions[actionIdx];
+      if (!action) return [];
+      return [
+        {
+          label: 'Duplicate Action',
+          onClick: () => addAction(webhook, { ...action }),
+        },
+        {
+          label: 'Move to Top',
+          disabled: actionIdx === 0,
+          onClick: () => moveAction(webhook, actionIdx, 0),
+        },
+        {
+          label: 'Move to Bottom',
+          disabled: actionIdx === wh.actions.length - 1,
+          onClick: () => moveAction(webhook, actionIdx, wh.actions.length - 1),
+        },
+        { label: '', separator: true, onClick: () => {} },
+        {
+          label: 'Remove',
+          danger: true,
+          onClick: () => removeAction(webhook, actionIdx),
+        },
+      ];
+    }
+
+    // Webhook-level context menu
+    return [
+      {
+        label: 'Copy curl',
+        onClick: () => copyCurl(webhook),
+      },
+      {
+        label: 'Fire',
+        onClick: () => handleFire(webhook),
+      },
+      {
+        label: 'Duplicate Webhook',
+        onClick: () => {
+          const copy: Webhook = { ...wh, name: `${wh.name}-copy`, actions: [...wh.actions] };
+          setWebhooks(prev => [...prev, copy]);
+          setDirty(true);
+        },
+      },
+      { label: '', separator: true, onClick: () => {} },
+      {
+        label: 'Delete',
+        danger: true,
+        onClick: () => handleDelete(webhook),
+      },
+    ];
+  }, [ctxMenu, webhooks, addAction, moveAction, removeAction, copyCurl, handleFire, handleDelete, setWebhooks]);
+
   if (loading) return <div style={{ padding: 40, color: '#888' }}>Loading...</div>;
 
   return (
@@ -214,6 +288,7 @@ export function WebhooksPage() {
                 {/* Header */}
                 <div
                   onClick={() => setEditing(isOpen ? null : wh.name)}
+                  onContextMenu={(e) => handleWebhookContext(e, wh.name)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '10px 14px', cursor: 'pointer',
@@ -302,7 +377,7 @@ export function WebhooksPage() {
                         </div>
                       )}
                       {wh.actions.map((action, i) => (
-                        <div key={i} style={{
+                        <div key={i} onContextMenu={(e) => handleActionContext(e, wh.name, i)} style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           padding: '5px 8px', background: '#1a1a1a',
                           borderRadius: 3, marginBottom: 3,
@@ -386,6 +461,15 @@ export function WebhooksPage() {
           target={modalTarget}
           onSubmit={handleModalSubmit}
           onCancel={() => { setModalTarget(null); setDropWebhook(null); }}
+        />
+      )}
+
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={getCtxMenuItems()}
+          onClose={() => setCtxMenu(null)}
         />
       )}
     </div>

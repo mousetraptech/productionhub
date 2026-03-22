@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { ActionCategory, GridSlot, DeckButton, InlineOSC } from '../../types';
 import { DeckButton as DeckButtonComponent } from './DeckButton';
 import { DeckButtonEditor } from './DeckButtonEditor';
 import { ActionCommandRef } from './useDeckButtonState';
 import { ROW_LABELS, EMPTY_COLORS } from './buttonTypes';
+import ContextMenu, { MenuItem } from '../ContextMenu';
 
 interface DeckGridProps {
   grid: GridSlot[];
@@ -29,6 +30,8 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const dragSrcRef = useRef<{ row: number; col: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; row: number; col: number } | null>(null);
+  const [clipboard, setClipboard] = useState<DeckButton | null>(null);
 
   const actionCommands = useMemo(() => {
     const map = new Map<string, ActionCommandRef[]>();
@@ -136,6 +139,88 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
     }
   };
 
+  // --- Context menu ---
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, row: number, col: number) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, row, col });
+  }, []);
+
+  const getContextMenuItems = useCallback((): MenuItem[] => {
+    if (!contextMenu) return [];
+    const { row, col } = contextMenu;
+    const button = getButton(row, col);
+    const items: MenuItem[] = [];
+
+    if (button) {
+      items.push({
+        label: 'Copy Button',
+        shortcut: '\u2318C',
+        onClick: () => setClipboard({ ...button }),
+      });
+      items.push({
+        label: 'Duplicate',
+        onClick: () => {
+          // Find first empty cell
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              if (!getButton(r, c) && (r !== row || c !== col)) {
+                const dup = { ...button, id: `btn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
+                onAssign(r, c, dup.actions[0]?.actionId ?? '', dup.actions[0]?.osc, {
+                  label: dup.label, icon: dup.icon, color: dup.color,
+                }, dup.toggle);
+                // Copy remaining actions
+                for (let a = 1; a < dup.actions.length; a++) {
+                  onAssign(r, c, dup.actions[a].actionId, dup.actions[a].osc);
+                }
+                return;
+              }
+            }
+          }
+        },
+      });
+      if (editing) {
+        items.push({ label: '', separator: true, onClick: () => {} });
+        items.push({
+          label: 'Edit',
+          onClick: () => setEditingSlot({ row, col }),
+        });
+        items.push({
+          label: 'Remove',
+          danger: true,
+          onClick: () => onRemove(row, col),
+        });
+      }
+    }
+
+    if (clipboard && editing) {
+      if (items.length > 0) {
+        items.push({ label: '', separator: true, onClick: () => {} });
+      }
+      items.push({
+        label: `Paste "${clipboard.label}"`,
+        shortcut: '\u2318V',
+        onClick: () => {
+          const pasted = { ...clipboard, id: `btn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
+          // Remove existing button first if occupied
+          if (getButton(row, col)) onRemove(row, col);
+          onAssign(row, col, pasted.actions[0]?.actionId ?? '', pasted.actions[0]?.osc, {
+            label: pasted.label, icon: pasted.icon, color: pasted.color,
+          }, pasted.toggle);
+          for (let a = 1; a < pasted.actions.length; a++) {
+            onAssign(row, col, pasted.actions[a].actionId, pasted.actions[a].osc);
+          }
+        },
+      });
+    }
+
+    if (!button && !clipboard) {
+      items.push({ label: 'No actions', disabled: true, onClick: () => {} });
+    }
+
+    return items;
+  }, [contextMenu, clipboard, editing, grid, onAssign, onRemove]);
+
   return (
     <>
       <div style={{
@@ -186,6 +271,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                       <div
                         key={cellKey}
                         draggable={false}
+                        onContextMenu={(e) => handleContextMenu(e, ri, ci)}
                         onDragOver={(e) => handleDragOver(e, ri, ci)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, ri, ci)}
@@ -212,6 +298,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                     <div
                       key={cellKey}
                       draggable={editing}
+                      onContextMenu={(e) => handleContextMenu(e, ri, ci)}
                       onDragStart={(e) => handleDragStart(e, ri, ci)}
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => handleDragOver(e, ri, ci)}
@@ -259,6 +346,15 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
           />
         );
       })()}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={getContextMenuItems()}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </>
   );
 }
