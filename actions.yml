@@ -150,6 +150,73 @@ actions:
         address: /main/mix/mute
         args: [1]
 
+  # ─── Group Audio ───
+  mute-all-inputs:
+    label: "Mute All Inputs"
+    category: "Audio"
+    icon: "🔇"
+    color: "#EF4444"
+    description: "Mute all input channels 1-64"
+    commands:
+      - device: avantis
+        address: /ch/1-64/mix/mute
+        args: [1]
+
+  unmute-all-inputs:
+    label: "Unmute All Inputs"
+    category: "Audio"
+    icon: "🔊"
+    color: "#10B981"
+    description: "Unmute all input channels 1-64"
+    commands:
+      - device: avantis
+        address: /ch/1-64/mix/mute
+        args: [0]
+
+  kill-all-faders:
+    label: "Kill All Faders"
+    category: "Audio"
+    icon: "⬇️"
+    color: "#EF4444"
+    description: "Drop all input faders to zero"
+    commands:
+      - device: avantis
+        address: /ch/1-64/mix/fader
+        args: [0]
+
+  kill-all-dcas:
+    label: "Kill All DCAs"
+    category: "Audio"
+    icon: "⬇️"
+    color: "#EF4444"
+    description: "Drop all DCA faders to zero"
+    commands:
+      - device: avantis
+        address: /dca/1-24/fader
+        args: [0]
+
+  mute-all-dcas:
+    label: "Mute All DCAs"
+    category: "Audio"
+    icon: "🔇"
+    color: "#EF4444"
+    description: "Mute all DCAs"
+    commands:
+      - device: avantis
+        address: /dca/1-24/mute
+        args: [1]
+
+  unmute-all-dcas:
+    label: "Unmute All DCAs"
+    category: "Audio"
+    icon: "🔊"
+    color: "#10B981"
+    description: "Unmute all DCAs"
+    commands:
+      - device: avantis
+        address: /dca/1-24/mute
+        args: [0]
+
   # ─── Livestream ───
   stream-start:
     label: "Go Live"

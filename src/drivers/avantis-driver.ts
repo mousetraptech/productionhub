@@ -155,61 +155,36 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     if (parts.length === 0) return;
 
     // Dispatch by strip type
-    switch (parts[0]) {
-      case 'ch':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) this.handleStripCommand(StripType.Input, n, parts.slice(2), args);
-        }
-        break;
-      case 'mix':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) this.handleStripCommand(StripType.Mix, n, parts.slice(2), args);
-        }
-        break;
-      case 'fxsend':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) this.handleStripCommand(StripType.FXSend, n, parts.slice(2), args);
-        }
-        break;
-      case 'fxrtn':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) this.handleStripCommand(StripType.FXReturn, n, parts.slice(2), args);
-        }
-        break;
-      case 'dca':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) {
-            const subParts = parts.slice(2);
-            // /dca/{n}/fader or /dca/{n}/mute (short form)
-            if (subParts.length === 1 && subParts[0] === 'fader') {
+    const stripTypeMap: Record<string, StripType> = {
+      ch: StripType.Input, mix: StripType.Mix, fxsend: StripType.FXSend,
+      fxrtn: StripType.FXReturn, dca: StripType.DCA, grp: StripType.Group,
+      mtx: StripType.Matrix,
+    };
+
+    const stripType = stripTypeMap[parts[0]];
+    if (stripType !== undefined && parts.length >= 2) {
+      const nums = this.parseRange(parts[1]);
+      if (nums) {
+        const subParts = parts.slice(2);
+        for (const n of nums) {
+          // DCA short forms: /dca/{n}/fader, /dca/{n}/mute
+          if (stripType === StripType.DCA && subParts.length === 1) {
+            if (subParts[0] === 'fader') {
               this.handleFader({ type: StripType.DCA, number: n }, getFloat(args));
-              return;
+              continue;
             }
-            if (subParts.length === 1 && subParts[0] === 'mute') {
+            if (subParts[0] === 'mute') {
               this.handleMute({ type: StripType.DCA, number: n }, getBool(args));
-              return;
+              continue;
             }
-            this.handleStripCommand(StripType.DCA, n, subParts, args);
           }
+          this.handleStripCommand(stripType, n, subParts, args);
         }
-        break;
-      case 'grp':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) this.handleStripCommand(StripType.Group, n, parts.slice(2), args);
-        }
-        break;
-      case 'mtx':
-        if (parts.length >= 2) {
-          const n = parseInt(parts[1], 10);
-          if (!isNaN(n)) this.handleStripCommand(StripType.Matrix, n, parts.slice(2), args);
-        }
-        break;
+        return;
+      }
+    }
+
+    switch (parts[0]) {
       case 'main':
         this.handleStripCommand(StripType.Main, 1, parts.slice(1), args);
         break;
@@ -232,6 +207,29 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
           console.warn(`[Avantis] Unrecognized OSC: ${address}`);
         }
     }
+  }
+
+  /**
+   * Parse a strip number or range. Supports:
+   *   "5"      → [5]
+   *   "1-48"   → [1, 2, ..., 48]
+   *   "*"      → null (not supported yet)
+   */
+  private parseRange(part: string): number[] | null {
+    const rangeMatch = part.match(/^(\d+)-(\d+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      if (start > 0 && end >= start && end - start < 128) {
+        const nums: number[] = [];
+        for (let i = start; i <= end; i++) nums.push(i);
+        return nums;
+      }
+      return null;
+    }
+    const n = parseInt(part, 10);
+    if (!isNaN(n) && n > 0) return [n];
+    return null;
   }
 
   /**
