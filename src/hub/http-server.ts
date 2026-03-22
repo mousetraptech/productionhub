@@ -558,6 +558,40 @@ export class HubHttpServer {
       return;
     }
 
+    // Save all webhooks (PUT replaces entire file)
+    if (method === 'PUT' && url === '/api/v1/webhooks') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const webhooks = JSON.parse(body);
+          this.saveAllWebhooks(webhooks);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (err: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+      return;
+    }
+
+    // Delete a single webhook
+    if (method === 'DELETE' && url?.match(/^\/api\/v1\/webhooks\/[^/]+$/)) {
+      const name = decodeURIComponent(url.split('/').pop()!);
+      const webhooks = this.loadAllWebhooks();
+      if (!(name in webhooks)) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Unknown webhook: ${name}` }));
+        return;
+      }
+      delete webhooks[name];
+      this.saveAllWebhooks(webhooks);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, deleted: name }));
+      return;
+    }
+
     // Static file serving for MOD UI (ui/dist/)
     if (method === 'GET' && this.uiAvailable) {
       this.serveStatic(url ?? '/', res);
@@ -634,6 +668,13 @@ export class HubHttpServer {
     } catch {
       return {};
     }
+  }
+
+  private saveAllWebhooks(webhooks: Record<string, any>): void {
+    const webhooksPath = path.join(process.cwd(), 'webhooks.yml');
+    const { stringify } = require('yaml');
+    fs.writeFileSync(webhooksPath, stringify({ webhooks }), 'utf-8');
+    log.info('Webhooks saved');
   }
 
   getServer(): http.Server | undefined {
