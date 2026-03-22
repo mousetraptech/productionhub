@@ -477,6 +477,14 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     return s;
   }
 
+  getAliases(): Record<string, number[]> {
+    const result: Record<string, number[]> = {};
+    for (const [name, nums] of this.aliases) {
+      result[name] = nums;
+    }
+    return result;
+  }
+
   getState(): Record<string, any> {
     const strips: Record<string, { fader: number; mute: boolean; pan: number }> = {};
     for (const [key, val] of this.strips) {

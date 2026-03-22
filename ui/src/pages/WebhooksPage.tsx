@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useWebhooks, Webhook } from '../hooks/useWebhooks';
+import { useAliases } from '../hooks/useAliases';
 import ActionPalette from '../components/ActionPalette';
 import CommandModal, { type CommandModalTarget } from '../components/CommandModal';
 import ContextMenu, { MenuItem } from '../components/ContextMenu';
@@ -11,6 +12,7 @@ const API_HOST = `${window.location.hostname}:8081`;
 
 export function WebhooksPage() {
   const { webhooks, setWebhooks, categories, loading, save, remove, fire } = useWebhooks();
+  const aliases = useAliases();
   const [editing, setEditing] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [dirty, setDirty] = useState(false);
@@ -241,7 +243,7 @@ export function WebhooksPage() {
           width: 270, borderRight: '1px solid #2a2a2a',
           overflowY: 'auto', background: '#111',
         }}>
-          <ActionPalette categories={categories} onNewShow={() => {}} />
+          <ActionPalette categories={categories} onNewShow={() => {}} aliases={aliases} />
         </div>
 
         {/* Main content */}

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDeck } from '../hooks/useDeck';
 import { useDeviceStates } from '../hooks/useDeviceStates';
+import { useAliases } from '../hooks/useAliases';
 import { DeckToolbar } from '../components/deck/DeckToolbar';
 import { DeckGrid } from '../components/deck/DeckGrid';
 import ActionPalette from '../components/ActionPalette';
@@ -25,6 +26,7 @@ function buildAutoToggle(commandType: string, actionId: string, osc: InlineOSC):
 export function DeckPage() {
   const deck = useDeck();
   const { deviceStates } = useDeviceStates();
+  const aliases = useAliases();
   const [modalTarget, setModalTarget] = useState<CommandModalTarget | null>(null);
   const [dropSlot, setDropSlot] = useState<{ row: number; col: number } | null>(null);
 
@@ -78,7 +80,7 @@ export function DeckPage() {
             width: 270, borderRight: '1px solid #2a2a2a',
             overflowY: 'auto', background: '#111',
           }}>
-            <ActionPalette categories={deck.categories} onNewShow={() => {}} />
+            <ActionPalette categories={deck.categories} onNewShow={() => {}} aliases={aliases} />
           </div>
         )}
         <div style={{ flex: 1, position: 'relative' }}>

@@ -216,6 +216,20 @@ export class HubHttpServer {
       return;
     }
 
+    // Channel aliases API
+    if (method === 'GET' && url === '/api/v1/aliases') {
+      const aliases: Record<string, number[]> = {};
+      for (const driver of this.deps.getDrivers().values()) {
+        if (typeof (driver as any).getAliases === 'function') {
+          const driverAliases = (driver as any).getAliases() as Record<string, number[]>;
+          Object.assign(aliases, driverAliases);
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(aliases));
+      return;
+    }
+
     // Command reference docs
     if (method === 'GET' && url === '/docs') {
       const docsPath = path.join(__dirname, '..', '..', 'docs', 'command-reference.html');

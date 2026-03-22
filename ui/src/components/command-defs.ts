@@ -22,7 +22,11 @@ export type CmdType =
   | 'sfx-go-cue'
   | 'show-go-cue'
   | 'raw-osc'
-  | 'wait';
+  | 'wait'
+  | `group-mute-${string}`
+  | `group-unmute-${string}`
+  | `group-fader-${string}`
+  | `group-fade-${string}`;
 
 export interface FieldDef {
   key: string;
@@ -48,7 +52,7 @@ export function normFader(raw: string): number {
   return Math.max(0, Math.min(v, 1));
 }
 
-export function getCommands(obsScenes?: string[]): CmdDef[] {
+export function getCommands(obsScenes?: string[], aliases?: Record<string, number[]>): CmdDef[] {
   const sceneField = (key: string, placeholder: string): FieldDef =>
     obsScenes && obsScenes.length > 0
       ? { key, placeholder, type: 'select', options: obsScenes }
@@ -385,6 +389,57 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
         args: osc.args.map(a => String(a)).join(', '),
       }),
     },
+    // Dynamic group commands from aliases
+    ...Object.keys(aliases ?? {}).flatMap((alias): CmdDef[] => {
+      const label = alias.charAt(0).toUpperCase() + alias.slice(1);
+      return [
+        {
+          type: `group-mute-${alias}` as CmdType,
+          label: `Mute ${label}`,
+          fields: [],
+          build: () => ({ address: `/avantis/ch/${alias}/mix/mute`, args: [1], label: `Mute ${label}` }),
+          parse: (osc) => osc.address === `/avantis/ch/${alias}/mix/mute` && osc.args[0] === 1 ? {} : null,
+        },
+        {
+          type: `group-unmute-${alias}` as CmdType,
+          label: `Unmute ${label}`,
+          fields: [],
+          build: () => ({ address: `/avantis/ch/${alias}/mix/mute`, args: [0], label: `Unmute ${label}` }),
+          parse: (osc) => osc.address === `/avantis/ch/${alias}/mix/mute` && osc.args[0] === 0 ? {} : null,
+        },
+        {
+          type: `group-fader-${alias}` as CmdType,
+          label: `${label} Fader`,
+          fields: [{ key: 'val', placeholder: 'Level (0-100)', type: 'number' as const, width: 100 }],
+          build: (v) => {
+            const val = normFader(v.val);
+            return { address: `/avantis/ch/${alias}/mix/fader`, args: [val], label: `${label} → ${Math.round(val * 100)}%` };
+          },
+          parse: (osc) => {
+            if (osc.address !== `/avantis/ch/${alias}/mix/fader`) return null;
+            return { val: String(Math.round(Number(osc.args[0] ?? 0) * 100)) };
+          },
+        },
+        {
+          type: `group-fade-${alias}` as CmdType,
+          label: `Fade ${label}`,
+          fields: [
+            { key: 'val', placeholder: 'Target (0-100)', type: 'number' as const, width: 100 },
+            { key: 'dur', placeholder: 'Seconds', type: 'number' as const, width: 80 },
+          ],
+          build: (v) => {
+            const val = normFader(v.val);
+            const dur = parseFloat(v.dur);
+            if (isNaN(dur) || dur <= 0) return null;
+            return { address: `/avantis/ch/${alias}/mix/fade`, args: [val, dur], label: `Fade ${label} → ${Math.round(val * 100)}% (${dur}s)` };
+          },
+          parse: (osc) => {
+            if (osc.address !== `/avantis/ch/${alias}/mix/fade`) return null;
+            return { val: String(Math.round(Number(osc.args[0] ?? 0) * 100)), dur: String(osc.args[1] ?? '') };
+          },
+        },
+      ];
+    }),
   ];
 }
 
@@ -414,7 +469,9 @@ export interface TileCategory {
   commands: { type: CmdType; label: string }[];
 }
 
-export const TILE_CATEGORIES: TileCategory[] = [
+export function getTileCategories(aliases?: Record<string, number[]>): TileCategory[] {
+  const aliasNames = Object.keys(aliases ?? {});
+  const cats: TileCategory[] = [
   {
     category: 'Audio',
     icon: '\uD83C\uDFA4',
@@ -492,4 +549,31 @@ export const TILE_CATEGORIES: TileCategory[] = [
       { type: 'raw-osc', label: 'Raw OSC' },
     ],
   },
-];
+  ];
+
+  // Add groups category if aliases exist
+  if (aliasNames.length > 0) {
+    const groupCommands: { type: CmdType; label: string }[] = [];
+    for (const alias of aliasNames) {
+      const label = alias.charAt(0).toUpperCase() + alias.slice(1);
+      groupCommands.push(
+        { type: `group-mute-${alias}` as CmdType, label: `Mute ${label}` },
+        { type: `group-unmute-${alias}` as CmdType, label: `Unmute ${label}` },
+        { type: `group-fader-${alias}` as CmdType, label: `${label} Fader` },
+        { type: `group-fade-${alias}` as CmdType, label: `Fade ${label}` },
+      );
+    }
+    // Insert before Custom
+    cats.splice(cats.length - 1, 0, {
+      category: 'Groups',
+      icon: '\uD83D\uDCE6',
+      color: '#8B5CF6',
+      commands: groupCommands,
+    });
+  }
+
+  return cats;
+}
+
+// Backward compat
+export const TILE_CATEGORIES = getTileCategories();

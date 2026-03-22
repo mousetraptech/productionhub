@@ -1,18 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { ActionCategory } from '../types';
 import DragTile from './DragTile';
 import CommandTile from './CommandTile';
-import { TILE_CATEGORIES } from './command-defs';
+import { getTileCategories } from './command-defs';
 
 interface ActionPaletteProps {
   categories: ActionCategory[];
   onNewShow: () => void;
   onSaveAs?: () => void;
+  aliases?: Record<string, number[]>;
 }
 
-export default function ActionPalette({ categories, onNewShow, onSaveAs }: ActionPaletteProps) {
+export default function ActionPalette({ categories, onNewShow, onSaveAs, aliases }: ActionPaletteProps) {
+  const tileCategories = useMemo(() => getTileCategories(aliases), [aliases]);
+
   const [expandedCats, setExpandedCats] = useState<string[]>(
-    TILE_CATEGORIES.map(t => `__cmd_${t.category}`)
+    tileCategories.map(t => `__cmd_${t.category}`)
   );
 
   useEffect(() => {
@@ -20,13 +23,13 @@ export default function ActionPalette({ categories, onNewShow, onSaveAs }: Actio
       setExpandedCats(prev => {
         const allKeys = [
           ...categories.map(c => c.category),
-          ...TILE_CATEGORIES.map(t => `__cmd_${t.category}`),
+          ...tileCategories.map(t => `__cmd_${t.category}`),
         ];
         const missing = allKeys.filter(k => !prev.includes(k));
         return missing.length > 0 ? [...prev, ...missing] : prev;
       });
     }
-  }, [categories]);
+  }, [categories, tileCategories]);
 
   const toggleCat = (cat: string) =>
     setExpandedCats(prev =>
@@ -91,7 +94,7 @@ export default function ActionPalette({ categories, onNewShow, onSaveAs }: Actio
         )}
 
         {/* Command tiles by category */}
-        {TILE_CATEGORIES.map(tileCat => {
+        {tileCategories.map(tileCat => {
           const catKey = `__cmd_${tileCat.category}`;
           const expanded = expandedCats.includes(catKey);
           return (
