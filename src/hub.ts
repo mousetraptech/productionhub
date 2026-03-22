@@ -253,6 +253,7 @@ export class ProductionHub {
       getDevices: () => Array.from(this.driverManager.getDrivers().values()).map(d => ({ type: d.name, prefix: d.prefix })),
       dashboardWs: this.dashboardWs,
       getShowContext: () => this.showContext,
+      getActionRegistry: () => this.actionRegistry,
     });
   }
 

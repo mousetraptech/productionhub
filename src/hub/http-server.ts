@@ -22,6 +22,8 @@ import { MacroEngine } from '../macros';
 import { DashboardWebSocket } from '../server/dashboard-ws';
 import { DeviceDriver } from '../drivers/device-driver';
 import { ShowContextService } from '../show-context';
+import { ActionRegistry } from '../actions/registry';
+import { fireDeckButton } from '../deck/fire';
 import { getLogger } from '../logger';
 
 const log = getLogger('HttpServer');
@@ -56,6 +58,7 @@ export interface HttpServerDeps {
   getDevices: () => Array<{ type: string; prefix: string }>;
   dashboardWs: DashboardWebSocket;
   getShowContext?: () => ShowContextService | undefined;
+  getActionRegistry?: () => ActionRegistry;
 }
 
 export class HubHttpServer {
@@ -471,6 +474,90 @@ export class HubHttpServer {
       return;
     }
 
+    // Fire a registry action by ID
+    if (method === 'POST' && url?.match(/^\/api\/v1\/actions\/[^/]+$/)) {
+      const actionId = decodeURIComponent(url.split('/').pop()!);
+      const registry = this.deps.getActionRegistry?.();
+      if (!registry) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Action registry not available' }));
+        return;
+      }
+      const action = registry.getAction(actionId);
+      if (!action) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Unknown action: ${actionId}` }));
+        return;
+      }
+      for (const cmd of action.commands) {
+        const prefix = cmd.prefix ? `/${cmd.prefix}` : this.resolveDevicePrefix(cmd.device);
+        if (prefix) {
+          this.deps.routeOSC(`${prefix}${cmd.address}`, cmd.args ?? [], 'http');
+        }
+      }
+      log.info({ actionId }, 'Action fired via API');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ fired: actionId, commands: action.commands.length }));
+      return;
+    }
+
+    // List all available actions
+    if (method === 'GET' && url === '/api/v1/actions') {
+      const registry = this.deps.getActionRegistry?.();
+      if (!registry) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify([]));
+        return;
+      }
+      const categories = registry.getCategoryList();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(categories, null, 2));
+      return;
+    }
+
+    // Fire a webhook (named action sequence from webhooks.yml)
+    if (method === 'POST' && url?.match(/^\/api\/v1\/webhooks\/[^/]+$/)) {
+      const name = decodeURIComponent(url.split('/').pop()!);
+      const webhook = this.loadWebhook(name);
+      if (!webhook) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Unknown webhook: ${name}` }));
+        return;
+      }
+      const registry = this.deps.getActionRegistry?.();
+      fireDeckButton(webhook.actions, (webhook.mode ?? 'series') as 'parallel' | 'series', webhook.seriesGap ?? 500, (actionId, osc) => {
+        if (osc) {
+          this.deps.routeOSC(osc.address, osc.args, 'http');
+        } else if (registry) {
+          const action = registry.getAction(actionId);
+          if (action) {
+            for (const cmd of action.commands) {
+              const prefix = cmd.prefix ? `/${cmd.prefix}` : this.resolveDevicePrefix(cmd.device);
+              if (prefix) {
+                this.deps.routeOSC(`${prefix}${cmd.address}`, cmd.args ?? [], 'http');
+              }
+            }
+          }
+        }
+      }).then(() => {
+        log.info({ webhook: name }, 'Webhook fired');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ fired: name, actions: webhook.actions.length }));
+      }).catch((err: any) => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      });
+      return;
+    }
+
+    // List all webhooks
+    if (method === 'GET' && url === '/api/v1/webhooks') {
+      const webhooks = this.loadAllWebhooks();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(webhooks, null, 2));
+      return;
+    }
+
     // Static file serving for MOD UI (ui/dist/)
     if (method === 'GET' && this.uiAvailable) {
       this.serveStatic(url ?? '/', res);
@@ -511,6 +598,42 @@ export class HubHttpServer {
       res.writeHead(200, { 'Content-Type': contentType });
       res.end(data);
     });
+  }
+
+  private resolveDevicePrefix(device: string): string | null {
+    const defaults: Record<string, string> = {
+      avantis: '/avantis',
+      chamsys: '/lights',
+      obs: '/obs',
+      visca: '/cam1',
+      touchdesigner: '/td',
+      'ndi-recorder': '/recorder',
+    };
+    return defaults[device] ?? null;
+  }
+
+  private loadWebhook(name: string): { actions: any[]; mode?: string; seriesGap?: number } | null {
+    const webhooksPath = path.join(process.cwd(), 'webhooks.yml');
+    if (!fs.existsSync(webhooksPath)) return null;
+    try {
+      const { parse } = require('yaml');
+      const doc = parse(fs.readFileSync(webhooksPath, 'utf-8'));
+      return doc?.webhooks?.[name] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private loadAllWebhooks(): Record<string, any> {
+    const webhooksPath = path.join(process.cwd(), 'webhooks.yml');
+    if (!fs.existsSync(webhooksPath)) return {};
+    try {
+      const { parse } = require('yaml');
+      const doc = parse(fs.readFileSync(webhooksPath, 'utf-8'));
+      return doc?.webhooks ?? {};
+    } catch {
+      return {};
+    }
   }
 
   getServer(): http.Server | undefined {

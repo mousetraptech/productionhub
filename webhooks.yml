@@ -1,0 +1,30 @@
+# Webhooks — named action sequences callable via POST /api/v1/webhooks/:name
+#
+# Each webhook fires a sequence of actions (like a deck button).
+# Actions can reference registry action IDs, inline OSC, or wait delays.
+#
+# Usage:
+#   curl -X POST http://showcontrol:8081/api/v1/webhooks/walk-in
+#
+# You can also fire any single registry action directly:
+#   curl -X POST http://showcontrol:8081/api/v1/actions/house-full
+
+webhooks:
+  walk-in:
+    mode: series
+    seriesGap: 500
+    actions:
+      - actionId: house-walk-in
+      - actionId: walk-in-music
+      - wait: 2000
+      - actionId: house-full
+
+  # Example: inline OSC in a webhook
+  # blackout:
+  #   mode: parallel
+  #   actions:
+  #     - actionId: house-out
+  #     - osc:
+  #         address: /lights/pb/1
+  #         args: [0]
+  #         label: "Kill PB1"
