@@ -159,6 +159,24 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
         onClick: () => setClipboard({ ...button }),
       });
       items.push({
+        label: 'Create Webhook',
+        onClick: () => {
+          const name = button.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          const host = `${window.location.hostname}:8081`;
+          fetch(`http://${host}/api/v1/webhooks`).then(r => r.json()).then(existing => {
+            const webhooks = { ...existing };
+            webhooks[name] = { mode: button.mode, seriesGap: button.seriesGap, actions: button.actions };
+            return fetch(`http://${host}/api/v1/webhooks`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhooks),
+            });
+          }).then(() => {
+            console.log(`Webhook "${name}" created from button "${button.label}"`);
+          });
+        },
+      });
+      items.push({
         label: 'Duplicate',
         onClick: () => {
           // Find first empty cell
