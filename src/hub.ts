@@ -482,9 +482,9 @@ export class ProductionHub {
       return;
     }
 
-    // Webhook trigger: /webhook/<name>
-    if (addr.startsWith('/webhook/')) {
-      const name = addr.slice('/webhook/'.length);
+    // Webhook trigger: /webhook/<name> or /webhooks/<name>
+    if (addr.startsWith('/webhook/') || addr.startsWith('/webhooks/')) {
+      const name = addr.replace(/^\/webhooks?\//, '');
       if (name) {
         this.fireWebhook(name);
         return;
