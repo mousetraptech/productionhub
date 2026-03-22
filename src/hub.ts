@@ -23,6 +23,7 @@ import { CueSequencer, CueSequencerState } from './cue-sequencer';
 import { DashboardWebSocket } from './server/dashboard-ws';
 import { MacroEngine, MacroDef } from './macros';
 import { DriverManager, HubHttpServer, CommandRouter, StatusReporter, StatusSnapshot } from './hub/index';
+import { fireDeckButton } from './deck/fire';
 import { BrainService } from './brain/brain-service';
 import { BrainConfig } from './brain/types';
 import { DeckPersistence } from './deck/persistence';
@@ -481,6 +482,15 @@ export class ProductionHub {
       return;
     }
 
+    // Webhook trigger: /webhook/<name>
+    if (addr.startsWith('/webhook/')) {
+      const name = addr.slice('/webhook/'.length);
+      if (name) {
+        this.fireWebhook(name);
+        return;
+      }
+    }
+
     // Recorder start: set session name from active show or auto-generate
     if (this.isRecorderStart(addr)) {
       this.setRecorderSessionAndStart(address, args);
@@ -532,6 +542,53 @@ export class ProductionHub {
     // Pass session name as first arg to /start
     this.driverManager.routeToDriver(address, [sessionName]);
     log.info({ sessionName }, 'Recorder started');
+  }
+
+  /** Fire a webhook by name (loaded from webhooks.yml) */
+  private fireWebhook(name: string): void {
+    const webhooksPath = require('path').join(process.cwd(), 'webhooks.yml');
+    const fs = require('fs');
+    if (!fs.existsSync(webhooksPath)) {
+      log.warn({ name }, 'Webhook not found — no webhooks.yml');
+      return;
+    }
+    const { parse } = require('yaml');
+    const doc = parse(fs.readFileSync(webhooksPath, 'utf-8'));
+    const webhook = doc?.webhooks?.[name];
+    if (!webhook) {
+      log.warn({ name }, 'Webhook not found');
+      return;
+    }
+
+    log.info({ name, actions: webhook.actions?.length ?? 0 }, 'Firing webhook via OSC');
+    fireDeckButton(
+      webhook.actions ?? [],
+      (webhook.mode ?? 'series') as 'parallel' | 'series',
+      webhook.seriesGap ?? 500,
+      (actionId, osc) => {
+        if (osc) {
+          this.routeOSC(osc.address, osc.args);
+        } else {
+          const action = this.actionRegistry.getAction(actionId);
+          if (action) {
+            for (const cmd of action.commands) {
+              const prefix = cmd.prefix ? `/${cmd.prefix}` : this.resolveDevicePrefix(cmd.device);
+              if (prefix) {
+                this.routeOSC(`${prefix}${cmd.address}`, cmd.args ?? []);
+              }
+            }
+          }
+        }
+      },
+    );
+  }
+
+  private resolveDevicePrefix(device: string): string | null {
+    const defaults: Record<string, string> = {
+      avantis: '/avantis', chamsys: '/lights', obs: '/obs',
+      visca: '/cam1', touchdesigner: '/td', 'ndi-recorder': '/recorder',
+    };
+    return defaults[device] ?? null;
   }
 
   /** Run a full systems check */
