@@ -65,6 +65,7 @@ const avantisDeviceSchema = baseDeviceSchema.extend({
     enabled: z.boolean().optional(),
     echoSuppressionMs: z.number().int().min(0).optional(),
   }).optional(),
+  aliases: z.record(z.string(), z.union([z.array(z.number()), z.string()])).optional(),
 });
 
 const chamsysDeviceSchema = baseDeviceSchema.extend({

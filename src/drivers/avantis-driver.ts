@@ -44,6 +44,7 @@ export interface AvantisConfig extends DeviceConfig {
     enabled?: boolean;         // default true
     echoSuppressionMs?: number; // default 100
   };
+  aliases?: Record<string, number[] | string>; // e.g. { vocals: [1,3,5], band: "9-16" }
 }
 
 export class AvantisDriver extends EventEmitter implements DeviceDriver {
@@ -71,6 +72,9 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   private strips: Map<string, { fader: number; mute: boolean; pan: number }> = new Map();
   private currentScene: number = 0;
 
+  // Channel aliases (e.g. "vocals" → [1, 3, 5, 7])
+  private aliases: Map<string, number[]> = new Map();
+
   constructor(config: AvantisConfig, hubContext: HubContext, verbose = false) {
     super();
     this.name = 'avantis';
@@ -81,6 +85,22 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
     this.baseMidiChannel = ((config.midiBaseChannel ?? 1) - 1); // 1-indexed to 0-indexed
     this.feedbackEnabled = config.feedback?.enabled ?? true;
     this.echoSuppressionMs = config.feedback?.echoSuppressionMs ?? 100;
+
+    // Load channel aliases
+    if (config.aliases) {
+      for (const [name, def] of Object.entries(config.aliases)) {
+        if (Array.isArray(def)) {
+          this.aliases.set(name.toLowerCase(), def);
+        } else if (typeof def === 'string') {
+          // Parse range string like "9-16"
+          const parsed = this.parseRange(def);
+          if (parsed) this.aliases.set(name.toLowerCase(), parsed);
+        }
+      }
+      if (this.aliases.size > 0) {
+        console.log(`[Avantis] Loaded ${this.aliases.size} alias(es): ${Array.from(this.aliases.keys()).join(', ')}`);
+      }
+    }
 
     this.transport = new AvantisTCPTransport(config.host, config.port);
     this.midiParser = new MIDIStreamParser();
@@ -210,12 +230,13 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
   }
 
   /**
-   * Parse a strip number or range. Supports:
-   *   "5"      → [5]
-   *   "1-48"   → [1, 2, ..., 48]
-   *   "*"      → null (not supported yet)
+   * Parse a strip number, range, or alias. Supports:
+   *   "5"       → [5]
+   *   "1-48"    → [1, 2, ..., 48]
+   *   "vocals"  → alias lookup → [1, 3, 5, 7]
    */
   private parseRange(part: string): number[] | null {
+    // Numeric range: "1-48"
     const rangeMatch = part.match(/^(\d+)-(\d+)$/);
     if (rangeMatch) {
       const start = parseInt(rangeMatch[1], 10);
@@ -227,8 +248,12 @@ export class AvantisDriver extends EventEmitter implements DeviceDriver {
       }
       return null;
     }
+    // Single number: "5"
     const n = parseInt(part, 10);
     if (!isNaN(n) && n > 0) return [n];
+    // Alias lookup: "vocals"
+    const alias = this.aliases.get(part.toLowerCase());
+    if (alias) return alias;
     return null;
   }
 
