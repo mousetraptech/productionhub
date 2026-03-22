@@ -35,13 +35,22 @@ export function DeckPage() {
 
   const handleModalSubmit = useCallback((target: CommandModalTarget, osc: InlineOSC) => {
     if (dropSlot) {
-      const actionId = `inline:${target.commandType}:${Date.now()}`;
-      const toggle = buildAutoToggle(target.commandType, actionId, osc);
-      deck.assignAction(dropSlot.row, dropSlot.col, actionId, osc, {
-        label: toggle ? osc.label.replace(/^Mute/, 'MUTE') : osc.label,
-        icon: '',
-        color: '#64748B',
-      }, toggle);
+      if (osc.address === '__wait__') {
+        const ms = osc.args[0] as number;
+        deck.assignAction(dropSlot.row, dropSlot.col, 'wait', undefined, {
+          label: osc.label,
+          icon: '',
+          color: '#64748B',
+        }, undefined, ms);
+      } else {
+        const actionId = `inline:${target.commandType}:${Date.now()}`;
+        const toggle = buildAutoToggle(target.commandType, actionId, osc);
+        deck.assignAction(dropSlot.row, dropSlot.col, actionId, osc, {
+          label: toggle ? osc.label.replace(/^Mute/, 'MUTE') : osc.label,
+          icon: '',
+          color: '#64748B',
+        }, toggle);
+      }
     }
     setModalTarget(null);
     setDropSlot(null);

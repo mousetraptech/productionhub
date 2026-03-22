@@ -7,6 +7,7 @@
 export interface DeckAction {
   actionId: string;
   osc?: { address: string; args: any[]; label: string };
+  wait?: number; // delay in milliseconds
 }
 
 export interface DeckButton {

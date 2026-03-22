@@ -21,16 +21,25 @@ export async function fireDeckButton(
 ): Promise<void> {
   if (mode === 'parallel') {
     for (const action of actions) {
-      callback(action.actionId, action.osc);
+      if (action.wait) {
+        await delay(action.wait);
+      } else {
+        callback(action.actionId, action.osc);
+      }
     }
     return;
   }
 
   // Series: fire one at a time with gap between
   for (let i = 0; i < actions.length; i++) {
-    callback(actions[i].actionId, actions[i].osc);
-    if (i < actions.length - 1) {
-      await delay(seriesGap);
+    const action = actions[i];
+    if (action.wait) {
+      await delay(action.wait);
+    } else {
+      callback(action.actionId, action.osc);
+      if (i < actions.length - 1 && !actions[i + 1]?.wait) {
+        await delay(seriesGap);
+      }
     }
   }
 }

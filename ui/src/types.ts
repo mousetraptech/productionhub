@@ -59,6 +59,7 @@ export type BrainMode = 'confirm' | 'trusted';
 export interface DeckAction {
   actionId: string;
   osc?: InlineOSC;
+  wait?: number; // delay in milliseconds
 }
 
 export interface DeckButton {

@@ -177,7 +177,7 @@ export function DeckButtonEditor({
               <span style={{
                 flex: 1, fontSize: 10, color: '#888', fontFamily: FONT_MONO,
               }}>
-                {action.osc ? action.osc.label : action.actionId}
+                {action.wait ? `Wait ${action.wait / 1000}s` : action.osc ? action.osc.label : action.actionId}
               </span>
               <button
                 onClick={() => onRemoveAction(row, col, i)}

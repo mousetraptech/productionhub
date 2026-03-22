@@ -128,12 +128,13 @@ export function useDeck(options: UseDeckOptions = {}) {
 
   // Grid editing operations (local state, saved explicitly)
 
-  const assignAction = useCallback((row: number, col: number, actionId: string, osc?: InlineOSC, actionMeta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle']) => {
+  const assignAction = useCallback((row: number, col: number, actionId: string, osc?: InlineOSC, actionMeta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle'], wait?: number) => {
     setGrid(prev => {
       const existing = prev.find(s => s.row === row && s.col === col);
+      const action = wait ? { actionId, wait } : { actionId, osc };
       if (existing) {
         // Append action to existing button
-        const updated = { ...existing.button, actions: [...existing.button.actions, { actionId, osc }] };
+        const updated = { ...existing.button, actions: [...existing.button.actions, action] };
         return prev.map(s => s.row === row && s.col === col ? { ...s, button: updated } : s);
       }
       // Create new button
@@ -142,7 +143,7 @@ export function useDeck(options: UseDeckOptions = {}) {
         label: actionMeta?.label ?? actionId,
         icon: actionMeta?.icon ?? '',
         color: actionMeta?.color ?? '#3B82F6',
-        actions: [{ actionId, osc }],
+        actions: [action],
         mode: 'parallel',
         seriesGap: 1000,
         ...(toggle ? { toggle } : {}),

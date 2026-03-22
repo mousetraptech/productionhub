@@ -21,7 +21,8 @@ export type CmdType =
   | 'recorder-stop'
   | 'sfx-go-cue'
   | 'show-go-cue'
-  | 'raw-osc';
+  | 'raw-osc'
+  | 'wait';
 
 export interface FieldDef {
   key: string;
@@ -349,6 +350,21 @@ export function getCommands(obsScenes?: string[]): CmdDef[] {
       },
     },
     {
+      type: 'wait',
+      label: 'Wait',
+      fields: [{ key: 'sec', placeholder: 'Seconds', type: 'number', width: 80 }],
+      build: (v) => {
+        const sec = parseFloat(v.sec);
+        if (isNaN(sec) || sec <= 0) return null;
+        // Encode wait as a pseudo-OSC; the drop handler extracts the duration
+        return { address: '__wait__', args: [sec * 1000], label: `Wait ${sec}s` };
+      },
+      parse: (osc) => {
+        if (osc.address !== '__wait__') return null;
+        return { sec: String((osc.args[0] as number) / 1000) };
+      },
+    },
+    {
       type: 'raw-osc',
       label: 'Raw OSC',
       fields: [
@@ -472,6 +488,7 @@ export const TILE_CATEGORIES: TileCategory[] = [
     icon: '\u26A1',
     color: '#64748B',
     commands: [
+      { type: 'wait', label: 'Wait' },
       { type: 'raw-osc', label: 'Raw OSC' },
     ],
   },
