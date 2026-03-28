@@ -97,48 +97,9 @@ export function DeckPage() {
             onCommandDrop={handleCommandDrop}
             deviceStates={deviceStates}
             showActive={deck.showActive}
-            currentPage={deck.currentPage}
-            totalPages={deck.totalPages}
-            pageNames={deck.pageNames}
-            onPageNext={deck.pageNext}
-            onPagePrev={deck.pagePrev}
           />
         </div>
       </div>
-      {deck.totalPages > 1 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          padding: '6px 16px', borderTop: '1px solid #2a2a2a', background: '#0d0d0d',
-          fontFamily: "'IBM Plex Mono', monospace", fontSize: 12,
-        }}>
-          <button onClick={deck.pagePrev} style={{
-            background: 'none', border: '1px solid #333', borderRadius: 3,
-            color: '#888', padding: '2px 10px', cursor: 'pointer',
-          }}>{'\u25C0'}</button>
-          {deck.pageNames.map((name, i) => (
-            <span key={i}
-              onClick={() => deck.setPage(i)}
-              style={{
-                color: i === deck.currentPage ? '#e8e8e8' : '#555',
-                cursor: 'pointer',
-                padding: '2px 8px',
-                borderBottom: i === deck.currentPage ? '2px solid #58a6ff' : '2px solid transparent',
-              }}>
-              {name}
-            </span>
-          ))}
-          <button onClick={deck.pageNext} style={{
-            background: 'none', border: '1px solid #333', borderRadius: 3,
-            color: '#888', padding: '2px 10px', cursor: 'pointer',
-          }}>{'\u25B6'}</button>
-          {deck.editing && (
-            <button onClick={deck.addPage} style={{
-              background: 'none', border: '1px dashed #444', borderRadius: 3,
-              color: '#666', padding: '2px 10px', cursor: 'pointer', marginLeft: 8,
-            }}>+ Page</button>
-          )}
-        </div>
-      )}
       {modalTarget && (
         <CommandModal
           target={modalTarget}

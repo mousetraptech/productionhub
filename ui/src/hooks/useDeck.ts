@@ -21,9 +21,6 @@ export function useDeck(options: UseDeckOptions = {}) {
   const [editing, setEditing] = useState(false);
   const [categories, setCategories] = useState<ActionCategory[]>([]);
   const [showActive, setShowActive] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [pageNames, setPageNames] = useState<string[]>(['Page 1']);
 
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -63,11 +60,6 @@ export function useDeck(options: UseDeckOptions = {}) {
             break;
           case 'show-context':
             setShowActive(msg.state === 'active');
-            break;
-          case 'deck-page-changed':
-            setCurrentPage(msg.page ?? 0);
-            setTotalPages(msg.totalPages ?? 1);
-            setPageNames(msg.pageNames ?? ['Page 1']);
             break;
         }
       };
@@ -206,19 +198,6 @@ export function useDeck(options: UseDeckOptions = {}) {
 
   const toggleEdit = useCallback(() => setEditing(e => !e), []);
 
-  const pageNext = useCallback(() => send({ type: 'deck-page-next' }), [send]);
-  const pagePrev = useCallback(() => send({ type: 'deck-page-prev' }), [send]);
-  const setPage = useCallback((page: number) => send({ type: 'deck-page', page }), [send]);
-  const renamePage = useCallback((page: number, name: string) => {
-    send({ type: 'deck-page-rename', page, name });
-  }, [send]);
-
-  const addPage = useCallback(() => {
-    const newName = `Page ${totalPages + 1}`;
-    const newNames = [...pageNames, newName];
-    send({ type: 'deck-page-rename', page: newNames.length - 1, name: newName });
-  }, [send, totalPages, pageNames]);
-
   return {
     connected,
     profiles,
@@ -237,13 +216,5 @@ export function useDeck(options: UseDeckOptions = {}) {
     removeAction,
     swapButtons,
     toggleEdit,
-    currentPage,
-    totalPages,
-    pageNames,
-    pageNext,
-    pagePrev,
-    setPage,
-    renamePage,
-    addPage,
   };
 }

@@ -36,8 +36,6 @@ export class ModWebSocket {
   private deckPersistence: DeckPersistence;
   private nodeAgentUrl?: string;
   private showContext?: ShowContextService;
-  private deckPage = 0;
-  private deckPageNames: string[] = [];
 
   constructor(
     config: ModWebSocketConfig,
@@ -87,9 +85,6 @@ export class ModWebSocket {
           this.send(ws, { type: 'show-context', ...status });
         }).catch(() => {});
       }
-
-      // Send current deck page
-      this.send(ws, this.buildPageMsg());
 
       ws.on('message', (data: Buffer) => {
         try {
@@ -283,22 +278,21 @@ export class ModWebSocket {
       case 'deck-load': {
         const profile = this.deckPersistence.load(msg.name);
         if (profile) {
-          this.deckPage = 0;
-          this.deckPageNames = profile.pageNames ?? [];
           if (msg.broadcast === false && sender) {
+            // Sender-only load (e.g. plugin initial connect)
             this.send(sender, { type: 'deck-state', name: msg.name, grid: profile.grid });
-            this.send(sender, this.buildPageMsg());
           } else {
+            // Broadcast so all clients mirror the switch
             this.broadcast({ type: 'deck-state', name: msg.name, grid: profile.grid });
-            this.broadcast(this.buildPageMsg());
           }
         }
         break;
       }
 
       case 'deck-save':
-        this.deckPersistence.save(msg.name, { name: msg.name, grid: msg.grid, pageNames: this.deckPageNames });
+        this.deckPersistence.save(msg.name, { name: msg.name, grid: msg.grid });
         this.broadcast({ type: 'deck-saved', name: msg.name });
+        // Broadcast updated state so Stream Deck mirrors the saved profile
         this.broadcast({ type: 'deck-state', name: msg.name, grid: msg.grid });
         break;
 
@@ -309,40 +303,6 @@ export class ModWebSocket {
 
       case 'deck-fire': {
         this.handleDeckFire(msg);
-        break;
-      }
-
-      case 'deck-page': {
-        const page = Math.max(0, msg.page ?? 0);
-        this.deckPage = page;
-        this.broadcast(this.buildPageMsg());
-        break;
-      }
-
-      case 'deck-page-next': {
-        const total = this.getTotalPages();
-        this.deckPage = total > 0 ? (this.deckPage + 1) % total : 0;
-        this.broadcast(this.buildPageMsg());
-        break;
-      }
-
-      case 'deck-page-prev': {
-        const total = this.getTotalPages();
-        this.deckPage = total > 0 ? (this.deckPage - 1 + total) % total : 0;
-        this.broadcast(this.buildPageMsg());
-        break;
-      }
-
-      case 'deck-page-rename': {
-        const idx = msg.page ?? 0;
-        const name = msg.name ?? '';
-        if (!this.deckPageNames.length) {
-          const total = this.getTotalPages();
-          this.deckPageNames = Array.from({ length: total }, (_, i) => `Page ${i + 1}`);
-        }
-        while (this.deckPageNames.length <= idx) this.deckPageNames.push(`Page ${this.deckPageNames.length + 1}`);
-        this.deckPageNames[idx] = name;
-        this.broadcast(this.buildPageMsg());
         break;
       }
 
@@ -584,26 +544,6 @@ export class ModWebSocket {
     }
   }
 
-  // --- Deck Pagination ---
-
-  private getTotalPages(): number {
-    return Math.max(this.deckPageNames.length, 1);
-  }
-
-  private buildPageMsg(): { type: string; page: number; totalPages: number; pageNames: string[] } {
-    const total = this.getTotalPages();
-    // Ensure pageNames covers all pages with defaults
-    while (this.deckPageNames.length < total) {
-      this.deckPageNames.push(`Page ${this.deckPageNames.length + 1}`);
-    }
-    return {
-      type: 'deck-page-changed',
-      page: this.deckPage,
-      totalPages: total,
-      pageNames: this.deckPageNames,
-    };
-  }
-
   /** Map device type to its configured prefix (same as CueEngine) */
   private resolveDevicePrefix(device: string): string | null {
     const defaults: Record<string, string> = {
@@ -613,8 +553,6 @@ export class ModWebSocket {
       visca: '/cam1',
       touchdesigner: '/td',
       'ndi-recorder': '/recorder',
-      'video-switch': '/video',
-      broadlink: '/ir',
     };
     return defaults[device] ?? null;
   }
