@@ -85,7 +85,7 @@ export function DeckPage() {
         )}
         <div style={{ flex: 1, position: 'relative' }}>
           <DeckGrid
-            grid={deck.grid}
+            grid={deck.displayGrid}
             editing={deck.editing}
             categories={deck.categories}
             onFire={deck.fireButton}
@@ -97,6 +97,9 @@ export function DeckPage() {
             onCommandDrop={handleCommandDrop}
             deviceStates={deviceStates}
             showActive={deck.showActive}
+            inGroup={deck.inGroup}
+            onGroupEnter={deck.enterGroup}
+            onGroupBack={deck.groupBack}
           />
         </div>
       </div>

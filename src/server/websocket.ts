@@ -36,6 +36,8 @@ export class ModWebSocket {
   private deckPersistence: DeckPersistence;
   private nodeAgentUrl?: string;
   private showContext?: ShowContextService;
+  private groupStack: string[] = [];
+  private currentProfileGrid: import('../deck/types').GridSlot[] = [];
 
   constructor(
     config: ModWebSocketConfig,
@@ -278,21 +280,23 @@ export class ModWebSocket {
       case 'deck-load': {
         const profile = this.deckPersistence.load(msg.name);
         if (profile) {
+          this.currentProfileGrid = profile.grid;
+          this.groupStack = [];
           if (msg.broadcast === false && sender) {
-            // Sender-only load (e.g. plugin initial connect)
             this.send(sender, { type: 'deck-state', name: msg.name, grid: profile.grid });
+            this.send(sender, { type: 'deck-group-changed', stack: [], grid: profile.grid });
           } else {
-            // Broadcast so all clients mirror the switch
             this.broadcast({ type: 'deck-state', name: msg.name, grid: profile.grid });
+            this.broadcast({ type: 'deck-group-changed', stack: [], grid: profile.grid });
           }
         }
         break;
       }
 
       case 'deck-save':
+        this.currentProfileGrid = msg.grid;
         this.deckPersistence.save(msg.name, { name: msg.name, grid: msg.grid });
         this.broadcast({ type: 'deck-saved', name: msg.name });
-        // Broadcast updated state so Stream Deck mirrors the saved profile
         this.broadcast({ type: 'deck-state', name: msg.name, grid: msg.grid });
         break;
 
@@ -303,6 +307,25 @@ export class ModWebSocket {
 
       case 'deck-fire': {
         this.handleDeckFire(msg);
+        break;
+      }
+
+      case 'deck-group-enter': {
+        const btnId = msg.buttonId as string;
+        if (btnId) {
+          this.groupStack.push(btnId);
+          const grid = this.resolveGroupGrid();
+          this.broadcast({ type: 'deck-group-changed', stack: [...this.groupStack], grid });
+        }
+        break;
+      }
+
+      case 'deck-group-back': {
+        if (this.groupStack.length > 0) {
+          this.groupStack.pop();
+        }
+        const grid = this.resolveGroupGrid();
+        this.broadcast({ type: 'deck-group-changed', stack: [...this.groupStack], grid });
         break;
       }
 
@@ -544,6 +567,22 @@ export class ModWebSocket {
     }
   }
 
+  /** Walk the group stack to resolve the currently visible grid */
+  private resolveGroupGrid(): import('../deck/types').GridSlot[] {
+    let grid = this.currentProfileGrid;
+    for (const btnId of this.groupStack) {
+      const slot = grid.find(s => s.button.id === btnId);
+      if (slot?.button.group) {
+        grid = slot.button.group;
+      } else {
+        // Invalid stack entry — reset
+        this.groupStack = [];
+        return this.currentProfileGrid;
+      }
+    }
+    return grid;
+  }
+
   /** Map device type to its configured prefix (same as CueEngine) */
   private resolveDevicePrefix(device: string): string | null {
     const defaults: Record<string, string> = {
@@ -553,6 +592,8 @@ export class ModWebSocket {
       visca: '/cam1',
       touchdesigner: '/td',
       'ndi-recorder': '/recorder',
+      'video-switch': '/video',
+      broadlink: '/ir',
     };
     return defaults[device] ?? null;
   }

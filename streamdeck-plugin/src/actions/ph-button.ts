@@ -52,6 +52,7 @@ export class PHButton extends SingletonAction {
     });
     this.hub.on('device-state', () => this.renderAll());
     this.hub.on('show-context', () => this.renderAll());
+    this.hub.on('group-changed', () => this.renderAll());
     this.hub.on('connected', () => {
       log('Hub connected, rendering all keys');
       this.renderAll();
@@ -90,8 +91,20 @@ export class PHButton extends SingletonAction {
     const coords = ev.action.coordinates;
     if (!coords) return;
 
+    // Back button at (3, 0) when inside a group
+    if (this.hub.inGroup && coords.row === 3 && coords.column === 0) {
+      this.hub.groupBack();
+      return;
+    }
+
     const button = this.getButton(coords.row, coords.column);
     if (!button) return;
+
+    // Group folder button — enter group
+    if (button.group) {
+      this.hub.enterGroup(button.id);
+      return;
+    }
 
     // Compute toggle state and fire effective actions
     const state = this.getButtonState(button);
@@ -113,7 +126,8 @@ export class PHButton extends SingletonAction {
   }
 
   private getButton(row: number, col: number): DeckButton | null {
-    const slot = this.hub.grid.find(s => s.row === row && s.col === col);
+    const grid = this.hub.displayGrid;
+    const slot = grid.find(s => s.row === row && s.col === col);
     return slot?.button ?? null;
   }
 
@@ -198,7 +212,35 @@ export class PHButton extends SingletonAction {
     }
 
     const [row, col] = key.split(':').map(Number);
+
+    // Render back button at (3, 0) when inside a group
+    if (this.hub.inGroup && row === 3 && col === 0) {
+      const backSvg = this.toDataUrl(renderButton(
+        { id: 'back', label: '\u25C0 Back', icon: '', color: '#4444aa', actions: [], mode: 'parallel', seriesGap: 0 },
+        { level: null, active: false, live: false }, false,
+      ));
+      if (this.lastRendered.get(key) !== backSvg) {
+        this.lastRendered.set(key, backSvg);
+        action.setImage(backSvg);
+      }
+      return;
+    }
+
     const button = this.getButton(row, col);
+
+    // Render group folder button with folder icon
+    if (button?.group) {
+      const folderSvg = this.toDataUrl(renderButton(
+        { ...button, label: `\uD83D\uDCC1 ${button.label}` },
+        { level: null, active: false, live: false }, false,
+      ));
+      if (this.lastRendered.get(key) !== folderSvg) {
+        this.lastRendered.set(key, folderSvg);
+        action.setImage(folderSvg);
+      }
+      return;
+    }
+
     const state = button
       ? this.getButtonState(button)
       : { level: null, active: false, live: false };

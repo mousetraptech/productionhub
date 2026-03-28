@@ -21,6 +21,8 @@ export function useDeck(options: UseDeckOptions = {}) {
   const [editing, setEditing] = useState(false);
   const [categories, setCategories] = useState<ActionCategory[]>([]);
   const [showActive, setShowActive] = useState(false);
+  const [groupStack, setGroupStack] = useState<string[]>([]);
+  const [activeGrid, setActiveGrid] = useState<GridSlot[]>([]);
 
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -60,6 +62,10 @@ export function useDeck(options: UseDeckOptions = {}) {
             break;
           case 'show-context':
             setShowActive(msg.state === 'active');
+            break;
+          case 'deck-group-changed':
+            setGroupStack(msg.stack ?? []);
+            setActiveGrid(msg.grid ?? []);
             break;
         }
       };
@@ -198,6 +204,18 @@ export function useDeck(options: UseDeckOptions = {}) {
 
   const toggleEdit = useCallback(() => setEditing(e => !e), []);
 
+  const enterGroup = useCallback((buttonId: string) => {
+    send({ type: 'deck-group-enter', buttonId });
+  }, [send]);
+
+  const groupBack = useCallback(() => {
+    send({ type: 'deck-group-back' });
+  }, [send]);
+
+  // Use activeGrid when inside a group, otherwise use the profile grid
+  const displayGrid = groupStack.length > 0 ? activeGrid : grid;
+  const inGroup = groupStack.length > 0;
+
   return {
     connected,
     profiles,
@@ -216,5 +234,10 @@ export function useDeck(options: UseDeckOptions = {}) {
     removeAction,
     swapButtons,
     toggleEdit,
+    groupStack,
+    displayGrid,
+    inGroup,
+    enterGroup,
+    groupBack,
   };
 }

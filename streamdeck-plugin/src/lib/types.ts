@@ -20,6 +20,7 @@ export interface DeckButton {
     pulse?: boolean;
   };
   prompt?: { message: string; default?: string };
+  group?: GridSlot[];
 }
 
 export interface GridSlot {

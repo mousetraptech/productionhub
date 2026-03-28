@@ -19,6 +19,9 @@ interface DeckGridProps {
   onCommandDrop?: (row: number, col: number, commandType: string) => void;
   deviceStates?: any;
   showActive?: boolean;
+  inGroup?: boolean;
+  onGroupEnter?: (buttonId: string) => void;
+  onGroupBack?: () => void;
 }
 
 const ROWS = 4;
@@ -26,7 +29,7 @@ const COLS = 8;
 const FONT_MONO = "'IBM Plex Mono', monospace";
 const FONT_SANS = "'IBM Plex Sans', sans-serif";
 
-export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates, showActive }: DeckGridProps) {
+export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates, showActive, inGroup = false, onGroupEnter, onGroupBack }: DeckGridProps) {
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const dragSrcRef = useRef<{ row: number; col: number } | null>(null);
@@ -280,9 +283,50 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                 gap: 4, flex: 1,
               }}>
                 {Array.from({ length: COLS }, (_, ci) => {
-                  const button = getButton(ri, ci);
                   const cellKey = `${ri}-${ci}`;
                   const isOver = dragOverCell === cellKey;
+
+                  {/* Auto-injected back button at (3, 0) when inside a group */}
+                  if (inGroup && !editing && ri === 3 && ci === 0) {
+                    return (
+                      <div key={cellKey}
+                        onPointerDown={() => onGroupBack?.()}
+                        style={{
+                          background: '#1a1a2a', border: '1px solid #404060',
+                          borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          minHeight: 62, cursor: 'pointer', flexDirection: 'column', gap: 2,
+                        }}>
+                        <span style={{ fontSize: 14, color: '#8888cc' }}>{'\u25C0'}</span>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: '#8888cc' }}>Back</span>
+                      </div>
+                    );
+                  }
+
+                  const button = getButton(ri, ci);
+
+                  {/* Group folder button — enter group on press */}
+                  if (button?.group && !editing) {
+                    return (
+                      <div key={cellKey}
+                        onPointerDown={() => onGroupEnter?.(button.id)}
+                        style={{
+                          background: (button.color ?? '#3B82F6') + '26',
+                          border: `1px solid ${button.color ?? '#3B82F6'}55`,
+                          borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          minHeight: 62, cursor: 'pointer', flexDirection: 'column', gap: 2,
+                          position: 'relative',
+                        }}>
+                        <span style={{ fontSize: 14 }}>{button.icon || '\uD83D\uDCC1'}</span>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: '#e8e8e8', textAlign: 'center' }}>
+                          {button.label}
+                        </span>
+                        <span style={{
+                          position: 'absolute', top: 3, right: 5,
+                          fontSize: 8, color: '#666', fontFamily: FONT_MONO,
+                        }}>{button.group.length}</span>
+                      </div>
+                    );
+                  }
 
                   if (!button) {
                     return (

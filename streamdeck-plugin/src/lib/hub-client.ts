@@ -44,6 +44,8 @@ export class HubClient extends EventEmitter {
   categories: ActionCategory[] = [];
   deviceStates: Record<string, any> = {};
   showActive = false;
+  groupStack: string[] = [];
+  activeGrid: GridSlot[] = [];
 
   constructor(config: HubClientConfig) {
     super();
@@ -133,6 +135,12 @@ export class HubClient extends EventEmitter {
             log(`Show active: ${this.showActive}`);
             this.emit('show-context');
             break;
+          case 'deck-group-changed':
+            this.groupStack = msg.stack ?? [];
+            this.activeGrid = msg.grid ?? [];
+            log(`Group changed: depth=${this.groupStack.length}, grid=${this.activeGrid.length} slots`);
+            this.emit('group-changed');
+            break;
           default:
             break;
         }
@@ -191,6 +199,24 @@ export class HubClient extends EventEmitter {
       log(`DashWS error: ${err.message}`);
       ws.close();
     });
+  }
+
+  get inGroup(): boolean {
+    return this.groupStack.length > 0;
+  }
+
+  get displayGrid(): GridSlot[] {
+    return this.inGroup ? this.activeGrid : this.grid;
+  }
+
+  enterGroup(buttonId: string): void {
+    log(`Enter group: ${buttonId}`);
+    this.sendMod({ type: 'deck-group-enter', buttonId });
+  }
+
+  groupBack(): void {
+    log('Group back');
+    this.sendMod({ type: 'deck-group-back' });
   }
 
   private sendMod(msg: Record<string, any>): void {
