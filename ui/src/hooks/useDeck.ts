@@ -204,6 +204,22 @@ export function useDeck(options: UseDeckOptions = {}) {
 
   const toggleEdit = useCallback(() => setEditing(e => !e), []);
 
+  const createGroup = useCallback((row: number, col: number, name: string) => {
+    setGrid(prev => {
+      const button: DeckButton = {
+        id: `grp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        label: name,
+        icon: '\uD83D\uDCC1',
+        color: '#6366F1',
+        actions: [],
+        mode: 'parallel',
+        seriesGap: 0,
+        group: [],
+      };
+      return [...prev.filter(s => !(s.row === row && s.col === col)), { row, col, button }];
+    });
+  }, []);
+
   const enterGroup = useCallback((buttonId: string) => {
     send({ type: 'deck-group-enter', buttonId });
   }, [send]);
@@ -237,6 +253,7 @@ export function useDeck(options: UseDeckOptions = {}) {
     groupStack,
     displayGrid,
     inGroup,
+    createGroup,
     enterGroup,
     groupBack,
   };

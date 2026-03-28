@@ -100,6 +100,7 @@ export function DeckPage() {
             inGroup={deck.inGroup}
             onGroupEnter={deck.enterGroup}
             onGroupBack={deck.groupBack}
+            onCreateGroup={deck.createGroup}
           />
         </div>
       </div>

@@ -22,6 +22,7 @@ interface DeckGridProps {
   inGroup?: boolean;
   onGroupEnter?: (buttonId: string) => void;
   onGroupBack?: () => void;
+  onCreateGroup?: (row: number, col: number, name: string) => void;
 }
 
 const ROWS = 4;
@@ -29,7 +30,7 @@ const COLS = 8;
 const FONT_MONO = "'IBM Plex Mono', monospace";
 const FONT_SANS = "'IBM Plex Sans', sans-serif";
 
-export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates, showActive, inGroup = false, onGroupEnter, onGroupBack }: DeckGridProps) {
+export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates, showActive, inGroup = false, onGroupEnter, onGroupBack, onCreateGroup }: DeckGridProps) {
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const dragSrcRef = useRef<{ row: number; col: number } | null>(null);
@@ -235,7 +236,20 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
       });
     }
 
-    if (!button && !clipboard) {
+    if (editing && !button && onCreateGroup) {
+      if (items.length > 0) {
+        items.push({ label: '', separator: true, onClick: () => {} });
+      }
+      items.push({
+        label: '\uD83D\uDCC1 Create Group',
+        onClick: () => {
+          const name = prompt('Group name:');
+          if (name) onCreateGroup(row, col, name);
+        },
+      });
+    }
+
+    if (!button && !clipboard && !editing) {
       items.push({ label: 'No actions', disabled: true, onClick: () => {} });
     }
 
@@ -287,7 +301,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
                   const isOver = dragOverCell === cellKey;
 
                   {/* Auto-injected back button at (3, 0) when inside a group */}
-                  if (inGroup && !editing && ri === 3 && ci === 0) {
+                  if (inGroup && ri === 3 && ci === 0) {
                     return (
                       <div key={cellKey}
                         onPointerDown={() => onGroupBack?.()}
@@ -304,8 +318,8 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
 
                   const button = getButton(ri, ci);
 
-                  {/* Group folder button — enter group on press */}
-                  if (button?.group && !editing) {
+                  {/* Group folder button — enter group on press (both edit and live) */}
+                  if (button?.group) {
                     return (
                       <div key={cellKey}
                         onPointerDown={() => onGroupEnter?.(button.id)}
