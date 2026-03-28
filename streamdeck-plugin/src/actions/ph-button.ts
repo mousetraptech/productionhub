@@ -52,6 +52,7 @@ export class PHButton extends SingletonAction {
     });
     this.hub.on('device-state', () => this.renderAll());
     this.hub.on('show-context', () => this.renderAll());
+    this.hub.on('page-changed', () => this.renderAll());
     this.hub.on('connected', () => {
       log('Hub connected, rendering all keys');
       this.renderAll();
@@ -90,6 +91,11 @@ export class PHButton extends SingletonAction {
     const coords = ev.action.coordinates;
     if (!coords) return;
 
+    // Handle nav buttons
+    const nav = this.isNavButton(coords.row, coords.column);
+    if (nav === 'prev') { this.hub.pagePrev(); return; }
+    if (nav === 'next') { this.hub.pageNext(); return; }
+
     const button = this.getButton(coords.row, coords.column);
     if (!button) return;
 
@@ -113,8 +119,16 @@ export class PHButton extends SingletonAction {
   }
 
   private getButton(row: number, col: number): DeckButton | null {
-    const slot = this.hub.grid.find(s => s.row === row && s.col === col);
+    const absRow = row + this.hub.currentPage * 4;
+    const slot = this.hub.grid.find(s => s.row === absRow && s.col === col);
     return slot?.button ?? null;
+  }
+
+  private isNavButton(row: number, col: number): 'prev' | 'next' | null {
+    if (this.hub.totalPages <= 1) return null;
+    if (row === 3 && col === 0) return 'prev';
+    if (row === 3 && col === 7) return 'next';
+    return null;
   }
 
   private getButtonState(button: DeckButton): ButtonState {
@@ -198,6 +212,30 @@ export class PHButton extends SingletonAction {
     }
 
     const [row, col] = key.split(':').map(Number);
+
+    // Render nav buttons
+    const nav = this.isNavButton(row, col);
+    if (nav) {
+      const pageNames = this.hub.pageNames;
+      const cur = this.hub.currentPage;
+      const total = this.hub.totalPages;
+      const targetPage = nav === 'prev'
+        ? (cur - 1 + total) % total
+        : (cur + 1) % total;
+      const label = pageNames[targetPage] ?? `Page ${targetPage + 1}`;
+      const arrow = nav === 'prev' ? '\u25C0' : '\u25B6';
+      const navSvg = this.toDataUrl(renderButton(
+        { id: 'nav', label: `${arrow} ${label}`, icon: '', color: '#4444aa', actions: [], mode: 'parallel', seriesGap: 0 },
+        { level: null, active: false, live: false },
+        false,
+      ));
+      if (this.lastRendered.get(key) !== navSvg) {
+        this.lastRendered.set(key, navSvg);
+        action.setImage(navSvg);
+      }
+      return;
+    }
+
     const button = this.getButton(row, col);
     const state = button
       ? this.getButtonState(button)

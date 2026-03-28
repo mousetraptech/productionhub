@@ -38,4 +38,5 @@ export interface GridSlot {
 export interface DeckProfile {
   name: string;
   grid: GridSlot[];
+  pageNames?: string[];
 }

@@ -44,6 +44,9 @@ export class HubClient extends EventEmitter {
   categories: ActionCategory[] = [];
   deviceStates: Record<string, any> = {};
   showActive = false;
+  currentPage = 0;
+  totalPages = 1;
+  pageNames: string[] = ['Page 1'];
 
   constructor(config: HubClientConfig) {
     super();
@@ -133,6 +136,13 @@ export class HubClient extends EventEmitter {
             log(`Show active: ${this.showActive}`);
             this.emit('show-context');
             break;
+          case 'deck-page-changed':
+            this.currentPage = msg.page ?? 0;
+            this.totalPages = msg.totalPages ?? 1;
+            this.pageNames = msg.pageNames ?? ['Page 1'];
+            log(`Page changed: ${this.currentPage + 1}/${this.totalPages} "${this.pageNames[this.currentPage]}"`);
+            this.emit('page-changed');
+            break;
           default:
             break;
         }
@@ -191,6 +201,16 @@ export class HubClient extends EventEmitter {
       log(`DashWS error: ${err.message}`);
       ws.close();
     });
+  }
+
+  pageNext(): void {
+    log('Page next');
+    this.sendMod({ type: 'deck-page-next' });
+  }
+
+  pagePrev(): void {
+    log('Page prev');
+    this.sendMod({ type: 'deck-page-prev' });
   }
 
   private sendMod(msg: Record<string, any>): void {
