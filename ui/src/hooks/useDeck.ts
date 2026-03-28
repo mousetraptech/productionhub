@@ -5,7 +5,7 @@
  * Connects to the same ModWebSocket as useProductionHub.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DeckButton, GridSlot, ActionCategory, InlineOSC } from '../types';
 
 interface UseDeckOptions {
@@ -132,18 +132,33 @@ export function useDeck(options: UseDeckOptions = {}) {
     });
   }, [send]);
 
-  // Grid editing operations (local state, saved explicitly)
+  // Grid editing — applies mutations at the correct depth (root or inside a group)
+
+  /** Apply a mutation to the sub-grid identified by groupStack, returning a new root grid */
+  const mutateAtDepth = useCallback((rootGrid: GridSlot[], stack: string[], mutate: (subGrid: GridSlot[]) => GridSlot[]): GridSlot[] => {
+    if (stack.length === 0) return mutate(rootGrid);
+    const [head, ...rest] = stack;
+    return rootGrid.map(s => {
+      if (s.button.id !== head || !s.button.group) return s;
+      const newGroup = rest.length === 0
+        ? mutate(s.button.group)
+        : mutateAtDepth(s.button.group, rest, mutate);
+      return { ...s, button: { ...s.button, group: newGroup } };
+    });
+  }, []);
+
+  const editGrid = useCallback((mutate: (subGrid: GridSlot[]) => GridSlot[]) => {
+    setGrid(prev => mutateAtDepth(prev, groupStack, mutate));
+  }, [groupStack, mutateAtDepth]);
 
   const assignAction = useCallback((row: number, col: number, actionId: string, osc?: InlineOSC, actionMeta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle'], wait?: number) => {
-    setGrid(prev => {
-      const existing = prev.find(s => s.row === row && s.col === col);
+    editGrid(sub => {
+      const existing = sub.find(s => s.row === row && s.col === col);
       const action = wait ? { actionId, wait } : { actionId, osc };
       if (existing) {
-        // Append action to existing button
         const updated = { ...existing.button, actions: [...existing.button.actions, action] };
-        return prev.map(s => s.row === row && s.col === col ? { ...s, button: updated } : s);
+        return sub.map(s => s.row === row && s.col === col ? { ...s, button: updated } : s);
       }
-      // Create new button
       const button: DeckButton = {
         id: `btn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         label: actionMeta?.label ?? actionId,
@@ -154,58 +169,49 @@ export function useDeck(options: UseDeckOptions = {}) {
         seriesGap: 1000,
         ...(toggle ? { toggle } : {}),
       };
-      return [...prev, { row, col, button }];
+      return [...sub, { row, col, button }];
     });
-  }, []);
+  }, [editGrid]);
 
   const removeButton = useCallback((row: number, col: number) => {
-    setGrid(prev => prev.filter(s => !(s.row === row && s.col === col)));
-  }, []);
+    editGrid(sub => sub.filter(s => !(s.row === row && s.col === col)));
+  }, [editGrid]);
 
   const updateButton = useCallback((row: number, col: number, updates: Partial<DeckButton>) => {
-    setGrid(prev => prev.map(s =>
+    editGrid(sub => sub.map(s =>
       s.row === row && s.col === col
         ? { ...s, button: { ...s.button, ...updates } }
         : s
     ));
-  }, []);
+  }, [editGrid]);
 
   const removeAction = useCallback((row: number, col: number, actionIndex: number) => {
-    setGrid(prev => prev.flatMap(s => {
+    editGrid(sub => sub.flatMap(s => {
       if (s.row !== row || s.col !== col) return [s];
       const actions = s.button.actions.filter((_, i) => i !== actionIndex);
       if (actions.length === 0) return [];
       return [{ ...s, button: { ...s.button, actions } }];
     }));
-  }, []);
+  }, [editGrid]);
 
   const swapButtons = useCallback((fromRow: number, fromCol: number, toRow: number, toCol: number) => {
-    setGrid(prev => {
-      const fromSlot = prev.find(s => s.row === fromRow && s.col === fromCol);
-      const toSlot = prev.find(s => s.row === toRow && s.col === toCol);
-
-      let next = prev.filter(s =>
+    editGrid(sub => {
+      const fromSlot = sub.find(s => s.row === fromRow && s.col === fromCol);
+      const toSlot = sub.find(s => s.row === toRow && s.col === toCol);
+      let next = sub.filter(s =>
         !(s.row === fromRow && s.col === fromCol) &&
         !(s.row === toRow && s.col === toCol)
       );
-
-      // Move from → to position
-      if (fromSlot) {
-        next = [...next, { row: toRow, col: toCol, button: fromSlot.button }];
-      }
-      // Move to → from position (swap)
-      if (toSlot) {
-        next = [...next, { row: fromRow, col: fromCol, button: toSlot.button }];
-      }
-
+      if (fromSlot) next = [...next, { row: toRow, col: toCol, button: fromSlot.button }];
+      if (toSlot) next = [...next, { row: fromRow, col: fromCol, button: toSlot.button }];
       return next;
     });
-  }, []);
+  }, [editGrid]);
 
   const toggleEdit = useCallback(() => setEditing(e => !e), []);
 
   const createGroup = useCallback((row: number, col: number, name: string) => {
-    setGrid(prev => {
+    editGrid(sub => {
       const button: DeckButton = {
         id: `grp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         label: name,
@@ -216,9 +222,9 @@ export function useDeck(options: UseDeckOptions = {}) {
         seriesGap: 0,
         group: [],
       };
-      return [...prev.filter(s => !(s.row === row && s.col === col)), { row, col, button }];
+      return [...sub.filter(s => !(s.row === row && s.col === col)), { row, col, button }];
     });
-  }, []);
+  }, [editGrid]);
 
   const enterGroup = useCallback((buttonId: string) => {
     send({ type: 'deck-group-enter', buttonId });
@@ -228,8 +234,20 @@ export function useDeck(options: UseDeckOptions = {}) {
     send({ type: 'deck-group-back' });
   }, [send]);
 
-  // Use activeGrid when inside a group, otherwise use the profile grid
-  const displayGrid = groupStack.length > 0 ? activeGrid : grid;
+  // Resolve the visible grid: walk groupStack through the local grid state
+  const displayGrid = useMemo(() => {
+    if (groupStack.length === 0) return grid;
+    let current = grid;
+    for (const btnId of groupStack) {
+      const slot = current.find(s => s.button.id === btnId);
+      if (slot?.button.group) {
+        current = slot.button.group;
+      } else {
+        return grid; // invalid stack, fall back to root
+      }
+    }
+    return current;
+  }, [grid, groupStack]);
   const inGroup = groupStack.length > 0;
 
   return {
