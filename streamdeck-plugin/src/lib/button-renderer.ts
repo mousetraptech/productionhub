@@ -2,11 +2,14 @@ import { DeckButton } from './types';
 import { ButtonState } from './state-matcher';
 
 const SIZE = 144;
-const ICON_AREA = { x: 22, y: 10, w: 100, h: 80 };
+// Icons are drawn in 48x48 space. Scale 1.8x and center in 144px button, above label.
+// Center point: (72, 46). Offset: 72 - 24*1.8 = 28.8, 46 - 24*1.8 = 2.8
+const ICON_SCALE = 1.8;
+const ICON_TX = `translate(${72 - 24 * ICON_SCALE},${46 - 24 * ICON_SCALE}) scale(${ICON_SCALE})`;
 const FONT = '-apple-system, SF Pro, Helvetica, sans-serif';
 
 // ---------------------------------------------------------------------------
-// SVG Icon paths — drawn in a 48x48 viewBox, centered via nested <svg>
+// SVG Icon paths — drawn in a 48x48 coordinate space
 // ---------------------------------------------------------------------------
 
 const ICON_PATHS: Record<string, string> = {
@@ -275,7 +278,7 @@ export function renderButton(
   // Icon SVG
   const iconPath = iconKey ? ICON_PATHS[iconKey] : null;
   const iconSvg = iconPath
-    ? `<svg x="${ICON_AREA.x}" y="${ICON_AREA.y}" width="${ICON_AREA.w}" height="${ICON_AREA.h}" viewBox="0 0 48 48">${iconPath.replace(/currentColor/g, textColor)}</svg>`
+    ? `<g transform="${ICON_TX}">${iconPath.replace(/currentColor/g, textColor)}</g>`
     : '';
 
   // Label sizing
