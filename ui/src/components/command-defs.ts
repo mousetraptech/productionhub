@@ -52,11 +52,20 @@ export function normFader(raw: string): number {
   return Math.max(0, Math.min(v, 1));
 }
 
-export function getCommands(obsScenes?: string[], aliases?: Record<string, number[]>): CmdDef[] {
+export function getCommands(obsScenes?: string[], aliases?: Record<string, number[]>, qlabCues?: { number: string; name: string }[]): CmdDef[] {
   const sceneField = (key: string, placeholder: string): FieldDef =>
     obsScenes && obsScenes.length > 0
       ? { key, placeholder, type: 'select', options: obsScenes }
       : { key, placeholder, type: 'text', width: 140 };
+
+  const cueOptions = qlabCues && qlabCues.length > 0
+    ? qlabCues.filter(c => c.number).map(c => c.number + (c.name ? ` — ${c.name}` : ''))
+    : null;
+
+  const cueField = (key: string, placeholder: string): FieldDef =>
+    cueOptions
+      ? { key, placeholder, type: 'select', options: cueOptions }
+      : { key, placeholder, type: 'text', width: 100 };
 
   return [
     {
@@ -326,11 +335,12 @@ export function getCommands(obsScenes?: string[], aliases?: Record<string, numbe
     {
       type: 'sfx-go-cue',
       label: 'SFX Go Cue',
-      fields: [{ key: 'cue', placeholder: 'Cue #', type: 'text', width: 100 }],
+      fields: [cueField('cue', 'Cue #')],
       build: (v) => {
-        const cue = v.cue?.trim();
+        const cue = v.cue?.trim().split(' — ')[0];
         if (!cue) return null;
-        return { address: `/sfx/go/${cue}`, args: [], label: `SFX Cue ${cue}` };
+        const name = v.cue?.includes(' — ') ? v.cue.split(' — ').slice(1).join(' — ') : '';
+        return { address: `/sfx/go/${cue}`, args: [], label: name ? `SFX ${name}` : `SFX Cue ${cue}` };
       },
       parse: (osc) => {
         const m = osc.address.match(/^\/sfx\/go\/(.+)$/);
@@ -341,11 +351,12 @@ export function getCommands(obsScenes?: string[], aliases?: Record<string, numbe
     {
       type: 'show-go-cue',
       label: 'Show Go Cue',
-      fields: [{ key: 'cue', placeholder: 'Cue #', type: 'text', width: 100 }],
+      fields: [cueField('cue', 'Cue #')],
       build: (v) => {
-        const cue = v.cue?.trim();
+        const cue = v.cue?.trim().split(' — ')[0];
         if (!cue) return null;
-        return { address: `/show/go/${cue}`, args: [], label: `Show Cue ${cue}` };
+        const name = v.cue?.includes(' — ') ? v.cue.split(' — ').slice(1).join(' — ') : '';
+        return { address: `/show/go/${cue}`, args: [], label: name ? `Show ${name}` : `Show Cue ${cue}` };
       },
       parse: (osc) => {
         const m = osc.address.match(/^\/show\/go\/(.+)$/);

@@ -108,6 +108,7 @@ export function DeckPage() {
         <CommandModal
           target={modalTarget}
           obsScenes={deviceStates?.obs?.scenes}
+          qlabCues={Object.values(deviceStates?.qlab ?? {}).flatMap(q => q?.cues ?? [])}
           onSubmit={handleModalSubmit}
           onCancel={() => { setModalTarget(null); setDropSlot(null); }}
         />

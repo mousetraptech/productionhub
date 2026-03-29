@@ -12,12 +12,13 @@ export interface CommandModalTarget {
 interface CommandModalProps {
   target: CommandModalTarget;
   obsScenes?: string[];
+  qlabCues?: { number: string; name: string }[];
   onSubmit: (target: CommandModalTarget, osc: InlineOSC, delay?: number) => void;
   onCancel: () => void;
 }
 
-export default function CommandModal({ target, obsScenes, onSubmit, onCancel }: CommandModalProps) {
-  const commands = getCommands(obsScenes);
+export default function CommandModal({ target, obsScenes, qlabCues, onSubmit, onCancel }: CommandModalProps) {
+  const commands = getCommands(obsScenes, undefined, qlabCues);
   const def = commands.find(c => c.type === target.commandType);
   const isEditing = target.editActionIndex !== undefined;
   const [vals, setVals] = useState<Record<string, string>>(target.initialValues ?? {});
