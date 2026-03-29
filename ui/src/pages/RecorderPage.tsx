@@ -21,7 +21,7 @@ function vuDbColor(vuDb: number): string {
 }
 
 function framesToTimecode(frames: number): string {
-  const totalSeconds = Math.floor(frames / 60);
+  const totalSeconds = Math.floor(frames / 30);
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
