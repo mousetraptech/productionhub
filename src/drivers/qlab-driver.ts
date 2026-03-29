@@ -1,8 +1,8 @@
 /**
- * QLab Device Driver
+ * QLab Device Driver (TCP + SLIP)
  *
- * OSC-to-OSC relay for Figure 53 QLab. Sends OSC commands over UDP
- * and polls QLab for playhead and running cue state.
+ * Connects to QLab 5 via TCP with SLIP framing for bidirectional OSC.
+ * Sends commands, receives replies and push updates.
  *
  * QLab OSC protocol (default port 53000):
  *   /go                        Fire next cue
@@ -25,10 +25,19 @@
  */
 
 import { EventEmitter } from 'events';
-import * as dgram from 'dgram';
+import * as net from 'net';
 import * as osc from 'osc';
 import { DeviceConfig, DeviceDriver, HubContext, FeedbackEvent } from './device-driver';
 import { ReconnectQueue } from './reconnect-queue';
+import { getLogger } from '../logger';
+
+const log = getLogger('QLab');
+
+// SLIP framing constants
+const SLIP_END = 0xC0;
+const SLIP_ESC = 0xDB;
+const SLIP_ESC_END = 0xDC;
+const SLIP_ESC_ESC = 0xDD;
 
 export interface QLabCue {
   uniqueID: string;
@@ -42,17 +51,30 @@ export interface QLabConfig extends DeviceConfig {
   passcode?: string;
 }
 
+function slipEncode(data: Buffer): Buffer {
+  const out: number[] = [SLIP_END];
+  for (const b of data) {
+    if (b === SLIP_END) { out.push(SLIP_ESC, SLIP_ESC_END); }
+    else if (b === SLIP_ESC) { out.push(SLIP_ESC, SLIP_ESC_ESC); }
+    else { out.push(b); }
+  }
+  out.push(SLIP_END);
+  return Buffer.from(out);
+}
+
 export class QLabDriver extends EventEmitter implements DeviceDriver {
   readonly name: string;
   readonly prefix: string;
   private host: string;
   private port: number;
   private passcode: string;
-  private socket: dgram.Socket | null = null;
+  private tcpSocket: net.Socket | null = null;
   private connected = false;
   private verbose: boolean;
   private queue = new ReconnectQueue<{ address: string; args: any[] }>(64);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private slipBuf: number[] = [];
+  private inEscape = false;
 
   // State
   private playhead = '';
@@ -70,19 +92,17 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
   }
 
   connect(): void {
-    const socket = dgram.createSocket('udp4');
-    this.socket = socket;
+    const socket = new net.Socket();
+    this.tcpSocket = socket;
 
-    socket.on('listening', () => {
-      const localPort = socket.address().port;
-      this.log(`UDP socket bound on port ${localPort}`);
+    socket.connect(this.port, this.host, () => {
+      log.info({ host: this.host, port: this.port }, 'TCP connected');
+
       if (this.passcode) {
         this.sendOsc('/connect', [{ type: 's', value: this.passcode }]);
       } else {
         this.sendOsc('/connect', []);
       }
-      // Tell QLab to send replies to our actual port (default is 53001)
-      this.sendOsc('/udpReplyPort', [{ type: 'i', value: localPort }]);
       this.sendOsc('/updates', [{ type: 'i', value: 1 }]);
 
       this.connected = true;
@@ -97,27 +117,31 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
         this.handleOSC(item.address, item.args);
       }
 
-      this.pollTimer = setInterval(() => this.poll(), 1000);
+      this.pollTimer = setInterval(() => this.poll(), 2000);
       this.pollTimer.unref();
     });
 
-    socket.on('message', (msg: Buffer, _rinfo: dgram.RemoteInfo) => {
-      try {
-        const packet = osc.readMessage(msg, { metadata: true });
-        if (packet.address) {
-          this.handleReply(packet.address, packet.args || []);
-        }
-      } catch (err) {
-        this.log(`Reply parse error: ${err}`);
-      }
+    socket.on('data', (data: Buffer) => {
+      this.processSLIP(data);
     });
 
     socket.on('error', (err: Error) => {
-      this.log(`Socket error: ${err.message}`);
+      log.error({ err: err.message }, 'TCP error');
       this.emit('error', err);
     });
 
-    socket.bind(0);
+    socket.on('close', () => {
+      if (this.tcpSocket === socket) {
+        log.info('TCP closed');
+        this.tcpSocket = null;
+        this.connected = false;
+        if (this.pollTimer) {
+          clearInterval(this.pollTimer);
+          this.pollTimer = null;
+        }
+        this.emit('disconnected');
+      }
+    });
   }
 
   disconnect(): void {
@@ -125,9 +149,9 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
+    if (this.tcpSocket) {
+      this.tcpSocket.destroy();
+      this.tcpSocket = null;
     }
     this.connected = false;
     this.emit('disconnected');
@@ -144,7 +168,7 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
     }
     const oscArgs = args.map((a) => this.toOscArg(a));
     this.sendOsc(address, oscArgs);
-    this.log(`TX ${address} ${args.map(String).join(' ')}`);
+    if (this.verbose) log.debug({ address, args }, 'TX');
   }
 
   handleFadeTick(_key: string, _value: number): void {
@@ -165,6 +189,40 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
     if (!this.connected) return;
     this.sendOsc('/cue/playhead/text', []);
     this.sendOsc('/runningCues', []);
+  }
+
+  /** Process incoming TCP data through SLIP decoder */
+  private processSLIP(data: Buffer): void {
+    for (const byte of data) {
+      if (this.inEscape) {
+        this.inEscape = false;
+        if (byte === SLIP_ESC_END) this.slipBuf.push(SLIP_END);
+        else if (byte === SLIP_ESC_ESC) this.slipBuf.push(SLIP_ESC);
+        else this.slipBuf.push(byte); // malformed, pass through
+      } else if (byte === SLIP_ESC) {
+        this.inEscape = true;
+      } else if (byte === SLIP_END) {
+        if (this.slipBuf.length > 0) {
+          this.handleFrame(Buffer.from(this.slipBuf));
+          this.slipBuf = [];
+        }
+        // Empty frame between END markers is normal — ignore
+      } else {
+        this.slipBuf.push(byte);
+      }
+    }
+  }
+
+  /** Handle a complete SLIP-decoded OSC frame */
+  private handleFrame(frame: Buffer): void {
+    try {
+      const packet = osc.readMessage(frame, { metadata: true });
+      if (packet.address) {
+        this.handleReply(packet.address, packet.args || []);
+      }
+    } catch (err) {
+      if (this.verbose) log.debug({ err, len: frame.length }, 'Frame parse error');
+    }
   }
 
   private handleReply(address: string, args: any[]): void {
@@ -214,8 +272,10 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
           if (Array.isArray(list.cues)) walk(list.cues);
         }
         this.cues = flat;
-        this.log(`Loaded ${flat.length} cues from workspace`);
+        log.info({ count: flat.length }, 'Loaded cues from workspace');
         this.emitFeedback('/cues', [{ type: 's', value: JSON.stringify(flat) }]);
+      } else if (originalAddress === '/connect') {
+        log.info({ workspace: reply.workspace_id }, 'QLab handshake OK');
       }
     } catch {
       // Not JSON — ignore
@@ -223,12 +283,12 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
   }
 
   private sendOsc(address: string, args: any[]): void {
-    if (!this.socket) return;
+    if (!this.tcpSocket || this.tcpSocket.destroyed) return;
     try {
-      const buf = osc.writeMessage({ address, args });
-      this.socket.send(buf, 0, buf.length, this.port, this.host);
+      const msgBuf = Buffer.from(osc.writeMessage({ address, args }));
+      this.tcpSocket.write(slipEncode(msgBuf));
     } catch (err) {
-      this.log(`Send error: ${err}`);
+      log.error({ err, address }, 'Send error');
     }
   }
 
@@ -243,9 +303,5 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
     }
     if (typeof value === 'string') return { type: 's', value };
     return value;
-  }
-
-  private log(msg: string): void {
-    if (this.verbose) console.log(`[${this.name}] ${msg}`);
   }
 }

@@ -53,7 +53,7 @@ export function inferTransportType(deviceType: string, config?: Record<string, a
     case 'obs': return 'websocket';
     case 'chamsys': return 'udp';
     case 'touchdesigner': return 'udp';
-    case 'qlab': return 'udp';
+    case 'qlab': return 'tcp';
     case 'broadlink': return 'custom';
     case 'video-switch': return 'custom';
     default: return 'udp';
