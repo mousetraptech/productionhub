@@ -74,12 +74,15 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
     this.socket = socket;
 
     socket.on('listening', () => {
-      this.log(`UDP socket bound on port ${socket.address().port}`);
+      const localPort = socket.address().port;
+      this.log(`UDP socket bound on port ${localPort}`);
       if (this.passcode) {
         this.sendOsc('/connect', [{ type: 's', value: this.passcode }]);
       } else {
         this.sendOsc('/connect', []);
       }
+      // Tell QLab to send replies to our actual port (default is 53001)
+      this.sendOsc('/udpReplyPort', [{ type: 'i', value: localPort }]);
       this.sendOsc('/updates', [{ type: 'i', value: 1 }]);
 
       this.connected = true;
