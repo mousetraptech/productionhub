@@ -124,6 +124,13 @@ export class DriverManager {
       this.onDriverStatus?.(driver.name, 1);
       this.checkAllReady();
       this.dashboardWs.broadcastDriverState(driver.name, prefix, 'connected');
+      // Broadcast initial device state after a short delay (lets async init like cueLists finish)
+      const driverAny = driver as any;
+      if (typeof driverAny.getState === 'function') {
+        setTimeout(() => {
+          this.dashboardWs.broadcastDeviceState(prefix, config?.type ?? 'unknown', driverAny.getState());
+        }, 2000);
+      }
     });
 
     driver.on('disconnected', () => {
