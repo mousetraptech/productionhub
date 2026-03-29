@@ -1,8 +1,17 @@
 {
   "port": 7200,
-  "ndiRecordPath": "C:\\Program Files\\NDI\\NDI 6 Tools\\NDI Record.exe",
+  "ffmpegPath": "ffmpeg",
   "recordingPath": "D:\\Recordings",
   "archivePath": "\\\\nas\\shows",
+  "video": {
+    "codec": "libx264",
+    "preset": "fast",
+    "crf": 18,
+    "scale": "1920:1080"
+  },
+  "audio": {
+    "codec": "pcm_s24le"
+  },
   "sources": [
     { "name": "OBS (Program)", "id": "program" },
     { "name": "CAM1 (PTZ1)", "id": "cam1" },

@@ -53,7 +53,7 @@ OSC (UDP 9000) ──> Hub ──> DriverManager ──> Device Drivers
 | `src/drivers/obs-driver.ts` | OBS Studio: WebSocket v5 protocol |
 | `src/drivers/visca-driver.ts` | PTZ cameras: VISCA over IP |
 | `src/drivers/ndi-recorder-driver.ts` | NDI recorder: WebSocket client to Windows recording agent |
-| `ndi-record-agent/agent.js` | Windows agent: spawns NDI Record.exe, robocopy archive |
+| `ndi-record-agent/agent.js` | Windows agent: spawns ffmpeg for NDI capture (H.264 transcode) |
 | `src/cue-engine/engine.ts` | Show state manager — cue list, fire, auto-follow |
 | `src/cue-engine/types.ts` | Cue, CueAction, InlineOSC, ShowState types |
 | `src/server/websocket.ts` | ModWebSocket — UI communication (port 3001) |
@@ -178,13 +178,16 @@ The ChamSys QuickQ 20 does NOT support scenes via OSC. The driver is a transpare
 ### NDI Recorder Driver Notes
 
 - Two-component architecture: hub driver (WebSocket client) connects to `ndi-record-agent` (WebSocket server on Windows PC, default port 7200)
-- The Windows agent spawns one `NDI Record.exe` per configured NDI source, using `-noautostart` for frame-accurate sync
-- Agent stdin commands: `<start/>` (begin recording), `<exit/>` (stop and close file)
-- Agent stdout feedback: XML with frame count, timecode, VU dB levels — parsed and relayed to hub as JSON
-- After all recorders stop, agent runs robocopy to archive recordings to a network share (exit codes 0-7 = success)
+- The Windows agent spawns one `ffmpeg` process per configured NDI source, transcoding to H.264 in .mov
+- ffmpeg uses `-f libndi_newtek` input — requires ffmpeg built with NDI SDK support and NDI Runtime installed
+- Discover NDI source names: `ffmpeg -f libndi_newtek -find_sources 1 -i dummy`
+- Agent stops ffmpeg gracefully via `q` on stdin (finalizes file headers properly)
+- Progress from ffmpeg's `-progress pipe:1` output (key=value format, ~1 update/sec)
+- VU meters not available from ffmpeg — UI will show -60 dB placeholder
+- Archive handled by hub driver (rsync on stop)
 - OSC commands (after prefix): `/start`, `/stop`, `/status`
-- No emulator support — the agent runs on a real Windows PC with NDI Record.exe installed
-- Agent config lives in `ndi-record-agent/config.json` (sources, paths, port)
+- Config: `ndi-record-agent/config.json` — video codec/preset/crf/scale, audio codec, source list
+- Default: libx264 crf=18 preset=fast scaled to 1920:1080 — ~20 Mbps per stream (vs 170 Mbps SpeedHQ 4K)
 
 ### VISCA Driver Notes
 

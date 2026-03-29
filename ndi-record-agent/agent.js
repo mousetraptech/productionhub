@@ -1,17 +1,27 @@
 #!/usr/bin/env node
 
 /**
- * NDI Record Agent
+ * NDI Record Agent (ffmpeg backend)
  *
- * Lightweight WebSocket server that spawns and controls NDI Record.exe
- * processes. Designed to run on the Windows recording PC.
+ * Lightweight WebSocket server that spawns ffmpeg processes to capture
+ * NDI streams, transcoding to H.264 for manageable file sizes.
  *
- * Protocol:
+ * Replaces NDI Record.exe (which writes SpeedHQ at ~170 Mbps per 4K stream)
+ * with configurable codec/resolution/quality. At 1080p H.264 crf=18,
+ * expect ~20 Mbps per stream — 8x smaller than SpeedHQ 4K.
+ *
+ * Requirements:
+ *   - ffmpeg built with NDI support (libndi_newtek input format)
+ *   - NDI Runtime installed on the recording PC
+ *   - NDI sources visible on the network
+ *
+ * Discover NDI source names:
+ *   ffmpeg -f libndi_newtek -find_sources 1 -i dummy
+ *
+ * Protocol (unchanged from NDI Record.exe version):
  *   Hub sends:  { type: "start" | "stop" | "status" }
- *   Agent sends: { type: "state", state: "recording" | "stopped" | "archiving" }
+ *   Agent sends: { type: "state", state: "recording" | "stopped" }
  *                { type: "source-update", id, frames, vuDb }
- *                { type: "archive-progress", progress: 0.0-1.0 }
- *                { type: "archive-done", path }
  *                { type: "sources", sources: [...] }
  *                { type: "error", message }
  */
@@ -30,13 +40,15 @@ if (!fs.existsSync(configPath)) {
 const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
 const PORT = config.port || 7200;
-const NDI_RECORD_PATH = config.ndiRecordPath;
+const FFMPEG_PATH = config.ffmpegPath || 'ffmpeg';
 const RECORDING_PATH = config.recordingPath;
 const SOURCES = config.sources || [];
+const VIDEO = config.video || {};
+const AUDIO = config.audio || {};
 
 // State
-let state = 'stopped'; // 'stopped' | 'recording' | 'archiving'
-let recorders = new Map(); // id -> { process, frames, vuDb }
+let state = 'stopped'; // 'stopped' | 'recording'
+let recorders = new Map(); // id -> { process, frames, vuDb, buffer }
 let sessionDir = '';
 let hubSocket = null;
 
@@ -44,8 +56,10 @@ let hubSocket = null;
 
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`[Agent] Listening on ws://0.0.0.0:${PORT}`);
-console.log(`[Agent] NDI Record: ${NDI_RECORD_PATH}`);
+console.log(`[Agent] ffmpeg: ${FFMPEG_PATH}`);
 console.log(`[Agent] Sources: ${SOURCES.map(s => s.name).join(', ')}`);
+console.log(`[Agent] Video: ${VIDEO.codec || 'libx264'} preset=${VIDEO.preset || 'fast'} crf=${VIDEO.crf ?? 18} scale=${VIDEO.scale || 'native'}`);
+console.log(`[Agent] Audio: ${AUDIO.codec || 'pcm_s24le'}`);
 
 wss.on('connection', (ws) => {
   console.log('[Agent] Hub connected');
@@ -105,13 +119,38 @@ function handleCommand(msg, ws) {
 
 // --- Recording ---
 
+function buildFfmpegArgs(sourceName, outFile) {
+  const args = [
+    // NDI input
+    '-f', 'libndi_newtek',
+    '-i', sourceName,
+
+    // Video
+    '-c:v', VIDEO.codec || 'libx264',
+  ];
+
+  if (VIDEO.preset) args.push('-preset', VIDEO.preset);
+  if (VIDEO.crf !== undefined) args.push('-crf', String(VIDEO.crf));
+  if (VIDEO.scale) args.push('-vf', `scale=${VIDEO.scale}`);
+
+  // Audio
+  args.push('-c:a', AUDIO.codec || 'pcm_s24le');
+
+  // Progress on stdout (key=value format, easy to parse)
+  args.push('-progress', 'pipe:1');
+
+  // Overwrite, output file
+  args.push('-y', outFile);
+
+  return args;
+}
+
 function startRecording(ws, sessionName) {
   if (state !== 'stopped') {
     send(ws, { type: 'error', message: `Cannot start: currently ${state}` });
     return;
   }
 
-  // Use provided session name or fall back to auto-generated timestamp
   const now = new Date();
   const stamp = now.toISOString().slice(0, 16).replace(/[T:]/g, '_').replace(/-/g, '-');
   const dirName = sessionName || stamp;
@@ -126,56 +165,77 @@ function startRecording(ws, sessionName) {
 
   console.log(`[Agent] Starting recording in ${sessionDir}`);
 
-  // Spawn one NDI Record.exe per source
+  // Spawn all ffmpeg processes — they start capturing immediately
   for (const source of SOURCES) {
     const outFile = path.join(sessionDir, `${source.id}.mov`);
-    const args = ['-i', source.name, '-o', outFile, '-noautostart'];
+    const args = buildFfmpegArgs(source.name, outFile);
 
-    console.log(`[Agent] Spawning: "${NDI_RECORD_PATH}" ${args.join(' ')}`);
+    console.log(`[Agent] Spawning: ${FFMPEG_PATH} ${args.join(' ')}`);
 
-    const proc = spawn(NDI_RECORD_PATH, args, {
+    const proc = spawn(FFMPEG_PATH, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    const recorder = { process: proc, frames: 0, vuDb: -60 };
+    const recorder = { process: proc, frames: 0, vuDb: -60, buffer: '' };
     recorders.set(source.id, recorder);
 
-    // Parse XML stdout for stats
-    let buffer = '';
+    // Parse ffmpeg progress output from stdout
+    // Format: key=value lines, blocks end with progress=continue|end
     proc.stdout.on('data', (chunk) => {
-      buffer += chunk.toString();
-      // Process complete XML tags
-      let match;
-      while ((match = buffer.match(/<(\w+)\s+([^>]*)\/>/)) !== null) {
-        parseRecorderXml(source.id, match[1], match[2], recorder);
-        buffer = buffer.slice(match.index + match[0].length);
+      recorder.buffer += chunk.toString();
+      const lines = recorder.buffer.split('\n');
+      recorder.buffer = lines.pop(); // keep incomplete line in buffer
+
+      for (const line of lines) {
+        const eq = line.indexOf('=');
+        if (eq === -1) continue;
+        const key = line.slice(0, eq).trim();
+        const val = line.slice(eq + 1).trim();
+
+        if (key === 'frame') {
+          recorder.frames = parseInt(val, 10) || 0;
+        } else if (key === 'progress') {
+          // End of progress block — broadcast accumulated stats
+          broadcast({
+            type: 'source-update',
+            id: source.id,
+            frames: recorder.frames,
+            vuDb: recorder.vuDb, // -60 placeholder — ffmpeg doesn't provide VU
+          });
+        }
       }
     });
 
+    // ffmpeg writes diagnostics to stderr — log errors only
     proc.stderr.on('data', (chunk) => {
-      console.error(`[${source.id}] ${chunk.toString().trim()}`);
+      const text = chunk.toString();
+      for (const line of text.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (/error|could not|failed|invalid/i.test(trimmed)) {
+          console.error(`[${source.id}] ${trimmed}`);
+          broadcast({ type: 'error', message: `${source.id}: ${trimmed}` });
+        }
+      }
     });
 
     proc.on('exit', (code) => {
-      console.log(`[Agent] ${source.id} exited with code ${code}`);
+      console.log(`[Agent] ${source.id} exited (code ${code})`);
+      // Broadcast final frame count
+      broadcast({
+        type: 'source-update',
+        id: source.id,
+        frames: recorder.frames,
+        vuDb: -60,
+      });
       recorders.delete(source.id);
       checkAllStopped();
     });
   }
 
-  // Send <start/> to all recorders for frame-accurate sync
-  setTimeout(() => {
-    for (const [id, rec] of recorders) {
-      try {
-        rec.process.stdin.write('<start/>\n');
-        console.log(`[Agent] Sent <start/> to ${id}`);
-      } catch (err) {
-        console.error(`[Agent] Failed to start ${id}: ${err.message}`);
-      }
-    }
-    state = 'recording';
-    broadcast({ type: 'state', state: 'recording' });
-  }, 500); // Brief delay to let processes initialize
+  state = 'recording';
+  broadcast({ type: 'state', state: 'recording' });
+  console.log(`[Agent] Recording started — ${SOURCES.length} sources`);
 }
 
 function stopRecording(ws) {
@@ -188,14 +248,26 @@ function stopRecording(ws) {
 
   for (const [id, rec] of recorders) {
     try {
-      rec.process.stdin.write('<exit/>\n');
-      console.log(`[Agent] Sent <exit/> to ${id}`);
+      // ffmpeg graceful stop: write 'q' to stdin
+      rec.process.stdin.write('q');
+      console.log(`[Agent] Sent quit to ${id}`);
     } catch (err) {
       console.error(`[Agent] Failed to stop ${id}: ${err.message}`);
+      // Force kill if stdin write fails
+      try { rec.process.kill('SIGTERM'); } catch {}
     }
   }
 
-  // Processes will exit, triggering checkAllStopped()
+  // Processes will exit naturally, triggering checkAllStopped()
+  // Safety: force kill after 10s if ffmpeg hangs on finalization
+  setTimeout(() => {
+    if (recorders.size > 0) {
+      console.warn(`[Agent] ${recorders.size} recorders still running after 10s — force killing`);
+      for (const [id, rec] of recorders) {
+        try { rec.process.kill('SIGKILL'); } catch {}
+      }
+    }
+  }, 10000);
 }
 
 function checkAllStopped() {
@@ -206,40 +278,20 @@ function checkAllStopped() {
   }
 }
 
-function parseRecorderXml(sourceId, tag, attrs, recorder) {
-  const attrMap = {};
-  attrs.replace(/(\w+)="([^"]*)"/g, (_, key, val) => {
-    attrMap[key] = val;
-  });
-
-  if (tag === 'recording') {
-    const frames = parseInt(attrMap.no_frames, 10) || 0;
-    const vuDbRaw = parseFloat(attrMap.vu_dB);
-    const vuDb = isNaN(vuDbRaw) ? -60 : vuDbRaw;
-    recorder.frames = frames;
-    recorder.vuDb = vuDb;
-
-    broadcast({
-      type: 'source-update',
-      id: sourceId,
-      frames,
-      vuDb,
-    });
-  } else if (tag === 'record_stopped') {
-    const frames = parseInt(attrMap.no_frames, 10) || 0;
-    console.log(`[Agent] ${sourceId} stopped after ${frames} frames`);
-  }
-}
-
 // --- Graceful shutdown ---
 
 process.on('SIGINT', () => {
   console.log('\n[Agent] Shutting down...');
   for (const [id, rec] of recorders) {
     try {
-      rec.process.stdin.write('<exit/>\n');
-    } catch {}
+      rec.process.stdin.write('q');
+    } catch {
+      try { rec.process.kill('SIGTERM'); } catch {}
+    }
   }
-  wss.close();
-  process.exit(0);
+  // Give ffmpeg a moment to finalize files
+  setTimeout(() => {
+    wss.close();
+    process.exit(0);
+  }, 3000);
 });
