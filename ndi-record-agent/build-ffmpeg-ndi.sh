@@ -1,6 +1,9 @@
 #!/bin/bash
 #
-# Build ffmpeg with NDI support on Windows (MSYS2 MinGW64)
+# Build ffmpeg 5.1 with NDI support on Windows (MSYS2 MinGW64)
+#
+# NDI was removed from mainline ffmpeg in 2019. This script uses the
+# community patch from lplassman/FFMPEG-NDI to re-add it to ffmpeg 5.1.
 #
 # Prerequisites:
 #   1. Install MSYS2 from https://www.msys2.org/
@@ -9,7 +12,7 @@
 #   3. Open "MSYS2 MinGW 64-bit" terminal (NOT the plain MSYS2 one)
 #   4. Run this script: bash build-ffmpeg-ndi.sh
 #
-# Output: ~/ffmpeg-ndi/ffmpeg.exe (copy to your PATH or set in config.json)
+# Output: ~/ffmpeg-ndi/bin/ffmpeg.exe
 #
 
 set -euo pipefail
@@ -18,18 +21,14 @@ set -euo pipefail
 NDI_SDK_DIR="/c/Program Files/NDI/NDI 6 SDK"
 BUILD_DIR="$HOME/ffmpeg-ndi-build"
 OUTPUT_DIR="$HOME/ffmpeg-ndi"
-FFMPEG_VERSION="7.1"
+FFMPEG_VERSION="5.1"
 
 # --- Check NDI SDK ---
 if [ ! -d "$NDI_SDK_DIR" ]; then
   echo "ERROR: NDI SDK not found at: $NDI_SDK_DIR"
   echo ""
   echo "Download from: https://ndi.video/for-developers/ndi-sdk/"
-  echo "Install it, then update NDI_SDK_DIR in this script if the path differs."
-  echo ""
-  echo "Common paths:"
-  echo '  "C:\Program Files\NDI\NDI 6 SDK"'
-  echo '  "C:\Program Files\NDI\NDI 5 SDK"'
+  echo "Install it, then update NDI_SDK_DIR at the top of this script."
   echo ""
   # Try to find it
   for d in /c/Program\ Files/NDI/NDI*/; do
@@ -42,9 +41,8 @@ fi
 
 echo "NDI SDK: $NDI_SDK_DIR"
 
-# Verify SDK has what we need
 if [ ! -f "$NDI_SDK_DIR/Include/Processing.NDI.Lib.h" ]; then
-  echo "ERROR: NDI SDK headers not found. Expected: $NDI_SDK_DIR/Include/Processing.NDI.Lib.h"
+  echo "ERROR: NDI SDK headers not found at: $NDI_SDK_DIR/Include/Processing.NDI.Lib.h"
   exit 1
 fi
 
@@ -61,33 +59,75 @@ pacman -S --needed --noconfirm \
   mingw-w64-x86_64-SDL2 \
   make \
   git \
-  diffutils
+  diffutils \
+  patch
 
-# --- Download ffmpeg source ---
+# --- Clone NDI patch repo ---
 echo ""
-echo "=== Getting ffmpeg source ==="
+echo "=== Getting NDI patch ==="
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-if [ ! -d "ffmpeg-$FFMPEG_VERSION" ]; then
-  if [ ! -f "ffmpeg-$FFMPEG_VERSION.tar.xz" ]; then
-    echo "Downloading ffmpeg $FFMPEG_VERSION..."
-    curl -LO "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz"
-  fi
-  tar xf "ffmpeg-$FFMPEG_VERSION.tar.xz"
+if [ ! -d "FFMPEG-NDI" ]; then
+  git clone https://github.com/lplassman/FFMPEG-NDI.git
+else
+  echo "NDI patch repo already cloned"
 fi
 
-cd "ffmpeg-$FFMPEG_VERSION"
-
-# --- Create pkg-config file for NDI ---
-# ffmpeg's configure uses pkg-config to find libndi_newtek
+# --- Get ffmpeg 5.1 source ---
 echo ""
-echo "=== Creating NDI pkg-config file ==="
+echo "=== Getting ffmpeg $FFMPEG_VERSION source ==="
 
+if [ ! -d "FFmpeg" ]; then
+  git clone --branch "n$FFMPEG_VERSION" --depth 1 https://github.com/FFmpeg/FFmpeg.git
+else
+  echo "ffmpeg source already cloned"
+fi
+
+cd FFmpeg
+
+# Clean any previous build attempt
+if [ -f config.mak ]; then
+  echo "Cleaning previous build..."
+  make distclean 2>/dev/null || true
+fi
+
+# --- Apply NDI patch ---
+echo ""
+echo "=== Applying NDI patch ==="
+
+# Check if patch already applied (look for the NDI source files)
+if [ ! -f libavdevice/libndi_newtek_dec.c ]; then
+  # Apply the patch that re-adds NDI configure/Makefile entries
+  git apply "$BUILD_DIR/FFMPEG-NDI/libndi.patch" || {
+    echo "git apply failed, trying patch command..."
+    patch -p1 < "$BUILD_DIR/FFMPEG-NDI/libndi.patch"
+  }
+
+  # Copy the NDI source files into libavdevice/
+  cp "$BUILD_DIR/FFMPEG-NDI/libavdevice/libndi_newtek_common.h" libavdevice/
+  cp "$BUILD_DIR/FFMPEG-NDI/libavdevice/libndi_newtek_dec.c" libavdevice/
+  cp "$BUILD_DIR/FFMPEG-NDI/libavdevice/libndi_newtek_enc.c" libavdevice/
+
+  echo "NDI patch applied and source files copied"
+else
+  echo "NDI patch already applied"
+fi
+
+# Verify the files are in place
+for f in libavdevice/libndi_newtek_common.h libavdevice/libndi_newtek_dec.c libavdevice/libndi_newtek_enc.c; do
+  if [ ! -f "$f" ]; then
+    echo "ERROR: Missing file after patch: $f"
+    exit 1
+  fi
+done
+echo "NDI source files verified"
+
+# --- Set up NDI SDK paths ---
 NDI_LIB_DIR="$NDI_SDK_DIR/Lib/x64"
 NDI_INC_DIR="$NDI_SDK_DIR/Include"
 
-# Find the actual .lib or .dll.a file
+# Find the library file
 NDI_LIB=""
 for f in "$NDI_LIB_DIR"/Processing.NDI.Lib.x64.lib "$NDI_LIB_DIR"/Processing.NDI.Lib.x64.dll.a; do
   if [ -f "$f" ]; then
@@ -104,15 +144,11 @@ if [ -z "$NDI_LIB" ]; then
 fi
 
 echo "NDI lib: $NDI_LIB"
-echo "NDI inc: $NDI_INC_DIR"
+echo "NDI headers: $NDI_INC_DIR"
 
-# Create a .pc file so configure can find NDI
+# --- Create pkg-config file for NDI ---
 PKG_DIR="$BUILD_DIR/pkgconfig"
 mkdir -p "$PKG_DIR"
-
-# Convert Windows paths to what the linker expects
-NDI_LIB_WIN=$(cygpath -w "$NDI_LIB_DIR")
-NDI_INC_WIN=$(cygpath -w "$NDI_INC_DIR")
 
 cat > "$PKG_DIR/libndi_newtek.pc" << PCEOF
 prefix=$NDI_SDK_DIR
@@ -122,18 +158,16 @@ includedir=$NDI_INC_DIR
 Name: libndi_newtek
 Description: NDI SDK
 Version: 6.0
-Cflags: -I"\${includedir}"
-Libs: -L"\${libdir}" -lProcessing.NDI.Lib.x64
+Cflags: -I\${includedir}
+Libs: -L\${libdir} -lProcessing.NDI.Lib.x64
 PCEOF
 
 export PKG_CONFIG_PATH="$PKG_DIR:${PKG_CONFIG_PATH:-}"
 
-echo "pkg-config test:"
-pkg-config --cflags --libs libndi_newtek || {
-  echo "WARNING: pkg-config couldn't read the NDI .pc file. Trying manual flags..."
-}
+echo "pkg-config check:"
+pkg-config --cflags --libs libndi_newtek && echo "  OK" || echo "  WARNING: pkg-config failed (will use manual flags)"
 
-# --- Configure ffmpeg ---
+# --- Configure ---
 echo ""
 echo "=== Configuring ffmpeg ==="
 
@@ -151,25 +185,47 @@ echo "=== Configuring ffmpeg ==="
   --disable-debug \
   --enable-optimizations
 
+# Verify NDI made it into the build
+if grep -q "CONFIG_LIBNDI_NEWTEK=yes" ffbuild/config.mak 2>/dev/null || grep -q "CONFIG_LIBNDI_NEWTEK=yes" config.mak 2>/dev/null; then
+  echo "NDI support: ENABLED"
+else
+  echo "WARNING: NDI may not be enabled in the build config"
+  echo "Check configure output above for errors"
+fi
+
 # --- Build ---
 echo ""
 echo "=== Building ffmpeg (this takes a while) ==="
 NPROC=$(nproc 2>/dev/null || echo 4)
 make -j"$NPROC"
 
-# --- Install to output dir ---
+# --- Install ---
 echo ""
 echo "=== Installing to $OUTPUT_DIR ==="
+mkdir -p "$OUTPUT_DIR"
 make install
 
 # --- Copy NDI runtime DLL ---
-NDI_RUNTIME_DIR="/c/Program Files/NDI/NDI 6 Runtime"
-if [ -d "$NDI_RUNTIME_DIR" ]; then
-  cp "$NDI_RUNTIME_DIR/Processing.NDI.Lib.x64.dll" "$OUTPUT_DIR/bin/" 2>/dev/null || true
-  echo "Copied NDI runtime DLL"
-else
-  echo "WARNING: NDI Runtime not found at $NDI_RUNTIME_DIR"
-  echo "Make sure NDI Runtime is installed and Processing.NDI.Lib.x64.dll is in PATH"
+echo ""
+echo "=== Copying NDI runtime DLL ==="
+NDI_RUNTIME_DIRS=(
+  "/c/Program Files/NDI/NDI 6 Runtime"
+  "/c/Program Files/NDI/NDI 5 Runtime"
+)
+NDI_DLL_COPIED=false
+
+for rtdir in "${NDI_RUNTIME_DIRS[@]}"; do
+  if [ -f "$rtdir/Processing.NDI.Lib.x64.dll" ]; then
+    cp "$rtdir/Processing.NDI.Lib.x64.dll" "$OUTPUT_DIR/bin/"
+    echo "Copied NDI runtime DLL from $rtdir"
+    NDI_DLL_COPIED=true
+    break
+  fi
+done
+
+if [ "$NDI_DLL_COPIED" = false ]; then
+  echo "WARNING: NDI runtime DLL not found — make sure NDI Runtime is installed"
+  echo "ffmpeg will still work if Processing.NDI.Lib.x64.dll is in your system PATH"
 fi
 
 # --- Done ---
@@ -178,15 +234,15 @@ echo "=========================================="
 echo " BUILD COMPLETE"
 echo "=========================================="
 echo ""
-echo "ffmpeg binary:  $OUTPUT_DIR/bin/ffmpeg.exe"
-echo "ffprobe binary: $OUTPUT_DIR/bin/ffprobe.exe"
+echo "ffmpeg:   $OUTPUT_DIR/bin/ffmpeg.exe"
+echo "ffprobe:  $OUTPUT_DIR/bin/ffprobe.exe"
 echo ""
-echo "Test NDI input:"
-echo "  $OUTPUT_DIR/bin/ffmpeg.exe -f libndi_newtek -find_sources 1 -i dummy"
+echo "Test NDI source discovery:"
+echo "  \"$OUTPUT_DIR/bin/ffmpeg.exe\" -f libndi_newtek -find_sources 1 -i dummy"
 echo ""
-echo "Test recording (10 seconds):"
-echo "  $OUTPUT_DIR/bin/ffmpeg.exe -f libndi_newtek -i \"SOURCE_NAME\" -t 10 -c:v libx264 -preset fast -crf 18 -vf scale=1920:1080 test.mov"
+echo "Test 10-second recording:"
+echo "  \"$OUTPUT_DIR/bin/ffmpeg.exe\" -f libndi_newtek -i \"SOURCE_NAME\" -t 10 -c:v libx264 -preset fast -crf 18 -vf scale=1920:1080 test.mov"
 echo ""
-echo "Update config.json ffmpegPath to:"
-echo "  $(cygpath -w "$OUTPUT_DIR/bin/ffmpeg.exe")"
+echo "Set in config.json:"
+echo "  \"ffmpegPath\": \"$(cygpath -w "$OUTPUT_DIR/bin/ffmpeg.exe")\""
 echo ""
