@@ -1,6 +1,6 @@
 {
   "port": 7200,
-  "ffmpegPath": "ffmpeg",
+  "ffmpegPath": "C:\\msys64\\home\\dlilly\\ffmpeg-ndi\\bin\\ffmpeg.exe",
   "recordingPath": "D:\\Recordings",
   "archivePath": "\\\\nas\\shows",
   "video": {
@@ -13,9 +13,9 @@
     "codec": "pcm_s24le"
   },
   "sources": [
-    { "name": "OBS (Program)", "id": "program" },
-    { "name": "CAM1 (PTZ1)", "id": "cam1" },
-    { "name": "CAM2 (PTZ2)", "id": "cam2" },
-    { "name": "CAM3 (PTZ3)", "id": "cam3" }
+    { "name": "DMMS-SHOW-CONTROL.LOCAL (OBS PGM)", "id": "program" },
+    { "name": "CAMERA1 (Channel 1)", "id": "cam1" },
+    { "name": "CAMERA2 (Channel 1)", "id": "cam2" },
+    { "name": "CAMERA3 (Channel 1)", "id": "cam3" }
   ]
 }
