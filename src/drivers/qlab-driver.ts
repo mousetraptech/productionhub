@@ -189,6 +189,10 @@ export class QLabDriver extends EventEmitter implements DeviceDriver {
     if (!this.connected) return;
     this.sendOsc('/cue/playhead/text', []);
     this.sendOsc('/runningCues', []);
+    // Always emit a state feedback so the dashboard WS stays current
+    // (QLab only sends replies when state changes, but new WS clients
+    // need the current state including cues list)
+    this.emitFeedback('/state', []);
   }
 
   /** Process incoming TCP data through SLIP decoder */
