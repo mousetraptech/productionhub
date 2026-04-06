@@ -81,6 +81,7 @@ export interface DeckButton {
   prompt?: { message: string; default?: string };
   imperative?: boolean;
   group?: GridSlot[];
+  span?: { cols: number; rows: number };
 }
 
 export interface GridSlot {

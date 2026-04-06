@@ -5,7 +5,6 @@ const SIZE = 144;
 // Icons are drawn in 48x48 space. Scale 1.8x and center in 144px button, above label.
 // Center point: (72, 46). Offset: 72 - 24*1.8 = 28.8, 46 - 24*1.8 = 2.8
 const ICON_SCALE = 1.8;
-const ICON_TX = `translate(${72 - 24 * ICON_SCALE},${46 - 24 * ICON_SCALE}) scale(${ICON_SCALE})`;
 const FONT = '-apple-system, SF Pro, Helvetica, sans-serif';
 
 // ---------------------------------------------------------------------------
@@ -235,7 +234,20 @@ export function renderButton(
   pulsePhase: boolean = false,
 ): string {
   if (!button) return renderEmpty();
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+  ${renderButtonFull(button, state, firing, SIZE, SIZE, pulsePhase)}
+</svg>`;
+}
 
+/** Render button content at an arbitrary width/height (for span composites) */
+function renderButtonFull(
+  button: DeckButton,
+  state: ButtonState,
+  firing: boolean,
+  w: number,
+  h: number,
+  pulsePhase: boolean = false,
+): string {
   const isToggled = !!(button.toggle && state.active);
   const displayLabel = isToggled ? button.toggle!.activeLabel : button.label;
 
@@ -272,41 +284,70 @@ export function renderButton(
         : compositeOnBlack(bg.r, bg.g, bg.b, 0.4);
 
   // Fill bar for fader levels
-  const fillHeight = state.level !== null ? Math.round(state.level * SIZE) : 0;
+  const fillHeight = state.level !== null ? Math.round(state.level * h) : 0;
   const fillColor = compositeOnBlack(bg.r, bg.g, bg.b, 0.7);
 
-  // Icon SVG
+  // Icon SVG — scale relative to composite size
+  const iconScale = Math.min(w, h) / SIZE * ICON_SCALE;
+  const iconTx = `translate(${w / 2 - 24 * iconScale},${h * 0.32 - 24 * iconScale}) scale(${iconScale})`;
   const iconPath = iconKey ? ICON_PATHS[iconKey] : null;
   const iconSvg = iconPath
-    ? `<g transform="${ICON_TX}">${iconPath.replace(/currentColor/g, textColor)}</g>`
+    ? `<g transform="${iconTx}">${iconPath.replace(/currentColor/g, textColor)}</g>`
     : '';
 
-  // Label sizing
-  const labelText = truncate(displayLabel, 14);
-  const labelSize = labelText.length > 10 ? 13 : labelText.length > 7 ? 15 : 17;
+  // Label sizing — scale for larger composites
+  const maxLabelLen = w > SIZE ? 20 : 14;
+  const labelText = truncate(displayLabel, maxLabelLen);
+  const baseFontSize = labelText.length > 10 ? 13 : labelText.length > 7 ? 15 : 17;
+  const labelSize = Math.round(baseFontSize * (Math.min(w, h) / SIZE));
+  const labelY = Math.round(h * 0.8);
 
   // Group badge (item count)
   const groupBadge = button.group
-    ? `<circle cx="${SIZE - 18}" cy="18" r="11" fill="${bgHex}"/>
-       <text x="${SIZE - 18}" y="23" text-anchor="middle" font-size="13" font-weight="700" font-family="${FONT}" fill="#fff">${button.group.length}</text>`
+    ? `<circle cx="${w - 18}" cy="18" r="11" fill="${bgHex}"/>
+       <text x="${w - 18}" y="23" text-anchor="middle" font-size="13" font-weight="700" font-family="${FONT}" fill="#fff">${button.group.length}</text>`
     : '';
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
-  <rect width="${SIZE}" height="${SIZE}" fill="#000"/>
-  <rect x="3" y="3" width="${SIZE - 6}" height="${SIZE - 6}" rx="12"
+  return `
+  <rect width="${w}" height="${h}" fill="#000"/>
+  <rect x="3" y="3" width="${w - 6}" height="${h - 6}" rx="12"
     fill="${bgFill}" stroke="${borderColor}" stroke-width="2.5"/>
-  ${fillHeight > 0 ? `<rect x="5" y="${SIZE - 3 - fillHeight}" width="${SIZE - 10}" height="${fillHeight}"
+  ${fillHeight > 0 ? `<rect x="5" y="${h - 3 - fillHeight}" width="${w - 10}" height="${fillHeight}"
     rx="10" fill="${fillColor}"/>` : ''}
   ${iconSvg}
-  <text x="${SIZE / 2}" y="116" text-anchor="middle" font-size="${labelSize}" font-weight="600"
+  <text x="${w / 2}" y="${labelY}" text-anchor="middle" font-size="${labelSize}" font-weight="600"
     font-family="${FONT}" fill="${textColor}">${escapeXml(labelText)}</text>
   ${state.live ? `<circle cx="16" cy="16" r="6" fill="#EF4444"/>
   <text x="28" y="20" font-size="10" font-family="${FONT}" fill="#EF4444" font-weight="700">LIVE</text>` : ''}
   ${state.active && !state.live && !isToggled ? `<circle cx="16" cy="16" r="5" fill="#10B981"/>` : ''}
   ${isToggled && !state.live ? `<circle cx="16" cy="16" r="5" fill="${bgHex}"/>` : ''}
   ${groupBadge}
-  ${button.actions.length > 1 && !button.group ? `<text x="${SIZE - 10}" y="${SIZE - 8}" text-anchor="end" font-size="12"
-    font-family="${FONT}" fill="${textColor}" opacity="0.5" font-weight="700">${button.actions.length}</text>` : ''}
+  ${button.actions.length > 1 && !button.group ? `<text x="${w - 10}" y="${h - 8}" text-anchor="end" font-size="12"
+    font-family="${FONT}" fill="${textColor}" opacity="0.5" font-weight="700">${button.actions.length}</text>` : ''}`;
+}
+
+/**
+ * Render a single tile of a spanned button.
+ * Renders the full composite at (cols*SIZE x rows*SIZE), then uses a viewBox
+ * to extract the tile at (tileCol, tileRow).
+ */
+export function renderSpanTile(
+  button: DeckButton,
+  state: ButtonState,
+  firing: boolean,
+  tileRow: number,
+  tileCol: number,
+  spanCols: number,
+  spanRows: number,
+  pulsePhase: boolean = false,
+): string {
+  const fullW = SIZE * spanCols;
+  const fullH = SIZE * spanRows;
+  const inner = renderButtonFull(button, state, firing, fullW, fullH, pulsePhase);
+  const vx = tileCol * SIZE;
+  const vy = tileRow * SIZE;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="${vx} ${vy} ${SIZE} ${SIZE}">
+  ${inner}
 </svg>`;
 }
 

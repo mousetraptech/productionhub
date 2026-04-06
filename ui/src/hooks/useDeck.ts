@@ -151,8 +151,21 @@ export function useDeck(options: UseDeckOptions = {}) {
     setGrid(prev => mutateAtDepth(prev, groupStack, mutate));
   }, [groupStack, mutateAtDepth]);
 
+  /** Check if a cell is occupied by any button's span region */
+  const isCellOccupied = useCallback((subGrid: GridSlot[], row: number, col: number, excludeId?: string): boolean => {
+    return subGrid.some(s => {
+      if (excludeId && s.button.id === excludeId) return false;
+      const sc = s.button.span?.cols ?? 1;
+      const sr = s.button.span?.rows ?? 1;
+      return row >= s.row && row < s.row + sr && col >= s.col && col < s.col + sc;
+    });
+  }, []);
+
   const assignAction = useCallback((row: number, col: number, actionId: string, osc?: InlineOSC, actionMeta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle'], wait?: number) => {
     editGrid(sub => {
+      // Don't assign to a cell occluded by a span
+      if (isCellOccupied(sub, row, col) && !sub.find(s => s.row === row && s.col === col)) return sub;
+
       const existing = sub.find(s => s.row === row && s.col === col);
       const action = wait ? { actionId, wait } : { actionId, osc };
       if (existing) {
@@ -171,7 +184,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       };
       return [...sub, { row, col, button }];
     });
-  }, [editGrid]);
+  }, [editGrid, isCellOccupied]);
 
   const removeButton = useCallback((row: number, col: number) => {
     editGrid(sub => sub.filter(s => !(s.row === row && s.col === col)));

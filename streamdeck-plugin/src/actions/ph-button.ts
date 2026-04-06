@@ -8,8 +8,8 @@ import streamDeck, {
 } from "@elgato/streamdeck";
 import { HubClient, HubClientConfig } from '../lib/hub-client';
 import { getDeckButtonState, ActionCommandRef, ButtonState } from '../lib/state-matcher';
-import { renderButton, renderDisconnected } from '../lib/button-renderer';
-import { GridSlot, DeckButton } from '../lib/types';
+import { renderButton, renderSpanTile, renderDisconnected } from '../lib/button-renderer';
+import { DeckButton } from '../lib/types';
 
 function coordKey(row: number, col: number): string {
   return `${row}:${col}`;
@@ -28,6 +28,7 @@ export class PHButton extends SingletonAction {
   private lastRendered = new Map<string, string>();
   private pulsePhase = false;
   private pulseTimer: ReturnType<typeof setInterval> | null = null;
+  private spanFireDebounce = new Map<string, number>(); // buttonId -> timestamp
 
   constructor() {
     super();
@@ -100,6 +101,14 @@ export class PHButton extends SingletonAction {
     const button = this.getButton(coords.row, coords.column);
     if (!button) return;
 
+    // Debounce multi-key press on spanned buttons (50ms window)
+    if (button.span && (button.span.cols > 1 || button.span.rows > 1)) {
+      const now = Date.now();
+      const lastFire = this.spanFireDebounce.get(button.id) ?? 0;
+      if (now - lastFire < 50) return;
+      this.spanFireDebounce.set(button.id, now);
+    }
+
     // Group folder button — enter group
     if (button.group) {
       this.hub.enterGroup(button.id);
@@ -114,21 +123,63 @@ export class PHButton extends SingletonAction {
       : button;
     this.hub.fire(effectiveButton);
 
-    // Flash animation
-    const key = coordKey(coords.row, coords.column);
-    const flashSvg = this.toDataUrl(renderButton(button, state, true));
-    await ev.action.setImage(flashSvg);
+    // Flash animation — for spanned buttons, flash all tiles
+    if (button.span && (button.span.cols > 1 || button.span.rows > 1)) {
+      const anchor = this.getAnchorSlot(button.id);
+      if (anchor) {
+        for (let dr = 0; dr < button.span.rows; dr++) {
+          for (let dc = 0; dc < button.span.cols; dc++) {
+            const tileKey = coordKey(anchor.row + dr, anchor.col + dc);
+            const tileAction = this.actionMap.get(tileKey);
+            if (tileAction) {
+              const flashSvg = this.toDataUrl(renderSpanTile(button, state, true, dr, dc, button.span.cols, button.span.rows));
+              tileAction.setImage(flashSvg);
+            }
+          }
+        }
+        setTimeout(() => {
+          for (let dr = 0; dr < button.span!.rows; dr++) {
+            for (let dc = 0; dc < button.span!.cols; dc++) {
+              const tileKey = coordKey(anchor.row + dr, anchor.col + dc);
+              const tileAction = this.actionMap.get(tileKey);
+              if (tileAction) this.renderKey(tileKey, tileAction);
+            }
+          }
+        }, 200);
+      }
+    } else {
+      const key = coordKey(coords.row, coords.column);
+      const flashSvg = this.toDataUrl(renderButton(button, state, true));
+      await ev.action.setImage(flashSvg);
 
-    setTimeout(() => {
-      const action = this.actionMap.get(key);
-      if (action) this.renderKey(key, action);
-    }, 200);
+      setTimeout(() => {
+        const action = this.actionMap.get(key);
+        if (action) this.renderKey(key, action);
+      }, 200);
+    }
   }
 
   private getButton(row: number, col: number): DeckButton | null {
     const grid = this.hub.displayGrid;
+    // Exact match first
     const slot = grid.find(s => s.row === row && s.col === col);
-    return slot?.button ?? null;
+    if (slot) return slot.button;
+    // Check if (row, col) is covered by a spanned button
+    for (const s of grid) {
+      if (!s.button.span) continue;
+      const { cols, rows } = s.button.span;
+      if (row >= s.row && row < s.row + rows && col >= s.col && col < s.col + cols) {
+        return s.button;
+      }
+    }
+    return null;
+  }
+
+  /** Find the anchor GridSlot (top-left) for a spanned button by ID */
+  private getAnchorSlot(buttonId: string): { row: number; col: number } | null {
+    const grid = this.hub.displayGrid;
+    const slot = grid.find(s => s.button.id === buttonId);
+    return slot ? { row: slot.row, col: slot.col } : null;
   }
 
   private getButtonState(button: DeckButton): ButtonState {
@@ -244,7 +295,17 @@ export class PHButton extends SingletonAction {
     const state = button
       ? this.getButtonState(button)
       : { level: null, active: false, live: false };
-    const svg = this.toDataUrl(renderButton(button, state, false));
+
+    // Spanned button — render the correct tile slice
+    let svg: string;
+    if (button?.span && (button.span.cols > 1 || button.span.rows > 1)) {
+      const anchor = this.getAnchorSlot(button.id);
+      const tileCol = anchor ? col - anchor.col : 0;
+      const tileRow = anchor ? row - anchor.row : 0;
+      svg = this.toDataUrl(renderSpanTile(button, state, false, tileRow, tileCol, button.span.cols, button.span.rows));
+    } else {
+      svg = this.toDataUrl(renderButton(button, state, false));
+    }
 
     // Skip if unchanged
     if (this.lastRendered.get(key) === svg) return;

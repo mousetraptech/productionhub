@@ -54,6 +54,20 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
     return slot?.button ?? null;
   };
 
+  /** Check if a cell is occluded by a spanned button at a different position */
+  const getOwnerSlot = (row: number, col: number): GridSlot | null => {
+    for (const s of grid) {
+      if (!s.button.span) continue;
+      const { cols, rows } = s.button.span;
+      if (cols <= 1 && rows <= 1) continue;
+      if (row >= s.row && row < s.row + rows && col >= s.col && col < s.col + cols) {
+        if (row === s.row && col === s.col) return null; // anchor cell, not occluded
+        return s;
+      }
+    }
+    return null;
+  };
+
   // --- Drag handlers ---
 
   const handleDragStart = (e: React.DragEvent, row: number, col: number) => {
@@ -259,152 +273,169 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
   return (
     <>
       <div style={{
-        display: 'flex', flexDirection: 'column', gap: 4,
+        display: 'grid',
+        gridTemplateColumns: `130px repeat(${COLS}, 1fr)`,
+        gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+        gap: 4,
         padding: 16,
         position: 'absolute', inset: 0,
         overflow: 'auto',
       }}>
         {Array.from({ length: ROWS }, (_, ri) => {
           const rowLabel = ROW_LABELS[ri];
-          return (
-            <div key={ri} style={{ display: 'flex', gap: 4, flex: 1, minHeight: 70 }}>
-              {/* Row label */}
+          const cells: React.ReactNode[] = [];
+
+          {/* Row label — spans 1 col in the label column */}
+          cells.push(
+            <div key={`label-${ri}`} style={{
+              gridColumn: 1, gridRow: ri + 1,
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              padding: '0 12px 0 0',
+              borderRight: '1px solid #2a2a2a',
+              marginRight: 4,
+            }}>
               <div style={{
-                width: 130, flexShrink: 0,
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                padding: '0 12px 0 0',
-                borderRight: '1px solid #2a2a2a',
-                marginRight: 4,
+                fontFamily: FONT_MONO, fontSize: 10, color: '#555',
+                letterSpacing: '0.1em', marginBottom: 2,
               }}>
-                <div style={{
-                  fontFamily: FONT_MONO, fontSize: 10, color: '#555',
-                  letterSpacing: '0.1em', marginBottom: 2,
-                }}>
-                  ROW {rowLabel?.num ?? ri + 1}
-                </div>
-                <div style={{
-                  fontFamily: FONT_SANS, fontSize: 11, color: '#888',
-                  lineHeight: 1.3, whiteSpace: 'pre-line',
-                }}>
-                  {rowLabel?.name ?? ''}
-                </div>
+                ROW {rowLabel?.num ?? ri + 1}
               </div>
-
-              {/* Button grid for this row */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-                gap: 4, flex: 1,
+                fontFamily: FONT_SANS, fontSize: 11, color: '#888',
+                lineHeight: 1.3, whiteSpace: 'pre-line',
               }}>
-                {Array.from({ length: COLS }, (_, ci) => {
-                  const cellKey = `${ri}-${ci}`;
-                  const isOver = dragOverCell === cellKey;
-
-                  {/* Auto-injected back button at (3, 0) when inside a group */}
-                  if (inGroup && ri === 3 && ci === 0) {
-                    return (
-                      <div key={cellKey}
-                        onPointerDown={() => onGroupBack?.()}
-                        style={{
-                          background: '#1a1a2a', border: '1px solid #404060',
-                          borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          minHeight: 62, cursor: 'pointer', flexDirection: 'column', gap: 2,
-                        }}>
-                        <span style={{ fontSize: 14, color: '#8888cc' }}>{'\u25C0'}</span>
-                        <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: '#8888cc' }}>Back</span>
-                      </div>
-                    );
-                  }
-
-                  const button = getButton(ri, ci);
-
-                  {/* Group folder button — enter group on press (both edit and live) */}
-                  if (button?.group) {
-                    return (
-                      <div key={cellKey}
-                        onPointerDown={() => onGroupEnter?.(button.id)}
-                        style={{
-                          background: (button.color ?? '#3B82F6') + '26',
-                          border: `1px solid ${button.color ?? '#3B82F6'}55`,
-                          borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          minHeight: 62, cursor: 'pointer', flexDirection: 'column', gap: 2,
-                          position: 'relative',
-                        }}>
-                        <span style={{ fontSize: 14 }}>{button.icon || '\uD83D\uDCC1'}</span>
-                        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: '#e8e8e8', textAlign: 'center' }}>
-                          {button.label}
-                        </span>
-                        <span style={{
-                          position: 'absolute', top: 3, right: 5,
-                          fontSize: 8, color: '#666', fontFamily: FONT_MONO,
-                        }}>{button.group.length}</span>
-                      </div>
-                    );
-                  }
-
-                  if (!button) {
-                    return (
-                      <div
-                        key={cellKey}
-                        draggable={false}
-                        onContextMenu={(e) => handleContextMenu(e, ri, ci)}
-                        onDragOver={(e) => handleDragOver(e, ri, ci)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, ri, ci)}
-                        style={{
-                          background: isOver ? '#1a1508' : EMPTY_COLORS.bg,
-                          border: `1px ${editing ? 'dashed' : 'solid'} ${isOver ? '#c8a96e' : EMPTY_COLORS.border}`,
-                          borderRadius: 3,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          minHeight: 62,
-                          transition: 'border-color 0.15s, background 0.15s',
-                        }}
-                      >
-                        {editing && (
-                          <span style={{
-                            fontSize: 16, opacity: 0.2, color: '#555',
-                            fontFamily: FONT_MONO, pointerEvents: 'none',
-                          }}>+</span>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={cellKey}
-                      draggable={editing}
-                      onContextMenu={(e) => handleContextMenu(e, ri, ci)}
-                      onDragStart={(e) => handleDragStart(e, ri, ci)}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleDragOver(e, ri, ci)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, ri, ci)}
-                      style={{
-                        display: 'flex', minHeight: 62,
-                        cursor: editing ? 'grab' : undefined,
-                        boxShadow: isOver ? '0 0 0 2px #c8a96e' : 'none',
-                        transform: isOver ? 'scale(1.05)' : 'none',
-                        transition: 'transform 0.1s, box-shadow 0.1s',
-                        borderRadius: 3,
-                      }}
-                    >
-                      <DeckButtonComponent
-                        button={button}
-                        editing={editing}
-                        onFire={onFire}
-                        onRemove={() => onRemove(ri, ci)}
-                        onClick={() => editing && setEditingSlot({ row: ri, col: ci })}
-                        deviceStates={deviceStates}
-                        actionCommands={actionCommands}
-                        showActive={showActive}
-                      />
-                    </div>
-                  );
-                })}
+                {rowLabel?.name ?? ''}
               </div>
             </div>
           );
+
+          for (let ci = 0; ci < COLS; ci++) {
+            const cellKey = `${ri}-${ci}`;
+            const isOver = dragOverCell === cellKey;
+            // gridColumn is offset by 1 because col 1 is the label
+            const gc = ci + 2;
+            const gr = ri + 1;
+
+            {/* Skip cells occluded by a spanned button */}
+            const owner = getOwnerSlot(ri, ci);
+            if (owner) continue;
+
+            {/* Auto-injected back button at (3, 0) when inside a group */}
+            if (inGroup && ri === 3 && ci === 0) {
+              cells.push(
+                <div key={cellKey}
+                  onPointerDown={() => onGroupBack?.()}
+                  style={{
+                    gridColumn: gc, gridRow: gr,
+                    background: '#1a1a2a', border: '1px solid #404060',
+                    borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    minHeight: 62, cursor: 'pointer', flexDirection: 'column', gap: 2,
+                  }}>
+                  <span style={{ fontSize: 14, color: '#8888cc' }}>{'\u25C0'}</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 9, color: '#8888cc' }}>Back</span>
+                </div>
+              );
+              continue;
+            }
+
+            const button = getButton(ri, ci);
+            const spanCols = button?.span?.cols ?? 1;
+            const spanRows = button?.span?.rows ?? 1;
+            const hasSpan = spanCols > 1 || spanRows > 1;
+
+            {/* Group folder button */}
+            if (button?.group) {
+              cells.push(
+                <div key={cellKey}
+                  onPointerDown={() => onGroupEnter?.(button.id)}
+                  style={{
+                    gridColumn: hasSpan ? `${gc} / span ${spanCols}` : gc,
+                    gridRow: hasSpan ? `${gr} / span ${spanRows}` : gr,
+                    background: (button.color ?? '#3B82F6') + '26',
+                    border: `1px solid ${button.color ?? '#3B82F6'}55`,
+                    borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    minHeight: 62, cursor: 'pointer', flexDirection: 'column', gap: 2,
+                    position: 'relative',
+                  }}>
+                  <span style={{ fontSize: 14 }}>{button.icon || '\uD83D\uDCC1'}</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: '#e8e8e8', textAlign: 'center' }}>
+                    {button.label}
+                  </span>
+                  <span style={{
+                    position: 'absolute', top: 3, right: 5,
+                    fontSize: 8, color: '#666', fontFamily: FONT_MONO,
+                  }}>{button.group.length}</span>
+                </div>
+              );
+              continue;
+            }
+
+            if (!button) {
+              cells.push(
+                <div
+                  key={cellKey}
+                  draggable={false}
+                  onContextMenu={(e) => handleContextMenu(e, ri, ci)}
+                  onDragOver={(e) => handleDragOver(e, ri, ci)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, ri, ci)}
+                  style={{
+                    gridColumn: gc, gridRow: gr,
+                    background: isOver ? '#1a1508' : EMPTY_COLORS.bg,
+                    border: `1px ${editing ? 'dashed' : 'solid'} ${isOver ? '#c8a96e' : EMPTY_COLORS.border}`,
+                    borderRadius: 3,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    minHeight: 62,
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                >
+                  {editing && (
+                    <span style={{
+                      fontSize: 16, opacity: 0.2, color: '#555',
+                      fontFamily: FONT_MONO, pointerEvents: 'none',
+                    }}>+</span>
+                  )}
+                </div>
+              );
+              continue;
+            }
+
+            cells.push(
+              <div
+                key={cellKey}
+                draggable={editing && !hasSpan}
+                onContextMenu={(e) => handleContextMenu(e, ri, ci)}
+                onDragStart={(e) => !hasSpan && handleDragStart(e, ri, ci)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, ri, ci)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, ri, ci)}
+                style={{
+                  gridColumn: hasSpan ? `${gc} / span ${spanCols}` : gc,
+                  gridRow: hasSpan ? `${gr} / span ${spanRows}` : gr,
+                  display: 'flex', minHeight: 62,
+                  cursor: editing && !hasSpan ? 'grab' : undefined,
+                  boxShadow: isOver ? '0 0 0 2px #c8a96e' : 'none',
+                  transform: isOver ? 'scale(1.05)' : 'none',
+                  transition: 'transform 0.1s, box-shadow 0.1s',
+                  borderRadius: 3,
+                }}
+              >
+                <DeckButtonComponent
+                  button={button}
+                  editing={editing}
+                  onFire={onFire}
+                  onRemove={() => onRemove(ri, ci)}
+                  onClick={() => editing && setEditingSlot({ row: ri, col: ci })}
+                  deviceStates={deviceStates}
+                  actionCommands={actionCommands}
+                  showActive={showActive}
+                />
+              </div>
+            );
+          }
+
+          return cells;
         })}
       </div>
 
