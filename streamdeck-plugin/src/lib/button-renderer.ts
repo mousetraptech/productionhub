@@ -253,8 +253,11 @@ function renderButtonFull(
 
   // Resolve icon and color category
   const firstOsc = button.actions[0]?.osc?.address;
+  // Explicit button.icon takes priority if it matches a known icon key
+  const explicitIcon = button.icon && ICON_PATHS[button.icon] ? button.icon : null;
   const iconKey = button.group ? 'folder'
-    : inferIcon(displayLabel, firstOsc, isToggled)
+    : explicitIcon
+    ?? inferIcon(displayLabel, firstOsc, isToggled)
     ?? inferIcon(button.label, firstOsc, false);
   const colorCat = button.group ? 'folder'
     : inferColorCategory(displayLabel, firstOsc, isToggled)
