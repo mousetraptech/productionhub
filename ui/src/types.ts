@@ -82,6 +82,7 @@ export interface DeckButton {
   imperative?: boolean;
   group?: GridSlot[];
   span?: { cols: number; rows: number };
+  vivid?: boolean;
 }
 
 export interface GridSlot {

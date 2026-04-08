@@ -259,9 +259,10 @@ function renderButtonFull(
     : explicitIcon
     ?? inferIcon(displayLabel, firstOsc, isToggled)
     ?? inferIcon(button.label, firstOsc, false);
-  const colorCat = button.group ? 'folder'
+  // Vivid buttons skip category inference and use button.color directly
+  const colorCat = button.vivid ? '' : (button.group ? 'folder'
     : inferColorCategory(displayLabel, firstOsc, isToggled)
-    || inferColorCategory(button.label, firstOsc, false);
+    || inferColorCategory(button.label, firstOsc, false));
 
   // Use inferred color palette or fall back to button.color
   const palette = COLOR_MAP[colorCat];
@@ -270,13 +271,16 @@ function renderButtonFull(
   const bg = hexToRgb(bgHex);
 
   const shouldPulse = isToggled && !!button.toggle?.pulse && pulsePhase;
-  const bgFill = firing
-    ? compositeOnBlack(bg.r, bg.g, bg.b, 0.6)
-    : isToggled
-      ? compositeOnBlack(bg.r, bg.g, bg.b, shouldPulse ? 0.35 : 0.55)
-      : state.active
-        ? compositeOnBlack(bg.r, bg.g, bg.b, 0.55)
-        : compositeOnBlack(bg.r, bg.g, bg.b, 0.2);
+  // Vivid buttons render at near-full intensity always; firing flashes brighter still
+  const bgFill = button.vivid
+    ? compositeOnBlack(bg.r, bg.g, bg.b, firing ? 1.0 : 0.85)
+    : firing
+      ? compositeOnBlack(bg.r, bg.g, bg.b, 0.6)
+      : isToggled
+        ? compositeOnBlack(bg.r, bg.g, bg.b, shouldPulse ? 0.35 : 0.55)
+        : state.active
+          ? compositeOnBlack(bg.r, bg.g, bg.b, 0.55)
+          : compositeOnBlack(bg.r, bg.g, bg.b, 0.2);
 
   const borderColor = state.live
     ? '#EF4444'
