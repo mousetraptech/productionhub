@@ -347,10 +347,15 @@ export function renderSpanTile(
   const fullW = SIZE * spanCols;
   const fullH = SIZE * spanRows;
   const inner = renderButtonFull(button, state, firing, fullW, fullH, pulsePhase);
-  const vx = tileCol * SIZE;
-  const vy = tileRow * SIZE;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="${vx} ${vy} ${SIZE} ${SIZE}">
-  ${inner}
+  const dx = -tileCol * SIZE;
+  const dy = -tileRow * SIZE;
+  // Use a translate transform instead of a non-zero viewBox origin —
+  // some SVG renderers (including Stream Deck's) don't handle viewBox
+  // origins correctly and clip content to the natural pixel area.
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+  <g transform="translate(${dx}, ${dy})">
+    ${inner}
+  </g>
 </svg>`;
 }
 
