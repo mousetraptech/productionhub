@@ -170,6 +170,25 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
     const button = getButton(row, col);
     const items: MenuItem[] = [];
 
+    if (button?.group) {
+      if (editing) {
+        items.push({
+          label: '\uD83D\uDDD1 Delete Group',
+          danger: true,
+          onClick: () => {
+            const count = button.group?.length ?? 0;
+            const msg = count > 0
+              ? `Delete group "${button.label}" and ${count} button${count === 1 ? '' : 's'} inside?`
+              : `Delete group "${button.label}"?`;
+            if (confirm(msg)) onRemove(row, col);
+          },
+        });
+      } else {
+        items.push({ label: 'No actions', disabled: true, onClick: () => {} });
+      }
+      return items;
+    }
+
     if (button) {
       items.push({
         label: 'Copy Button',
@@ -348,6 +367,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
               cells.push(
                 <div key={cellKey}
                   onPointerDown={() => onGroupEnter?.(button.id)}
+                  onContextMenu={(e) => handleContextMenu(e, ri, ci)}
                   style={{
                     gridColumn: hasSpan ? `${gc} / span ${spanCols}` : gc,
                     gridRow: hasSpan ? `${gr} / span ${spanRows}` : gr,
