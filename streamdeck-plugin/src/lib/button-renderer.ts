@@ -315,6 +315,11 @@ function renderButtonFull(
        <text x="${w - 18}" y="23" text-anchor="middle" font-size="13" font-weight="700" font-family="${FONT}" fill="#fff">${button.group.length}</text>`
     : '';
 
+  // Long-press indicator — small dot in bottom-left
+  const longPressBadge = button.longPressActions && button.longPressActions.length > 0
+    ? `<circle cx="12" cy="${h - 12}" r="3.5" fill="${textColor}" opacity="0.6"/>`
+    : '';
+
   return `
   <rect width="${w}" height="${h}" fill="#000"/>
   <rect x="3" y="3" width="${w - 6}" height="${h - 6}" rx="12"
@@ -329,6 +334,7 @@ function renderButtonFull(
   ${state.active && !state.live && !isToggled ? `<circle cx="16" cy="16" r="5" fill="#10B981"/>` : ''}
   ${isToggled && !state.live ? `<circle cx="16" cy="16" r="5" fill="${bgHex}"/>` : ''}
   ${groupBadge}
+  ${longPressBadge}
   ${button.actions.length > 1 && !button.group ? `<text x="${w - 10}" y="${h - 8}" text-anchor="end" font-size="12"
     font-family="${FONT}" fill="${textColor}" opacity="0.5" font-weight="700">${button.actions.length}</text>` : ''}`;
 }

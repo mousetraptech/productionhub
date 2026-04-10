@@ -1,6 +1,7 @@
 import streamDeck, {
   action,
   KeyDownEvent,
+  KeyUpEvent,
   SingletonAction,
   WillAppearEvent,
   WillDisappearEvent,
@@ -29,6 +30,10 @@ export class PHButton extends SingletonAction {
   private pulsePhase = false;
   private pulseTimer: ReturnType<typeof setInterval> | null = null;
   private spanFireDebounce = new Map<string, number>(); // buttonId -> timestamp
+
+  // Long-press tracking, keyed by button ID (so spanned buttons share state)
+  private holdTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private longPressFired = new Set<string>();
 
   constructor() {
     super();
@@ -92,7 +97,7 @@ export class PHButton extends SingletonAction {
     const coords = ev.action.coordinates;
     if (!coords) return;
 
-    // Back button at (3, 0) when inside a group
+    // Back button at (3, 0) when inside a group — fires on press, no long-press
     if (this.hub.inGroup && coords.row === 3 && coords.column === 0) {
       this.hub.groupBack();
       return;
@@ -100,6 +105,12 @@ export class PHButton extends SingletonAction {
 
     const button = this.getButton(coords.row, coords.column);
     if (!button) return;
+
+    // Group folder button — enter on press
+    if (button.group) {
+      this.hub.enterGroup(button.id);
+      return;
+    }
 
     // Debounce multi-key press on spanned buttons (50ms window)
     if (button.span && (button.span.cols > 1 || button.span.rows > 1)) {
@@ -109,21 +120,66 @@ export class PHButton extends SingletonAction {
       this.spanFireDebounce.set(button.id, now);
     }
 
-    // Group folder button — enter group
-    if (button.group) {
-      this.hub.enterGroup(button.id);
+    // If button has long-press actions, schedule the timer.
+    // The actual fire happens on KeyUp (or when the timer fires for long-press).
+    if (button.longPressActions && button.longPressActions.length > 0) {
+      this.longPressFired.delete(button.id);
+      const threshold = button.longPressMs ?? 500;
+      const timer = setTimeout(() => {
+        this.holdTimers.delete(button.id);
+        this.longPressFired.add(button.id);
+        // Fire long-press actions
+        const lpButton: DeckButton = { ...button, actions: button.longPressActions!, prompt: undefined };
+        this.hub.fire(lpButton);
+        this.flashButton(button, coords);
+      }, threshold);
+      this.holdTimers.set(button.id, timer);
       return;
     }
 
-    // Compute toggle state and fire effective actions
+    // No long-press configured — fire immediately on press
+    this.firePress(button, coords);
+  }
+
+  override async onKeyUp(ev: KeyUpEvent): Promise<void> {
+    const coords = ev.action.coordinates;
+    if (!coords) return;
+
+    const button = this.getButton(coords.row, coords.column);
+    if (!button) return;
+    if (!button.longPressActions || button.longPressActions.length === 0) return;
+
+    // Cancel pending hold timer
+    const timer = this.holdTimers.get(button.id);
+    if (timer) {
+      clearTimeout(timer);
+      this.holdTimers.delete(button.id);
+    }
+
+    // If long-press already fired, just clear the flag and stop
+    if (this.longPressFired.has(button.id)) {
+      this.longPressFired.delete(button.id);
+      return;
+    }
+
+    // Released before threshold — fire normal press
+    this.firePress(button, coords);
+  }
+
+  /** Fire the button's normal (non-long-press) action and flash. */
+  private firePress(button: DeckButton, coords: { row: number; column: number }): void {
     const state = this.getButtonState(button);
     const isToggled = !!(button.toggle && state.active);
     const effectiveButton = isToggled
       ? { ...button, actions: button.toggle!.activeActions, prompt: undefined }
       : button;
     this.hub.fire(effectiveButton);
+    this.flashButton(button, coords);
+  }
 
-    // Flash animation — for spanned buttons, flash all tiles
+  /** Flash the button (and all tiles if spanned) for visual feedback. */
+  private flashButton(button: DeckButton, coords: { row: number; column: number }): void {
+    const state = this.getButtonState(button);
     if (button.span && (button.span.cols > 1 || button.span.rows > 1)) {
       const anchor = this.getAnchorSlot(button.id);
       if (anchor) {
@@ -147,11 +203,13 @@ export class PHButton extends SingletonAction {
           }
         }, 200);
       }
-    } else {
-      const key = coordKey(coords.row, coords.column);
+      return;
+    }
+    const key = coordKey(coords.row, coords.column);
+    const tileAction = this.actionMap.get(key);
+    if (tileAction) {
       const flashSvg = this.toDataUrl(renderButton(button, state, true));
-      await ev.action.setImage(flashSvg);
-
+      tileAction.setImage(flashSvg);
       setTimeout(() => {
         const action = this.actionMap.get(key);
         if (action) this.renderKey(key, action);

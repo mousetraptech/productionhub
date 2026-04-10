@@ -23,6 +23,8 @@ export interface DeckButton {
   group?: GridSlot[];
   span?: { cols: number; rows: number };
   vivid?: boolean;
+  longPressActions?: DeckAction[];
+  longPressMs?: number;
 }
 
 export interface GridSlot {
