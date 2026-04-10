@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
-import { join, extname } from 'path';
+import { join, dirname, extname } from 'path';
+import { fileURLToPath } from 'url';
 import { DeckButton } from './types';
 import { ButtonState } from './state-matcher';
 
@@ -8,7 +9,8 @@ const SIZE = 144;
 // Custom images directory — resolved relative to the plugin bundle location.
 // Bundle at <project>/streamdeck-plugin/com.productionhub.deck.sdPlugin/bin/plugin.js
 // Images at <project>/deck-images/  (3 levels up from bin/ to project root)
-const IMAGE_DIR = join(__dirname, '..', '..', '..', 'deck-images');
+const _bundleDir = typeof __dirname !== 'undefined' ? __dirname : dirname(fileURLToPath(import.meta.url));
+const IMAGE_DIR = join(_bundleDir, '..', '..', '..', 'deck-images');
 
 // Cache loaded images (filename -> base64 data URL)
 const imageCache = new Map<string, string>();
