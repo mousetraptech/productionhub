@@ -6,9 +6,9 @@ import { ButtonState } from './state-matcher';
 const SIZE = 144;
 
 // Custom images directory — resolved relative to the plugin bundle location.
-// Plugin lives at <project>/streamdeck-plugin/com.productionhub.deck.sdPlugin/bin/plugin.js
-// Images at <project>/deck-images/
-const IMAGE_DIR = join(__dirname, '..', '..', '..', '..', 'deck-images');
+// Bundle at <project>/streamdeck-plugin/com.productionhub.deck.sdPlugin/bin/plugin.js
+// Images at <project>/deck-images/  (3 levels up from bin/ to project root)
+const IMAGE_DIR = join(__dirname, '..', '..', '..', 'deck-images');
 
 // Cache loaded images (filename -> base64 data URL)
 const imageCache = new Map<string, string>();
