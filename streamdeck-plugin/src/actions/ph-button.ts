@@ -9,7 +9,7 @@ import streamDeck, {
 } from "@elgato/streamdeck";
 import { HubClient, HubClientConfig } from '../lib/hub-client';
 import { getDeckButtonState, ActionCommandRef, ButtonState } from '../lib/state-matcher';
-import { renderButton, renderSpanTile, renderDisconnected } from '../lib/button-renderer';
+import { renderButton, renderSpanTile, renderDisconnected, renderCustomImageTile } from '../lib/button-renderer';
 import { DeckButton } from '../lib/types';
 
 function coordKey(row: number, col: number): string {
@@ -348,6 +348,24 @@ export class PHButton extends SingletonAction {
         action.setImage(folderSvg);
       }
       return;
+    }
+
+    // Custom image button — bypass SVG rendering entirely
+    if (button?.customImage) {
+      const spanCols = button.span?.cols ?? 1;
+      const spanRows = button.span?.rows ?? 1;
+      const anchor = (spanCols > 1 || spanRows > 1) ? this.getAnchorSlot(button.id) : null;
+      const tileCol = anchor ? col - anchor.col : 0;
+      const tileRow = anchor ? row - anchor.row : 0;
+      const img = renderCustomImageTile(button.customImage, tileRow, tileCol, spanCols, spanRows);
+      if (img) {
+        if (this.lastRendered.get(key) !== img) {
+          this.lastRendered.set(key, img);
+          action.setImage(img);
+        }
+        return;
+      }
+      // Fall through to normal rendering if image not found
     }
 
     const state = button

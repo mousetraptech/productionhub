@@ -85,6 +85,7 @@ export interface DeckButton {
   vivid?: boolean;
   longPressActions?: DeckAction[];
   longPressMs?: number;
+  customImage?: string;
 }
 
 export interface GridSlot {

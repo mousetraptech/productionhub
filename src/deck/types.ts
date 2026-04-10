@@ -32,6 +32,7 @@ export interface DeckButton {
   vivid?: boolean;
   longPressActions?: DeckAction[];
   longPressMs?: number; // hold threshold, default 500
+  customImage?: string; // filename in deck-images/ (e.g. "safe-state.png")
 }
 
 export interface GridSlot {

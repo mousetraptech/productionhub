@@ -1,7 +1,82 @@
+import { readFileSync, existsSync } from 'fs';
+import { join, extname } from 'path';
 import { DeckButton } from './types';
 import { ButtonState } from './state-matcher';
 
 const SIZE = 144;
+
+// Custom images directory — resolved relative to the plugin's working directory,
+// which is the PH project root when launched by the hub.
+const IMAGE_DIR = join(process.cwd(), 'deck-images');
+
+// Cache loaded images (filename -> base64 data URL)
+const imageCache = new Map<string, string>();
+
+/**
+ * Load a custom image as a base64 data URL.
+ * Supports PNG, JPG, SVG. Returns null if file not found.
+ */
+function loadCustomImage(filename: string): string | null {
+  const cached = imageCache.get(filename);
+  if (cached) return cached;
+
+  const filePath = join(IMAGE_DIR, filename);
+  if (!existsSync(filePath)) return null;
+
+  const ext = extname(filename).toLowerCase();
+  const mime = ext === '.svg' ? 'image/svg+xml'
+    : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+    : 'image/png';
+
+  const data = readFileSync(filePath);
+  const dataUrl = `data:${mime};base64,${data.toString('base64')}`;
+  imageCache.set(filename, dataUrl);
+  return dataUrl;
+}
+
+/** Clear the image cache (call after hot-reloading images) */
+export function clearImageCache(): void {
+  imageCache.clear();
+}
+
+/**
+ * Render a custom image tile for the Stream Deck.
+ * For 1×1 buttons: returns the image as-is (scaled to 144×144 via SVG).
+ * For spanned buttons: embeds the full image in an SVG and slices via translate.
+ * Returns a base64 data URL, or null if the image file is not found.
+ */
+export function renderCustomImageTile(
+  filename: string,
+  tileRow: number,
+  tileCol: number,
+  spanCols: number,
+  spanRows: number,
+): string | null {
+  const dataUrl = loadCustomImage(filename);
+  if (!dataUrl) return null;
+
+  // 1×1 button — just embed the image at 144×144
+  if (spanCols <= 1 && spanRows <= 1) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+      width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+      <image href="${dataUrl}" width="${SIZE}" height="${SIZE}"/>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  }
+
+  // Spanned button — embed full image at composite size and translate to show this tile
+  const fullW = SIZE * spanCols;
+  const fullH = SIZE * spanRows;
+  const dx = -tileCol * SIZE;
+  const dy = -tileRow * SIZE;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+    <g transform="translate(${dx}, ${dy})">
+      <image href="${dataUrl}" width="${fullW}" height="${fullH}"/>
+    </g>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+}
 // Icons are drawn in 48x48 space. Scale 1.8x and center in 144px button, above label.
 // Center point: (72, 46). Offset: 72 - 24*1.8 = 28.8, 46 - 24*1.8 = 2.8
 const ICON_SCALE = 1.8;
