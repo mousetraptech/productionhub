@@ -72,6 +72,16 @@ export function DeckButtonEditor({
           style={{ ...inputStyle, width: 80 }}
         />
 
+        {/* Custom Image */}
+        <label style={labelStyle}>Custom Image (filename in deck-images/)</label>
+        <input
+          type="text"
+          value={button.customImage ?? ''}
+          placeholder="e.g. safe-state.png"
+          onChange={(e) => onUpdate(row, col, { customImage: e.target.value || undefined })}
+          style={inputStyle}
+        />
+
         {/* Button Type */}
         <label style={labelStyle}>Type</label>
         <select

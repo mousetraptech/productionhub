@@ -147,6 +147,14 @@ export function DeckButton({ button, editing, onFire, onRemove, onClick, deviceS
         </span>
       )}
 
+      {/* Custom image indicator */}
+      {button.customImage && (
+        <span style={{
+          position: 'absolute', bottom: 3, left: 4,
+          fontSize: 8, opacity: 0.5, pointerEvents: 'none',
+        }}>IMG</span>
+      )}
+
       {/* Series mode */}
       {button.mode === 'series' && (
         <span style={{
