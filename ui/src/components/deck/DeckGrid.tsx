@@ -15,6 +15,7 @@ interface DeckGridProps {
   onAssign: (row: number, col: number, actionId: string, osc?: InlineOSC, meta?: { label: string; icon: string; color: string }, toggle?: DeckButton['toggle']) => void;
   onUpdate: (row: number, col: number, updates: Partial<DeckButton>) => void;
   onRemoveAction: (row: number, col: number, actionIndex: number) => void;
+  onReorderAction?: (row: number, col: number, fromIndex: number, toIndex: number) => void;
   onSwap?: (fromRow: number, fromCol: number, toRow: number, toCol: number) => void;
   onCommandDrop?: (row: number, col: number, commandType: string) => void;
   deviceStates?: any;
@@ -30,7 +31,7 @@ const COLS = 8;
 const FONT_MONO = "'IBM Plex Mono', monospace";
 const FONT_SANS = "'IBM Plex Sans', sans-serif";
 
-export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onSwap, onCommandDrop, deviceStates, showActive, inGroup = false, onGroupEnter, onGroupBack, onCreateGroup }: DeckGridProps) {
+export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign, onUpdate, onRemoveAction, onReorderAction, onSwap, onCommandDrop, deviceStates, showActive, inGroup = false, onGroupEnter, onGroupBack, onCreateGroup }: DeckGridProps) {
   const [editingSlot, setEditingSlot] = useState<{ row: number; col: number } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const dragSrcRef = useRef<{ row: number; col: number } | null>(null);
@@ -469,6 +470,7 @@ export function DeckGrid({ grid, editing, categories, onFire, onRemove, onAssign
             col={editingSlot.col}
             onUpdate={onUpdate}
             onRemoveAction={onRemoveAction}
+            onReorderAction={onReorderAction}
             onClose={() => setEditingSlot(null)}
           />
         );

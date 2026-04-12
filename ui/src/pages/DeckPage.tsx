@@ -93,6 +93,7 @@ export function DeckPage() {
             onAssign={deck.assignAction}
             onUpdate={deck.updateButton}
             onRemoveAction={deck.removeAction}
+            onReorderAction={deck.reorderAction}
             onSwap={deck.swapButtons}
             onCommandDrop={handleCommandDrop}
             deviceStates={deviceStates}

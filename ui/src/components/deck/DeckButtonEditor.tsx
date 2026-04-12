@@ -7,6 +7,7 @@ interface DeckButtonEditorProps {
   col: number;
   onUpdate: (row: number, col: number, updates: Partial<DeckButton>) => void;
   onRemoveAction: (row: number, col: number, actionIndex: number) => void;
+  onReorderAction?: (row: number, col: number, fromIndex: number, toIndex: number) => void;
   onClose: () => void;
 }
 
@@ -26,7 +27,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export function DeckButtonEditor({
-  button, row, col, onUpdate, onRemoveAction, onClose,
+  button, row, col, onUpdate, onRemoveAction, onReorderAction, onClose,
 }: DeckButtonEditorProps) {
   return (
     <div
@@ -180,10 +181,34 @@ export function DeckButtonEditor({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {button.actions.map((action, i) => (
             <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
+              display: 'flex', alignItems: 'center', gap: 4,
               background: '#1c1c1c', borderRadius: 2, padding: '6px 8px',
               border: '1px solid #2a2a2a',
             }}>
+              {/* Reorder arrows */}
+              {onReorderAction && button.actions.length > 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  <button
+                    disabled={i === 0}
+                    onClick={() => onReorderAction(row, col, i, i - 1)}
+                    style={{
+                      background: 'none', border: 'none', color: i === 0 ? '#333' : '#888',
+                      cursor: i === 0 ? 'default' : 'pointer', fontSize: 9, padding: 0,
+                      lineHeight: '10px', fontFamily: FONT_MONO,
+                    }}
+                  >{'\u25B2'}</button>
+                  <button
+                    disabled={i === button.actions.length - 1}
+                    onClick={() => onReorderAction(row, col, i, i + 1)}
+                    style={{
+                      background: 'none', border: 'none',
+                      color: i === button.actions.length - 1 ? '#333' : '#888',
+                      cursor: i === button.actions.length - 1 ? 'default' : 'pointer',
+                      fontSize: 9, padding: 0, lineHeight: '10px', fontFamily: FONT_MONO,
+                    }}
+                  >{'\u25BC'}</button>
+                </div>
+              )}
               <span style={{
                 flex: 1, fontSize: 10, color: '#888', fontFamily: FONT_MONO,
               }}>

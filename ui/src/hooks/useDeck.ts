@@ -207,6 +207,16 @@ export function useDeck(options: UseDeckOptions = {}) {
     }));
   }, [editGrid]);
 
+  const reorderAction = useCallback((row: number, col: number, fromIndex: number, toIndex: number) => {
+    editGrid(sub => sub.map(s => {
+      if (s.row !== row || s.col !== col) return s;
+      const actions = [...s.button.actions];
+      const [moved] = actions.splice(fromIndex, 1);
+      actions.splice(toIndex, 0, moved);
+      return { ...s, button: { ...s.button, actions } };
+    }));
+  }, [editGrid]);
+
   const swapButtons = useCallback((fromRow: number, fromCol: number, toRow: number, toCol: number) => {
     editGrid(sub => {
       const fromSlot = sub.find(s => s.row === fromRow && s.col === fromCol);
@@ -279,6 +289,7 @@ export function useDeck(options: UseDeckOptions = {}) {
     removeButton,
     updateButton,
     removeAction,
+    reorderAction,
     swapButtons,
     toggleEdit,
     groupStack,
