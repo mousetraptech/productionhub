@@ -5,7 +5,7 @@
   "archivePath": "\\\\nas\\shows",
   "video": {
     "codec": "libx264",
-    "preset": "fast",
+    "preset": "ultrafast",
     "crf": 18,
     "scale": "1920:1080"
   },
